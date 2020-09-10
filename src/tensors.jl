@@ -51,7 +51,7 @@ end
 
 
 function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt;
-                        xi=1:size(ρ)[4], yi=1:1, zi=1:1)
+                        xi=1:size(ρ)[4], yi=1:size(ρ)[5], zi=1:size(ρ)[6])
     @assert length(gpoints) == length(wgp)
     @assert length(t) == length(wt)
 
@@ -75,7 +75,7 @@ function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt;
     v = similar(ρ, size(e)[1:end-1]...)
     vv = similar(ρ, size(v)[2:end]...)
 
-    @showprogress "Calculating..." for (I, J, K) ∈ Iterators.product(xi, yi, zi)
+    @showprogress "Calculating v-tensor..." for (I, J, K) ∈ Iterators.product(xi, yi, zi)
         Tx = transtensor[:,:,:,I,:]
         Ty = transtensor[:,:,:,J,:]
         Tz = transtensor[:,:,:,K,:]
