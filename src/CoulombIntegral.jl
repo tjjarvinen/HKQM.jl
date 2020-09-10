@@ -25,7 +25,7 @@ C6=[
 """
     self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6) -> Float64
 
-Calculates self energy using cubic elemens and Gaussian quadrature.
+Calculates self energy using cubic elements and Gaussian quadrature.
 
 # Arguments
 - `n_elements` : number of elements
@@ -34,7 +34,7 @@ Calculates self energy using cubic elemens and Gaussian quadrature.
 
 # Keywords
 - `tmax=10`    :  integration limit for exponential function
-- `atoms=C6`   :  array of atoms coordinates - default benzene carbons
+- `atoms=C6`   :  array of atom coordinates - default benzene carbons
 """
 function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6)
     @info "Initializing elements and Gauss points"

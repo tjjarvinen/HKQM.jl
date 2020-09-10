@@ -22,13 +22,13 @@ To see what command options are available type
 ```julia
 ?self_energy
 ```
-to get
+wich results
 ```
 search: self_energy
 
   self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6) -> Float64
 
-  Calculates self energy using cubic elemens and Gaussian quadrature.
+  Calculates self energy using cubic elements and Gaussian quadrature.
 
   Arguments
   ≡≡≡≡≡≡≡≡≡≡≡
@@ -44,5 +44,5 @@ search: self_energy
 
     •    tmax=10 : integration limit for exponential function
 
-    •    atoms=C6 : array of atoms coordinates - default benzene carbons
+    •    atoms=C6 : array of atom coordinates - default benzene carbons
 ```
