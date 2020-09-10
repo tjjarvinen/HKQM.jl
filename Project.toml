@@ -4,9 +4,8 @@ authors = ["Teemu Järvinen <teemu.jarvinen@helsinki.fi> and contributors"]
 version = "0.1.0"
 
 [deps]
-BarycentricInterpolation = "9eb6a62d-0ffa-5353-839e-400c605afeda"
-Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
 GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 
 [compat]

@@ -1,10 +1,10 @@
 using GaussQuadrature
 
 
-abstract type AbstractElementCenters end
+abstract type AbstractCubicElements end
 
 """
-    ElementCenters <: AbstractElementCenters
+    CubicElements <: AbstractCubicElements
 
 Struct to hold finite element center locations
 
@@ -13,11 +13,11 @@ Struct to hold finite element center locations
 - `high` : highest value for element boundary
 - `npoints` : number of elements per degree of freedom
 """
-struct ElementCenters <: AbstractElementCenters
+struct CubicElements <: AbstractCubicElements
     low
     high
     npoints
-    function ElementCenters(low, high, npoints::Int)
+    function CubicElements(low, high, npoints::Int)
         @assert high > low
         @assert npoints > 0
         new(low, high, npoints)
@@ -26,37 +26,38 @@ end
 
 
 
-Base.size(ec::ElementCenters) = (ec.npoints, ec.npoints, ec.npoints)
-function Base.getindex(ec::ElementCenters, i::Int)
-    @assert i <= ec.npoints && i > 0
-    s = (ec.high - ec.low)/ec.npoints
-    return ec.low + (i-0.5)*s
+Base.size(ce::CubicElements) = (ce.npoints, ce.npoints, ce.npoints)
+function Base.getindex(ce::CubicElements, i::Int)
+    @assert i <= ce.npoints && i > 0
+    s = (ce.high - ce.low)/ce.npoints
+    return ce.low + (i-0.5)*s
 end
 
-function Base.getindex(ec::ElementCenters, i::Int, j::Int, k::Int)
-    return ec[i], ec[j], ec[j]
+function Base.getindex(ce::CubicElements, i::Int, j::Int, k::Int)
+    return ce[i], ce[j], ce[j]
 end
 
-function Base.show(io::IO, ec::ElementCenters)
-    print(io, "Finite element centers size=$(size(ec))")
+function Base.show(io::IO, ce::CubicElements)
+    print(io, "Finite element centers size=$(size(ce))")
 end
 
-function elementsize(ec::ElementCenters)
-    return (ec.high - ec.low)/ec.npoints
+function elementsize(ce::CubicElements)
+    return (ce.high - ce.low)/ce.npoints
 end
 
-function getcenters(ec::ElementCenters)
-    return [ec[i] for i ∈ 1:ec.npoints]
+function getcenters(ce::CubicElements)
+    return [ce[i] for i ∈ 1:ce.npoints]
 end
 
-function gausspoints(n; elementsize=(-1.0, 1.0), shift=0.0)
+function gausspoints(n; elementsize=(-1.0, 1.0))
     x, w = legendre(n)
+    shift = (elementsize[2]+elementsize[1])./2
     x = x .* (elementsize[2]-elementsize[1])./2 .+ shift
     return x, w
 end
 
-function gausspoints(ec::ElementCenters, npoints::Int)
-    s = elementsize(ec)/2
+function gausspoints(ce::CubicElements, npoints::Int)
+    s = elementsize(ce)/2
     return gausspoints(npoints; elementsize=(-s, s))
 end
 

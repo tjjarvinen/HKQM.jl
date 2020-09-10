@@ -1,6 +1,7 @@
 module CoulombIntegral
 
-export ElementCenters,
+export CubicElements,
+       coulomb_tensor,
        elementsize,
        gausspoints,
        getcenters,
