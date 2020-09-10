@@ -1,41 +1,79 @@
+using GaussQuadrature
 
-abstract type AbstractElementCenters end
+
+abstract type AbstractCubicElements end
 
 """
-    ElementCenters <: AbstractElementCenters
+    CubicElements <: AbstractCubicElements
 
 Struct to hold finite element center locations
 
 # Fields
-- `centers::Array{Tuple{Float64,Float64,Float64},3` : stores centers
-
-# Construct
-    ElementCenters(n:Int; start=-10, stop=10)
-
-# Arguments
-- `n::Int` : number of boxes per dimension
-
-# Keywords
-- `start=-10` : minimum value for box center coordinate
-- `stop=10`   : maximum value for box center coordinate
-
-# Examples
-```
-julia> ElementCenters(10)
-Finite element centers size=(10, 10, 10)
-```
+- `low`  : lowes value for element boundary
+- `high` : highest value for element boundary
+- `npoints` : number of elements per degree of freedom
 """
-struct ElementCenters <: AbstractElementCenters
-    centers::Array{Tuple{Float64,Float64,Float64},3}
-    function ElementCenters(n::Int; start=-10, stop=10)
-        x = range(start, stop; length=n+2)[2:end-1]
-        new(collect(Base.Iterators.product(x,x,x)))
+struct CubicElements <: AbstractCubicElements
+    low
+    high
+    npoints
+    function CubicElements(low, high, npoints::Int)
+        @assert high > low
+        @assert npoints > 0
+        new(low, high, npoints)
     end
 end
 
-Base.size(ec::ElementCenters) = size(ec.centers)
-Base.getindex(ec::ElementCenters, I...) = ec.centers[I...]
 
-function Base.show(io::IO, ec::ElementCenters)
-    print(io, "Finite element centers size=$(size(ec))")
+
+Base.size(ce::CubicElements) = (ce.npoints, ce.npoints, ce.npoints)
+function Base.getindex(ce::CubicElements, i::Int)
+    @assert i <= ce.npoints && i > 0
+    s = (ce.high - ce.low)/ce.npoints
+    return ce.low + (i-0.5)*s
+end
+
+function Base.getindex(ce::CubicElements, i::Int, j::Int, k::Int)
+    return ce[i], ce[j], ce[j]
+end
+
+function Base.show(io::IO, ce::CubicElements)
+    print(io, "Finite element centers size=$(size(ce))")
+end
+
+function elementsize(ce::CubicElements)
+    return (ce.high - ce.low)/ce.npoints
+end
+
+function getcenters(ce::CubicElements)
+    return [ce[i] for i ∈ 1:ce.npoints]
+end
+
+function gausspoints(n; elementsize=(-1.0, 1.0))
+    x, w = legendre(n)
+    shift = (elementsize[2]+elementsize[1])./2
+    x = x .* (elementsize[2]-elementsize[1])./2 .+ shift
+    return x, w
+end
+
+function gausspoints(ce::CubicElements, npoints::Int)
+    s = elementsize(ce)/2
+    return gausspoints(npoints; elementsize=(-s, s))
+end
+
+function gausspoints3d(x::AbstractVector, w::AbstractVector)
+    xyz = collect(Base.Iterators.product(x,x,x))
+    ww = zeros(n,n,n)
+    for i ∈ 1:n
+        for j ∈ 1:n
+            for k ∈ 1:n
+                ww[i,j,k] = w[i] * w[j] * w[k]
+            end
+        end
+    end
+    return xyz, ww
+end
+
+function gausspoints3d(n; elementsize=(-1.0, 1.0))
+    return gausspoints3d( gausspoints(n; elementsize=elementsize) )
 end
