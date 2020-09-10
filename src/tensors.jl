@@ -48,6 +48,28 @@ function density_tensor(elements, gpoints)
     return ρ
 end
 
+function density_tensor(elements, gpoints, r)
+    @assert length(r) == 3
+    ρ = similar(elements,
+        length(gpoints),
+        length(gpoints),
+        length(gpoints),
+        length(elements),
+        length(elements),
+        length(elements)
+    )
+    ne = length(elements)
+    np = length(gpoints)
+    for (I, J, K) ∈ Iterators.product(1:ne, 1:ne, 1:ne)
+        for (i, j) ∈ Iterators.product(1:np, 1:np)
+            ρ[:,i,j,I,J,K] = exp.(
+                -(gpoints .+ elements[I] .- r[1]).^2 .-(gpoints[i]+elements[J]-r[2])^2 .-(gpoints[j]+elements[K]-r[3])^2
+            )
+        end
+    end
+    return ρ
+end
+
 
 
 function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt;
