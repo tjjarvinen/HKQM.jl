@@ -61,7 +61,7 @@ function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6)
     # cx = CuArray(x) and so on
 
     v = coulomb_tensor(ρ, T, x, w, t, wt; yi=1:n_elements, zi=1:n_elements)
-    V = v .+ (π/100).*ρ
+    V = v .+ (π/tmax^2).*ρ
 
 
     ω = hcat([w for i in 1:n_elements]...)
