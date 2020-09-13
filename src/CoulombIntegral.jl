@@ -48,28 +48,23 @@ function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6)
 
     @info "Generating transformation tensor"
     T = transformation_tensor(centers, x, w, t)
-
     @info "Generating electron density tensor"
-    ρa = [density_tensor(centers, x, a) for a ∈ atoms]
-    ρ = ρa[1]
-    for i in 2:length(ρa)
-        ρ .+= ρa[i]
-    end
+
+    ρ = density_tensor(centers, x, atoms)
 
     # To run on GPU the previous ternsors need to be moved to GPU
     # eg.
     # cx = CuArray(x) and so on
 
     v = coulomb_tensor(ρ, T, x, w, t, wt)
-    V = v .+ (π/tmax^2).*ρ   # correction
+    V = v .+ (π/tmax^2).*ρ   # add correction
 
-
+    # Integraton weights fore elements + Gausspoints in tersor form
     ω = hcat([w for i in 1:n_elements]...)
-    @info "ω" ω
 
     cc = V.*ρ
     E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
-
+    return E
 end
 
 

@@ -48,8 +48,8 @@ function density_tensor(elements, gpoints)
     return ρ
 end
 
-function density_tensor(elements, gpoints, r)
-    @assert length(r) == 3
+function density_tensor(elements, gpoints, r::AbstractVector)
+    @assert length(r[1]) == 3
     ρ = similar(elements,
         length(gpoints),
         length(gpoints),
@@ -58,13 +58,16 @@ function density_tensor(elements, gpoints, r)
         length(elements),
         length(elements)
     )
+    ρ .= 0
     ne = length(elements)
     np = length(gpoints)
     for (I, J, K) ∈ Iterators.product(1:ne, 1:ne, 1:ne)
         for (i, j) ∈ Iterators.product(1:np, 1:np)
-            ρ[:,i,j,I,J,K] = exp.(
-                -(gpoints .+ elements[I] .- r[1]).^2 .-(gpoints[i]+elements[J]-r[2])^2 .-(gpoints[j]+elements[K]-r[3])^2
-            )
+            for xyz ∈ r
+                ρ[:,i,j,I,J,K] .+= exp.(
+                    -(gpoints .+ elements[I] .- xyz[1]).^2 .-(gpoints[i]+elements[J]-xyz[2])^2 .-(gpoints[j]+elements[K]-xyz[3])^2
+                )
+            end
         end
     end
     return ρ
