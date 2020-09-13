@@ -11,14 +11,13 @@ function transformation_tensor(elements, gpoints, w, t)
         length(elements),
         length(t)
     )
-
-    for J ∈ eachindex(elements)
-        for I ∈ eachindex(elements)
-            for α ∈ eachindex(gpoints)
-                for β ∈ eachindex(gpoints)
-                    T[α,β,I,J,:] = w[β]*exp.(
-                        -t.^2 .*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
-                        )
+    for p ∈ eachindex(t)
+        for (I,J) ∈ Iterators.product(eachindex(elements), eachindex(elements))
+            for β ∈ eachindex(gpoints)
+                for α ∈ eachindex(gpoints)
+                    T[α,β,I,J,p] = w[β].*exp.(
+                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
+                    )
                 end
             end
         end
