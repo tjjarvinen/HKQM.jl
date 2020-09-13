@@ -53,6 +53,7 @@ function gausspoints(n; elementsize=(-1.0, 1.0))
     x, w = legendre(n)
     shift = (elementsize[2]+elementsize[1])./2
     x = x .* (elementsize[2]-elementsize[1])./2 .+ shift
+    w .*= (elementsize[2]-elementsize[1])/2
     return x, w
 end
 
