@@ -5,26 +5,26 @@ using ProgressMeter
 function transformation_tensor(elements, gpoints, w, t)
     @assert length(w) == length(gpoints)
     T = similar(gpoints,
-        length(t),
         length(gpoints),
         length(gpoints),
         length(elements),
-        length(elements)
+        length(elements),
+        length(t)
     )
-
-    for J ∈ eachindex(elements)
-        for I ∈ eachindex(elements)
-            for α ∈ eachindex(gpoints)
-                for β ∈ eachindex(gpoints)
-                    T[:,α,β,I,J] = w[β]*exp.(
-                        -t.^2 .*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
-                        )
+    for p ∈ eachindex(t)
+        for (I,J) ∈ Iterators.product(eachindex(elements), eachindex(elements))
+            for β ∈ eachindex(gpoints)
+                for α ∈ eachindex(gpoints)
+                    T[α,β,I,J,p] = w[β].*exp.(
+                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
+                    )
                 end
             end
         end
     end
     return T
 end
+
 
 
 function density_tensor(elements, gpoints)
@@ -72,42 +72,28 @@ end
 
 
 
-function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt;
-                        xi=1:size(ρ)[4], yi=1:size(ρ)[5], zi=1:size(ρ)[6])
+function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt)
     @assert length(gpoints) == length(wgp)
     @assert length(t) == length(wt)
 
-    # Initializing δ tensor
-    lt = length(t)
-    δ = similar(ρ,lt,lt,lt)
-    δ .= 0
-    for i ∈ 1:lt
-        δ[i,i,i] = 1
-    end
-
     # Coulomb tensor (returned at end)
     ν = similar(ρ)
+    ν .= 0
 
     # Initializing temporary tensors
-    Tx = similar(transtensor, size(transtensor)[vcat(1:4,end)])
-    Ty = similar(Tx)
-    Tz = similar(Tx)
-    d = similar(ρ, length(t), size(ρ)[1:end-1]...)
-    e = similar(ρ, size(d)[1:end-1]...)
-    v = similar(ρ, size(e)[1:end-1]...)
-    vv = similar(ρ, size(v)[2:end]...)
+    T = similar(transtensor, size(transtensor)[1:end-1])
+    d = similar(ρ)
+    e = similar(ρ)
+    v = similar(ρ)
 
-    @showprogress "Calculating v-tensor..." for (I, J, K) ∈ Iterators.product(xi, yi, zi)
-        Tx = transtensor[:,:,:,I,:]
-        Ty = transtensor[:,:,:,J,:]
-        Tz = transtensor[:,:,:,K,:]
+    @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
+        T = transtensor[:,:,:,:,p]
         @tensoropt begin
-            d[p,α',β',γ, I',J'] = Tz[p,γ,γ',K']*ρ[α',β',γ',I',J',K'];
-            e[p,α',β,γ,I'] = d[p1,α',β',γ,I',J']*Ty[p2,β,β',J']*δ[p1,p2,p];
-            v[p,α,β,γ] = e[p1,α',β,γ,I']*Tx[p2,α,α',I']*δ[p1,p2,p];
-            vv[α,β,γ] = v[p,α,β,γ] * wt[p];
+            d[α',β',γ, I',J',K] = T[γ,γ',K,K']*ρ[α',β',γ',I',J',K'];
+            e[α',β,γ,I',J,K] = d[α',β',γ,I',J',K]*T[β,β',J,J'];
+            v[α,β,γ,I,J,K] = e[α',β,γ,I',J,K]*T[α,α',I,I'];
         end
-        ν[:,:,:,I,J,K] =  vv
+        ν = ν .+ wt[p].*v
     end
     return ν
 end
