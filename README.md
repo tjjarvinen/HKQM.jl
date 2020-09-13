@@ -1,6 +1,8 @@
 # CoulombIntegral
 Solves electrostatic potential using combination finite elements and Gaussian quadrature.
 
+**Note integration weights are not correct yet!**
+
 ## Installation
 Hit "]" to enter pkg> and type
 ```julia
