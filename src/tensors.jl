@@ -61,12 +61,14 @@ function density_tensor(elements, gpoints, r::AbstractVector)
     ρ .= 0
     ne = length(elements)
     np = length(gpoints)
-    for (I, J, K) ∈ Iterators.product(1:ne, 1:ne, 1:ne)
-        for (i, j) ∈ Iterators.product(1:np, 1:np)
-            for xyz ∈ r
-                ρ[:,i,j,I,J,K] .+= exp.(
-                    -(gpoints .+ elements[I] .- xyz[1]).^2 .-(gpoints[i]+elements[J]-xyz[2])^2 .-(gpoints[j]+elements[K]-xyz[3])^2
-                )
+    Threads.@threads for K ∈ 1:ne
+        for (I, J) ∈ Iterators.product(1:ne, 1:ne)
+            for (i, j) ∈ Iterators.product(1:np, 1:np)
+                for xyz ∈ r
+                    ρ[:,i,j,I,J,K] .+= exp.(
+                        -(gpoints .+ elements[I] .- xyz[1]).^2 .-(gpoints[i]+elements[J]-xyz[2])^2 .-(gpoints[j]+elements[K]-xyz[3])^2
+                    )
+                end
             end
         end
     end
