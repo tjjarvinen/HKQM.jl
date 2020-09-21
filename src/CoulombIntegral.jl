@@ -35,8 +35,9 @@ Calculates self energy using cubic elements and Gaussian quadrature.
 # Keywords
 - `tmax=10`    :  integration limit for exponential function
 - `atoms=C6`   :  array of atom coordinates - default benzene carbons
+- `correction=true`  : add correction to t-coordinate integration
 """
-function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6)
+function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correction=true)
     @info "Initializing elements and Gauss points"
     eq = CubicElements(-10, 10, n_elements)
 
@@ -56,8 +57,10 @@ function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6)
     # eg.
     # cx = CuArray(x) and so on
 
-    v = coulomb_tensor(ρ, T, x, w, t, wt)
-    V = v .+ (π/tmax^2).*ρ   # add correction
+    V = coulomb_tensor(ρ, T, x, w, t, wt)
+    if correction
+        V = V .+ (π/tmax^2).*ρ   # add correction
+    end
 
     # Integraton weights fore elements + Gausspoints in tersor form
     ω = hcat([w for i in 1:n_elements]...)

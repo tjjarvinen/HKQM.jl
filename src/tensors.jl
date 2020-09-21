@@ -2,7 +2,7 @@ using TensorOperations
 using ProgressMeter
 
 
-function transformation_tensor(elements, gpoints, w, t)
+function transformation_tensor(elements, gpoints, w, t; ϵ=1E-2)
     @assert length(w) == length(gpoints)
     T = similar(gpoints,
         length(gpoints),
@@ -16,7 +16,7 @@ function transformation_tensor(elements, gpoints, w, t)
             for β ∈ eachindex(gpoints)
                 for α ∈ eachindex(gpoints)
                     T[α,β,I,J,p] = w[β].*exp.(
-                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
+                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J]+ϵ)^2
                     )
                 end
             end
@@ -86,11 +86,11 @@ function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt)
     V .= 0
 
     # Initializing temporary tensors
-    T = similar(transtensor, size(transtensor)[1:end-1])
+    #T = similar(transtensor, size(transtensor)[1:end-1])
     v = similar(ρ)
 
     @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
-        T = transtensor[:,:,:,:,p]
+        T = @view transtensor[:,:,:,:,p]
         @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
 
         V = V .+ wt[p].*v
