@@ -2,7 +2,7 @@ using TensorOperations
 using ProgressMeter
 
 
-function transformation_tensor(elements, gpoints, w, t; ϵ=1E-2)
+function transformation_tensor(elements, gpoints, w, t)
     @assert length(w) == length(gpoints)
     T = similar(gpoints,
         length(gpoints),
@@ -16,7 +16,7 @@ function transformation_tensor(elements, gpoints, w, t; ϵ=1E-2)
             for β ∈ eachindex(gpoints)
                 for α ∈ eachindex(gpoints)
                     T[α,β,I,J,p] = w[β].*exp.(
-                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J]+ϵ)^2
+                        -t[p]^2*(gpoints[α]+elements[I]-gpoints[β]-elements[J])^2
                     )
                 end
             end
