@@ -1,5 +1,9 @@
 using TensorOperations
 using ProgressMeter
+using OffsetArrays
+using SpecialFunctions
+
+
 
 
 function transformation_tensor(elements, gpoints, w, t)
@@ -24,6 +28,39 @@ function transformation_tensor(elements, gpoints, w, t)
     end
     return T
 end
+
+
+function transformation_tensor_alt(elements::CubicElements, gpoints, w, t)
+    @assert length(w) == length(gpoints)
+    T = similar(gpoints,
+        length(gpoints),
+        length(gpoints),
+        elements.npoints,
+        elements.npoints,
+        length(t)
+    )
+    s = elementsize(elements)/2
+    ele = getcenters(elements)
+    off = OffsetArray( vcat(-s, gpoints, s), 0:length(gpoints)+1)
+    Threads.@threads for p ∈ eachindex(t)
+        for (I,J) ∈ Iterators.product(eachindex(ele), eachindex(ele))
+            for β ∈ 1:length(gpoints)
+                for α ∈ 1:length(gpoints)
+                    r = off[β] - off[α] + ele[J] - ele[I]
+                    βp = 0.5*(off[β+1] - off[β])
+                    βm = 0.5*(off[β-1] - off[β])
+                    αp = 0.5*(off[α+1] - off[α])
+                    αm = 0.5*(off[α-1] - off[α])
+                    rmax = (r + maximum(abs, (βp - αm, βm - αp) ))*t[p]
+                    rmin = (r - minimum(abs, (βp - αm, βm - αp) ))*t[p]
+                    T[α,β,I,J,p] = w[β] * 0.5*√π*erf(rmin, rmax)/(rmax - rmin)
+                end
+            end
+        end
+    end
+    return T
+end
+
 
 
 

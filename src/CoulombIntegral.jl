@@ -6,7 +6,8 @@ export CubicElements,
        gausspoints,
        getcenters,
        self_energy,
-       transformation_tensor
+       transformation_tensor,
+       transformation_tensor_alt
 
 
 include("elements.jl")
@@ -37,7 +38,7 @@ Calculates self energy using cubic elements and Gaussian quadrature.
 - `atoms=C6`   :  array of atom coordinates - default benzene carbons
 - `correction=true`  : add correction to t-coordinate integration
 """
-function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correction=true)
+function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correction=true, alt=false)
     @info "Initializing elements and Gauss points"
     eq = CubicElements(-10, 10, n_elements)
 
@@ -48,7 +49,11 @@ function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correct
     centers = getcenters(eq)
 
     @info "Generating transformation tensor"
-    T = transformation_tensor(centers, x, w, t)
+    if alt
+        T = transformation_tensor_alt(eq, x, w, t)
+    else
+        T = transformation_tensor(centers, x, w, t)
+    end
     @info "Generating electron density tensor"
 
     ρ = density_tensor(centers, x, atoms)
