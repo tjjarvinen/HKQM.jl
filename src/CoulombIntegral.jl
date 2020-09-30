@@ -3,15 +3,18 @@ module CoulombIntegral
 export CubicElements,
        coulomb_tensor,
        elementsize,
+       gaussiandensity_self_energy,
        gausspoints,
        getcenters,
        self_energy,
+       test_accuracy,
        transformation_tensor,
        transformation_tensor_alt
 
 
 include("elements.jl")
 include("tensors.jl")
+include("accuracytests.jl")
 
 # Benzene carbons
 const C6=[
