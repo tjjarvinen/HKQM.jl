@@ -8,9 +8,25 @@ function gaussiandensity_self_energy(tmax, nt)
 end 
 
 
-function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=10, correction=true, alt=false, amax=10)
+"""
+    test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=10, correction=true, alt=false, cmax=10) -> Float
+
+Calculates self-energy for Gaussian change density numerically and compares it analytic result.
+
+# Arguments
+- `n_elements`  : Number of finite elements in calculation
+- `n_gaussp`    : Number of Gauss points in element per degree of freedom
+- `n_tpoins`    : Number of Gauss points for t-variable integration
+
+# Keywords
+- `tmax=20`          : Maximum value in t integration
+- `correction=true`  : Add correction to electric field calculation
+- `alt=false`        : If true use alternative formulation for T-tensor, if false use original
+- `cmax=10`          : Limits for numerical calculation - cubic box from `-cmax` to `cmax`
+"""
+function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=20, correction=true, alt=false, cmax=10)
     @info "Initializing elements and Gauss points"
-    eq = CubicElements(-amax, amax, n_elements)
+    eq = CubicElements(-cmax, cmax, n_elements)
 
     x, w = gausspoints(eq, n_gaussp)
     t, wt = gausspoints(n_tpoints; elementsize=(0,tmax))
@@ -36,7 +52,7 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=10, correction=true
 
     cc = V.*ρ
     E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
-    E_true = gaussiandensity_self_energy(500, 50000)
+    E_true = 21.924726575271762 # = gaussiandensity_self_energy(500, 50000)
     @info "Calculated energy = $E"
     @info "True energy = $E_true"
     @info "Error = $(E-E_true)"
