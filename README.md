@@ -10,7 +10,7 @@ pkg> add https://github.com/tjjarvinen/CoulombIntegral.jl
 
 ## Testing Accuracy
 
-Simple test can be performed by using 
+Simple test can be performed by typing
 
 ```julia
 julia> test_accuracy(16,16,64; tmax=25)
