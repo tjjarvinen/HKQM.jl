@@ -20,7 +20,7 @@ Simple test can be performed by typing
 ```julia
 using CoulombIntegral
 
-julia> test_accuracy(16,16,64; tmax=25)
+test_accuracy(16,16,64; tmax=25)
 ```
 
 To see full instruction for test type
