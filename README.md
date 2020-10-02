@@ -3,9 +3,14 @@ Solves electrostatic potential using combination finite elements and Gaussian qu
 
 
 ## Installation
-Hit "]" to enter pkg> and type
+Hit julia console "]" to enter pkg> and then type
 ```julia
 pkg> add https://github.com/tjjarvinen/CoulombIntegral.jl
+```
+Alternatively type
+```julia
+using Pkg
+Pkg.add(url="https://github.com/tjjarvinen/CoulombIntegral.jl")
 ```
 
 ## Testing Accuracy
@@ -13,6 +18,8 @@ pkg> add https://github.com/tjjarvinen/CoulombIntegral.jl
 Simple test can be performed by typing
 
 ```julia
+using CoulombIntegral
+
 julia> test_accuracy(16,16,64; tmax=25)
 ```
 
