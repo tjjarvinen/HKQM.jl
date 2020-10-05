@@ -1,11 +1,11 @@
 using TensorOperations
+using QuadGK
 
 
-function gaussiandensity_self_energy(tmax, nt)
-    _f(x) = (π/sqrt(2x^2+1))^3 
-    t, w = gausspoints(nt; elementsize=(0.0, tmax))
-    return sum(w .* _f.(t))
-end 
+function gaussiandensity_self_energy(rtol=1e-12)
+    _f(x) = (π/sqrt(2x^2+1))^3
+    return quadgk(_f, 0, Inf, rtol=rtol)
+end
 
 
 """
@@ -52,9 +52,9 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=20, correction=true
 
     cc = V.*ρ
     E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
-    E_true = 21.924726575271762 # = gaussiandensity_self_energy(500, 50000)
+    E_true = 21.92474849998632 # = gaussiandensity_self_energy()[1]
     @info "Calculated energy = $E"
     @info "True energy = $E_true"
-    @info "Error = $(E-E_true)"
+    @info "Error = $(E-E_true) ; error/E = $( round((E-E_true)/E_true; sigdigits=1))"
     return E-E_true
 end
