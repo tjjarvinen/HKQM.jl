@@ -1,4 +1,5 @@
 using GaussQuadrature
+using FastGaussQuadrature
 
 
 abstract type AbstractCubicElements end

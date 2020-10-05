@@ -41,7 +41,7 @@ Calculates self energy using cubic elements and Gaussian quadrature.
 - `atoms=C6`   :  array of atom coordinates - default benzene carbons
 - `correction=true`  : add correction to t-coordinate integration
 """
-function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correction=true, alt=false)
+function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correction=true, mode=:normal)
     @info "Initializing elements and Gauss points"
     eq = CubicElements(-10, 10, n_elements)
 
@@ -52,10 +52,17 @@ function self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6, correct
     centers = getcenters(eq)
 
     @info "Generating transformation tensor"
-    if alt
+    if mode == :normal
+        @info "Gauss Legedre integration for t"
         T = transformation_tensor_alt(eq, x, w, t)
-    else
+    elseif mode == :average
+        @info "Local average for T tensor used"
         T = transformation_tensor(centers, x, w, t)
+    elseif mode == :laguerre
+        @info "Gauss Laguerre integration for t"
+        T, x, w, t, wt = transformation_tensor_glaguerre(eq, n_gaussp, n_tpoints)
+    else
+        error("Option mode $(mode) not know!")
     end
     @info "Generating electron density tensor"
 

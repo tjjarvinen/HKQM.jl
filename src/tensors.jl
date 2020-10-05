@@ -2,6 +2,7 @@ using TensorOperations
 using ProgressMeter
 using OffsetArrays
 using SpecialFunctions
+using FastGaussQuadrature
 
 
 
@@ -29,6 +30,31 @@ function transformation_tensor(elements, gpoints, w, t)
     return T
 end
 
+function transformation_tensor_gauss_laguerre(elements::CubicElements, ngpoints, ntpoints)
+    t, wt = gausslaguerre(ntpoints)
+    x, w = gausspoints(elements, ngpoints)
+    T = zeros(
+        length(x),
+        length(x),
+        elements.npoints,
+        elements.npoints,
+        length(t)
+    )
+    ele = getcenters(elements)
+    for p ∈ eachindex(t)
+        for (I,J) ∈ Iterators.product(eachindex(ele), eachindex(ele))
+            for β ∈ eachindex(x)
+                for α ∈ eachindex(x)
+                    T[α,β,I,J,p] = w[β].*exp.(t[p]
+                        -t[p]^2*(x[α]+ele[I]-x[β]-ele[J])^2
+                    )
+                end
+            end
+        end
+    end
+    return T, x,w, t,wt
+end
+
 
 function transformation_tensor_alt(elements::CubicElements, gpoints, w, t)
     @assert length(w) == length(gpoints)
@@ -53,7 +79,7 @@ function transformation_tensor_alt(elements::CubicElements, gpoints, w, t)
                     αm = 0.5*(off[α-1] - off[α])
                     rmax = (r + maximum(abs, (βp - αm, βm - αp) ))*t[p]
                     rmin = (r - minimum(abs, (βp - αm, βm - αp) ))*t[p]
-                    T[α,β,I,J,p] = w[β] * 0.5*√π*erf(rmin, rmax)/(rmax - rmin)
+                    T[α,β,I,J,p] = (w[β]/(rmax - rmin)) * 0.5*√π*erf(rmin, rmax)
                 end
             end
         end
