@@ -2,5 +2,5 @@ using CoulombIntegral
 using Test
 
 @testset "CoulombIntegral.jl" begin
-    # Write your tests here.
+    e = gaussiandensity_self_energy
 end
