@@ -76,7 +76,7 @@ function transformation_harrison_alt(elements::CubicElements, gpoints, w, nt::In
         nt
     )
     ele = getcenters(elements)
-    s, ws = gausspoints(nt; elementsize=(-tmax,tmax))
+    s, ws = gausspoints(nt; elementsize=(-log(tmax),log(tmax)))
     es = elementsize(elements)/2
     off = OffsetArray( vcat(-es, gpoints, es), 0:length(gpoints)+1)
     Threads.@threads for p ∈ eachindex(s)
@@ -114,7 +114,7 @@ function transformation_harrison(elements::CubicElements, gpoints, w, nt::Int;
         nt
     )
     ele = getcenters(elements)
-    s, ws = gausspoints(nt; elementsize=(-tmax,tmax))
+    s, ws = gausspoints(nt; elementsize=(-log(tmax),log(tmax)))
     Threads.@threads for p ∈ eachindex(s)
         for (I,J) ∈ Iterators.product(eachindex(ele), eachindex(ele))
             for β ∈ 1:length(gpoints)
