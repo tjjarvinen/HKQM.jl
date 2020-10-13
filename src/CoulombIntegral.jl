@@ -9,6 +9,8 @@ export CubicElements,
        self_energy,
        test_accuracy,
        transformation_tensor,
+       transformation_tensor_alt,
+       transformation_harrison,
        transformation_tensor_alt
 
 

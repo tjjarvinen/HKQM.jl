@@ -24,7 +24,8 @@ Calculates self-energy for Gaussian change density numerically and compares it a
 - `alt=false`        : If true use alternative formulation for T-tensor, if false use original
 - `cmax=10`          : Limits for numerical calculation - cubic box from `-cmax` to `cmax`
 """
-function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=20, correction=true, alt=false, cmax=10)
+function test_accuracy(n_elements, n_gaussp, n_tpoints;
+                       tmax=20, correction=true, alt=false, cmax=10, mode=:normal, δ=1.0, μ=1.0)
     @info "Initializing elements and Gauss points"
     eq = CubicElements(-cmax, cmax, n_elements)
 
@@ -33,19 +34,38 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=20, correction=true
     centers = getcenters(eq)
 
     @info "Generating transformation tensor"
-    if alt
-        T = transformation_tensor_alt(eq, x, w, t)
+    if mode in [:alt, :normal_alt]
+        @info "Mode is normal with local mean values for T-tensor"
+        T = transformation_tensor_alt(eq, x, w, t; δ=δ)
+    elseif mode == :normal
+        @info "Mode is normal"
+        T = transformation_tensor(centers, x, w, t)
+    elseif mode == :harrison
+        @info "Mode is Harrison"
+        T, t, wt = transformation_harrison(eq, x, w, n_tpoints; tmax=tmax, μ=μ)
+    elseif mode == :harrison_alt
+        @info "Mode is Harrison with local mean values for T-tensor"
+        T, t, wt = transformation_harrison_alt(eq, x, w, n_tpoints; tmax=tmax, δ=δ, μ=μ)
     else
+        @warn "Mode not recognised. Using normal mode"
         T = transformation_tensor(centers, x, w, t)
     end
     @info "Generating electron density tensor"
 
-    ρ = density_tensor(centers, x)
+    if mode in [:harrison, :harrison_alt]
+        ρ, ρ_m = density_harrison(centers, x, μ)
+        V = coulomb_tensor(ρ_m, T, x, w, t, wt)
+    else
+        ρ = density_tensor(centers, x)
+        V = coulomb_tensor(ρ, T, x, w, t, wt)
+    end
 
-    V = coulomb_tensor(ρ, T, x, w, t, wt)
-    if correction
+    if correction && !(mode in [:harrison, :harrison_alt])
         V = V .+ (π/tmax^2).*ρ   # add correction
     end
+
+
+
 
     # Integraton weights fore elements + Gausspoints in tersor form
     ω = hcat([w for i in 1:n_elements]...)
