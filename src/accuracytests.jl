@@ -9,7 +9,7 @@ end
 
 
 """
-    test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=10, correction=true, alt=false, cmax=10) -> Float
+    test_accuracy(n_elements, n_gaussp, n_tpoints; Keywords) -> Float
 
 Calculates self-energy for Gaussian change density numerically and compares it analytic result.
 
@@ -20,26 +20,34 @@ Calculates self-energy for Gaussian change density numerically and compares it a
 
 # Keywords
 - `tmax=20`          : Maximum value in t integration
+- `tmin=0`           : Minimum value in t integration
 - `correction=true`  : Add correction to electric field calculation
-- `alt=false`        : If true use alternative formulation for T-tensor, if false use original
 - `cmax=10`          : Limits for numerical calculation - cubic box from `-cmax` to `cmax`
+- `mode=:normal`     : Integration method `:normal`,  `:normal_alt` or `:harrison`
+- `δ=1.0`            : Area parameter to determine average value in `:normal_alt` δ∈]0,1]
+- `μ=0`              : Parameter for `:harrison` mode
 """
 function test_accuracy(n_elements, n_gaussp, n_tpoints;
-                       tmax=20, correction=true, alt=false, cmax=10, mode=:normal, δ=1.0, μ=1.0)
+                       tmax=20,
+                       tmin=0,
+                       correction=true,
+                       cmax=10,
+                       mode=:normal,
+                       δ=1.0,
+                       μ=0)
     @info "Initializing elements and Gauss points"
     eq = CubicElements(-cmax, cmax, n_elements)
 
     x, w = gausspoints(eq, n_gaussp)
-    t, wt = gausspoints(n_tpoints; elementsize=(0,tmax))
     centers = getcenters(eq)
 
     @info "Generating transformation tensor"
     if mode in [:alt, :normal_alt]
         @info "Mode is normal with local mean values for T-tensor"
-        T = transformation_tensor_alt(eq, x, w, t; δ=δ)
+        T, t, wt = transformation_tensor_alt(eq, x, w, n_tpoints; δ=δ, tmin=tmin)
     elseif mode == :normal
         @info "Mode is normal"
-        T = transformation_tensor(centers, x, w, t)
+        T, t, wt = transformation_tensor(centers, x, w, n_tpoints; tmax=tmax, tmin=tmin)
     elseif mode == :harrison
         @info "Mode is Harrison"
         T, t, wt = transformation_harrison(eq, x, w, n_tpoints; tmax=tmax, μ=μ)
@@ -48,19 +56,16 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
         T, t, wt = transformation_harrison_alt(eq, x, w, n_tpoints; tmax=tmax, δ=δ, μ=μ)
     else
         @warn "Mode not recognised. Using normal mode"
-        T = transformation_tensor(centers, x, w, t)
+        T, t, wt = transformation_tensor(centers, x, w, n_tpoints; tmax=tmax, tmin=tmin)
     end
     @info "Generating electron density tensor"
 
-    if mode in [:harrison, :harrison_alt]
-        ρ, ρ_m = density_harrison(centers, x, μ)
-        V = coulomb_tensor(ρ_m, T, x, w, t, wt)
-    else
-        ρ = density_tensor(centers, x)
-        V = coulomb_tensor(ρ, T, x, w, t, wt)
-    end
 
-    if correction && !(mode in [:harrison, :harrison_alt])
+    ρ = density_tensor(centers, x)
+    V = coulomb_tensor(ρ, T, x, w, t, wt)
+
+
+    if correction
         V = V .+ (π/tmax^2).*ρ   # add correction
     end
 
@@ -76,5 +81,5 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
     @info "Calculated energy = $E"
     @info "True energy = $E_true"
     @info "Error = $(E-E_true) ; error/E = $( round((E-E_true)/E_true; sigdigits=1))"
-    return E-E_true
+    return E, E-E_true
 end
