@@ -31,9 +31,10 @@ To see full instruction for test type
 
 which results
 ```
+help?> test_accuracy
 search: test_accuracy
 
-  test_accuracy(n_elements, n_gaussp, n_tpoints; tmax=10, correction=true, alt=false, cmax=10) -> Float
+  test_accuracy(n_elements, n_gaussp, n_tpoints; Keywords) -> Float
 
   Calculates self-energy for Gaussian change density numerically and compares it analytic result.
 
@@ -51,51 +52,15 @@ search: test_accuracy
 
     •    tmax=20 : Maximum value in t integration
 
+    •    tmin=0 : Minimum value in t integration
+
     •    correction=true : Add correction to electric field calculation
 
-    •    alt=false : If true use alternative formulation for T-tensor, if false use original
-
     •    cmax=10 : Limits for numerical calculation - cubic box from -cmax to cmax
-```
 
-## Usage
+    •    mode=:normal : Integration method :normal, :normal_alt or :harrison
 
-Typing
-```julia
-using CoulombIntegral
+    •    δ=1.0 : Area parameter to determine average value in :normal_alt δ∈]0,1]
 
-E = self_energy(8,8,64)
-```
-will calculate self-interaction energy for benzene carbons.
-
-
-To see what command options are available type
-```julia
-?self_energy
-```
-wich results
-```
-search: self_energy gaussiandensity_self_energy
-
-  self_energy(n_elements, n_gaussp, n_tpoints; tmax=10, atoms=C6) -> Float64
-
-  Calculates self energy using cubic elements and Gaussian quadrature.
-
-  Arguments
-  ≡≡≡≡≡≡≡≡≡≡≡
-
-    •    n_elements : number of elements
-
-    •    n_gaussp : number of Gauss points
-
-    •    n_tpoints : number of Gauss points in exponential function integration
-
-  Keywords
-  ≡≡≡≡≡≡≡≡≡≡
-
-    •    tmax=10 : integration limit for exponential function
-
-    •    atoms=C6 : array of atom coordinates - default benzene carbons
-
-    •    correction=true : add correction to t-coordinate integration
+    •    μ=0 : Parameter for :harrison mode
 ```

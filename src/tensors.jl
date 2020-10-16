@@ -6,15 +6,16 @@ using SpecialFunctions
 
 
 
-function transformation_tensor(elements, gpoints, w, t)
+function transformation_tensor(elements, gpoints, w, nt::Int; tmax=20, tmin=0)
     @assert length(w) == length(gpoints)
     T = similar(gpoints,
         length(gpoints),
         length(gpoints),
         length(elements),
         length(elements),
-        length(t)
+        nt
     )
+    t, wt = gausspoints(nt; elementsize=(tmin,tmax))
     for p ∈ eachindex(t)
         for (I,J) ∈ Iterators.product(eachindex(elements), eachindex(elements))
             for β ∈ eachindex(gpoints)
@@ -26,19 +27,54 @@ function transformation_tensor(elements, gpoints, w, t)
             end
         end
     end
-    return T
+    return T, t, wt
+end
+
+function transformation_tensor(elements::CubicElements, gpoints, w, nt::AbstractVector, borders::AbstractVector )
+    @assert length(nt) == length(borders)
+    boff = OffsetArray( vcat([0], borders), 0:length(borders))
+    T = []
+    t = []
+    wt = []
+    ele = getcenters(elements)
+    for i ∈ eachindex(nt)
+        tT, tt, twt = transformation_tensor(ele, gpoints, w, nt[i]; tmax=boff[i], tmin=boff[i-1])
+        push!(T, tT)
+        push!(t, tt)
+        push!(wt, twt)
+    end
+    return cat(T...; dims=5), vcat(t...), vcat(wt...)
+end
+
+function transformation_tensor_alt(elements::CubicElements, gpoints, w,
+                         nt::AbstractVector, borders::AbstractVector; δ=1)
+    #@assert length(nt) == length(borders)
+    boff = OffsetArray( borders, 0:length(borders)-1)
+    T = []
+    t = []
+    wt = []
+    for i ∈ eachindex(nt)
+        tT, tt, twt = transformation_tensor_alt(elements, gpoints, w, nt[i]; tmax=boff[i], tmin=boff[i-1], δ=δ)
+        push!(T, tT)
+        push!(t, tt)
+        push!(wt, twt)
+    end
+    return cat(T...; dims=5), vcat(t...), vcat(wt...)
 end
 
 
-function transformation_tensor_alt(elements::CubicElements, gpoints, w, t)
+function transformation_tensor_alt(elements::CubicElements, gpoints, w, nt::Int;
+                                   tmax=20, tmin=0, δ=1)
     @assert length(w) == length(gpoints)
+    @assert δ > 0
     T = similar(gpoints,
         length(gpoints),
         length(gpoints),
         elements.npoints,
         elements.npoints,
-        length(t)
+        nt
     )
+    t, wt = gausspoints(nt; elementsize=(tmin,tmax))
     s = elementsize(elements)/2
     ele = getcenters(elements)
     off = OffsetArray( vcat(-s, gpoints, s), 0:length(gpoints)+1)
@@ -51,14 +87,86 @@ function transformation_tensor_alt(elements::CubicElements, gpoints, w, t)
                     βm = 0.5*(off[β-1] - off[β])
                     αp = 0.5*(off[α+1] - off[α])
                     αm = 0.5*(off[α-1] - off[α])
-                    rmax = (r + maximum(abs, (βp - αm, βm - αp) ))*t[p]
-                    rmin = (r - minimum(abs, (βp - αm, βm - αp) ))*t[p]
+                    rmax = (r + δ*maximum(abs, (βp - αm, βm - αp) ))*t[p]
+                    rmin = (r - δ*minimum(abs, (βp - αm, βm - αp) ))*t[p]
                     T[α,β,I,J,p] = w[β] * 0.5*√π*erf(rmin, rmax)/(rmax - rmin)
                 end
             end
         end
     end
-    return T
+    return T, t, wt
+end
+
+
+function transformation_harrison_alt(elements::CubicElements, gpoints, w, nt::Int;
+                                tmax=10, μ=1, δ=1)
+    @assert length(w) == length(gpoints)
+    @assert tmax > 0
+    @assert δ > 0
+    T = similar(gpoints,
+        length(gpoints),
+        length(gpoints),
+        elements.npoints,
+        elements.npoints,
+        nt
+    )
+    ele = getcenters(elements)
+    s, ws = gausspoints(nt; elementsize=(-log(tmax),log(tmax)))
+    ww = similar(ws)
+    es = elementsize(elements)/2
+    off = OffsetArray( vcat(-es, gpoints, es), 0:length(gpoints)+1)
+    Threads.@threads for p ∈ eachindex(s)
+        ww[p] = exp(-0.25μ^2*exp(-2s[p]))
+        for (I,J) ∈ Iterators.product(eachindex(ele), eachindex(ele))
+            for β ∈ 1:length(gpoints)
+                for α ∈ 1:length(gpoints)
+                    r = off[β] - off[α] + ele[J] - ele[I]
+                    βp = 0.5*(off[β+1] - off[β])
+                    βm = 0.5*(off[β-1] - off[β])
+                    αp = 0.5*(off[α+1] - off[α])
+                    αm = 0.5*(off[α-1] - off[α])
+                    rmax = (r + δ*maximum(abs, (βp - αm, βm - αp) ))
+                    rmin = (r - δ*minimum(abs, (βp - αm, βm - αp) ))
+
+                    # Mean value of T-tensor in r=0±δr
+                    meanval = erf(rmin*exp(s[p]), rmax*exp(s[p]))/(rmax - rmin)
+                    T[α,β,I,J,p] = w[β] * 0.5*√π*meanval                
+                end
+            end
+        end
+    end
+    return T, s, ws.*ww
+end
+
+
+function transformation_harrison(elements::CubicElements, gpoints, w, nt::Int;
+                                tmax=10, μ=1)
+    @assert length(w) == length(gpoints)
+    @assert tmax > 0
+    T = similar(gpoints,
+        length(gpoints),
+        length(gpoints),
+        elements.npoints,
+        elements.npoints,
+        nt
+    )
+    @debug "transformation_harrison" μ tmax
+    ele = getcenters(elements)
+    s, ws = gausspoints(nt; elementsize=(-log(tmax),log(tmax)))
+    ww = similar(ws)
+    Threads.@threads for p ∈ eachindex(s)
+        ww[p] = exp( (-0.25μ^2*exp(-2s[p])+s[p]) )
+        for (I,J) ∈ Iterators.product(eachindex(ele), eachindex(ele))
+            for β ∈ 1:length(gpoints)
+                for α ∈ 1:length(gpoints)
+                    r = gpoints[β] - gpoints[α] + ele[J] - ele[I]
+                    e = exp( -r^2*exp(2s[p]) )
+                    T[α,β,I,J,p] = w[β]*e
+                end
+            end
+        end
+    end
+    return T, s, ws.*ww
 end
 
 
@@ -84,6 +192,9 @@ function density_tensor(elements, gpoints)
     end
     return ρ
 end
+
+
+
 
 function density_tensor(elements, gpoints, r::AbstractVector)
     @assert length(r[1]) == 3
