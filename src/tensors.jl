@@ -4,6 +4,24 @@ using OffsetArrays
 using SpecialFunctions
 
 
+abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
+
+
+struct CoulombTransformation <: AbtractTransformationTensor{5}
+    elementgrid::CubicElementGrid
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    function CoulombTransformation(elementgrid::CubicElementGrid, )
+        nothing
+    end
+end
+
+
+
+function coulombtransformation(r,t)
+    return exp(-t^2*r^2)
+end
+
 
 
 function transformation_tensor(elements, gpoints, w, nt::Int; tmax=20, tmin=0)
@@ -130,7 +148,7 @@ function transformation_harrison_alt(elements::CubicElements, gpoints, w, nt::In
 
                     # Mean value of T-tensor in r=0±δr
                     meanval = erf(rmin*exp(s[p]), rmax*exp(s[p]))/(rmax - rmin)
-                    T[α,β,I,J,p] = w[β] * 0.5*√π*meanval                
+                    T[α,β,I,J,p] = w[β] * 0.5*√π*meanval
                 end
             end
         end

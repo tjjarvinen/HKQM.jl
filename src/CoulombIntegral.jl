@@ -1,7 +1,10 @@
 module CoulombIntegral
 
-export CubicElements,
+export AbstractElementGrid,
+       CubicElementGrid,
+       CubicElements,
        coulomb_tensor,
+       coulombtransformation,
        elementsize,
        gaussiandensity_self_energy,
        gausspoints,
