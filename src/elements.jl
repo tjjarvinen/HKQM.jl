@@ -22,7 +22,9 @@ struct CubicElement <: AbstractElement{3}
 end
 
 function CubicElement(xe::Element1D, ye::Element1D, ze::Element1D)
-    center = SVector(    )
+    @assert elementsize(xe) == elementsize(ye) == elementsize(ze)
+    center = SVector(getcenter(xe), getcenter(ye), getcenter(ze))
+    return CubicElement(center, elementsize(xe))
 end
 
 
@@ -49,16 +51,16 @@ end
 
 
 
-struct CubicElementGrid <: AbstractElementGrid{6}
+struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
     elements::CubicElements
     ngpoints::Int
-    ecenters::Vector{Float64}
-    gpoints::Vector{Float64}
-    w::Vector{Float64}
+    ecenters::SVector{NE}{Float64}
+    gpoints::SVector{NG}{Float64}
+    w::SVector{NG}{Float64}
     function CubicElementGrid(elow, ehigh, nelements, ngpoints)
         ce = CubicElements(elow, ehigh, nelements)
         x, w = gausspoints(ce, ngpoints)
-        new(ce, ngpoints, getcenters(ce), x, w)
+        new{ngpoints, nelements}(ce, ngpoints, getcenters(ce), x, w)
     end
 end
 
@@ -70,40 +72,45 @@ function Base.show(io::IO, ::MIME"text/plain", ceg::CubicElementGrid)
     print(io, "Cubic elements grid with $(size(ceg.elements)[1])^3 elements and $(ceg.ngpoints)^3 Gauss points")
 end
 
-function Base.size(c::CubicElementGrid)
-    return ((c.ngpoints, c.ngpoints, c.ngpoints)..., size(c.elements)...)
+function Base.show(io::IO, ce::CubicElements)
+    print(io, "Cubit elements=$(size(ce))")
 end
-
-function Base.getindex(c::CubicElementGrid, i,j,k, I,J,K)
-    return (c.ecenters[I]+c.gpoints[i], c.ecenters[J]+c.gpoints[j], c.ecenters[K]+c.gpoints[k] )
-end
-
-
 
 
 Base.size(ce::CubicElements) = (ce.npoints, ce.npoints, ce.npoints)
 
+function Base.size(c::CubicElementGrid)
+    return ((c.ngpoints, c.ngpoints, c.ngpoints)..., size(c.elements)...)
+end
+
+
+Base.length(ce::CubicElements) = ce.npoints
+
+function Base.getindex(c::CubicElementGrid, i::Int,j::Int,k::Int, I::Int,J::Int,K::Int)
+    return (c.ecenters[I]+c.gpoints[i], c.ecenters[J]+c.gpoints[j], c.ecenters[K]+c.gpoints[k] )
+end
+
 function Base.getindex(ce::CubicElements, i::Int)
     @assert i <= ce.npoints && i > 0
-    s = (ce.high - ce.low)/ce.npoints
-    return ce.low + (i-0.5)*s
+    s = elementsize(ce)
+    low = ce.low+(i-1)*s
+    return Element1D(low, low+s)
 end
 
-function Base.getindex(ce::CubicElements, i::Int, j::Int, k::Int)
-    return ce[i], ce[j], ce[k]
+function Base.getindex(ce::CubicElements, I, J, K)
+    return CubicElement(ce[I], ce[J], ce[K])
 end
 
-function Base.show(io::IO, ce::CubicElements)
-    print(io, "Finite element centers size=$(size(ce))")
-end
 
 elementsize(ce::CubicElements) = (ce.high - ce.low)/ce.npoints
 elementsize(e::Element1D) = e.high - e.low
 
 getcenter(e::Element1D) = 0.5*(e.high + e.low)
 
+get1dgrid(ceg::CubicElementGrid) = SMatrix([x+X for x in ceg.gpoints, X in ceg.ecenters ])
+
 function getcenters(ce::CubicElements)
-    return [ce[i] for i ∈ 1:ce.npoints]
+    return [ getcenter(ce[i]) for i ∈ 1:ce.npoints]
 end
 
 function gausspoints(n; elementsize=(-1.0, 1.0))
@@ -111,7 +118,11 @@ function gausspoints(n; elementsize=(-1.0, 1.0))
     shift = (elementsize[2]+elementsize[1])./2
     x = x .* (elementsize[2]-elementsize[1])./2 .+ shift
     w .*= (elementsize[2]-elementsize[1])/2
-    return x, w
+    return SVector{n}(x), SVector{n}(w)
+end
+
+function gausspoints(el::Element1D, n)
+    return gausspoints(n; elementsize=(el.low, el.high) )
 end
 
 function gausspoints(ce::CubicElements, npoints::Int)
