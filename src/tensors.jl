@@ -261,9 +261,11 @@ end
 
 
 
-function density_tensor(grid::AbstractArray, r=SVector(0.,0.,0.), a=1.)
+function density_tensor(grid::AbstractArray, r::AbstractVector, a)
     return [ exp(-a*sum( (x-r).^2 )) for x in grid ]
 end
+
+density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 
 function density_tensor(elements, gpoints, r::AbstractVector)
