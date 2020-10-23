@@ -21,6 +21,10 @@ struct CubicElement <: AbstractElement{3}
     a::Float64
 end
 
+function CubicElement(a)
+    return CubicElement((0.,0.,0.), a)
+end
+
 function CubicElement(xe::Element1D, ye::Element1D, ze::Element1D)
     @assert elementsize(xe) == elementsize(ye) == elementsize(ze)
     center = SVector(getcenter(xe), getcenter(ye), getcenter(ze))
