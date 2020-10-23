@@ -1,5 +1,10 @@
 using TensorOperations
 using QuadGK
+using FiniteDifferences
+using Zygote
+using ForwardDiff
+
+
 
 
 function gaussiandensity_self_energy(rtol=1e-12)
@@ -85,7 +90,7 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
 end
 
 
-function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal)
+function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal, ae=1.0)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -97,7 +102,7 @@ function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal)
         error("Mode not known")
     end
 
-    ρ = density_tensor(ceg)
+    ρ = density_tensor(ceg; a=ae)
     V = coulomb_tensor(ρ, ct)
     V = V .+ coulomb_correction(ρ, tmax)
 
@@ -110,4 +115,42 @@ function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal)
     @info "True energy = $E_true"
     @info "Error = $(E-E_true) ; error/E = $( round((E-E_true)/E_true; sigdigits=1))"
     return E, E-E_true
+end
+
+function test_accuracy_ad(a, ne, ng, nt; tmax=25, mode=:normal, ae=1., h=1e-3)
+    function f(aa)
+        ceg = CubicElementGrid(a, ne, ng)
+        if mode == :normal
+            @info "Normal mode"
+            ct = CoulombTransformation(ceg, nt; tmax=tmax)
+        elseif mode == :log
+            @info "Logritmic mode"
+            ct = CoulombTransformationLog(ceg, nt; tmax=tmax)
+        else
+            error("Mode not known")
+        end
+        ρ = density_tensor(ceg; a=aa[1])
+        V = coulomb_tensor(ρ, Array(ct), Array(ct.wt))
+        V = V .+ coulomb_correction(ρ, tmax)
+        ω = ω_tensor(ceg)
+        cc = V.*ρ
+        E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
+        return E
+    end
+    g = x -> ForwardDiff.gradient(f, [x])[1];
+    a2 = ae+h
+    a1 = ae-h
+    E1 = f(a1)
+    E2 = f(a2)
+    d_num = (E2-E1)/(a2-a1)
+    @info "Numerical derivative=$d_num"
+    @info "Zygote forward mode"
+    zd_ad = Zygote.forwarddiff(f, ae)
+    @info "Zygote = $zd_ad"
+    @info "ForwardDiff"
+    fd_ad = g(ae)
+    @info "ForwardDiff = $fd_ad"
+    @info "Difference between AD methods = $(zd_ad-fd_ad)"
+    @info "Difference between ForwardDiff and numerical = $(fd_ad-d_num)"
+    return fd_ad, d_num
 end
