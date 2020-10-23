@@ -36,7 +36,7 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
                        δ=1.0,
                        μ=0)
     @info "Initializing elements and Gauss points"
-    eq = CubicElements(-cmax, cmax, n_elements)
+    eq = CubicElements(2cmax, n_elements)
 
     x, w = gausspoints(eq, n_gaussp)
     centers = getcenters(eq)
@@ -61,7 +61,7 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
     @info "Generating electron density tensor"
 
 
-    ρ = density_tensor(centers, x)
+    ρ = density_tensor_old(centers, x)
     V = coulomb_tensor(ρ, T, x, w, t, wt)
 
 
@@ -73,7 +73,35 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
 
 
     # Integraton weights fore elements + Gausspoints in tersor form
-    ω = hcat([w for i in 1:n_elements]...)
+    ω = hcat([Array(w) for i in 1:n_elements]...)
+
+    cc = V.*ρ
+    E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
+    E_true = 21.92474849998632 # = gaussiandensity_self_energy()[1]
+    @info "Calculated energy = $E"
+    @info "True energy = $E_true"
+    @info "Error = $(E-E_true) ; error/E = $( round((E-E_true)/E_true; sigdigits=1))"
+    return E, E-E_true
+end
+
+
+function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal)
+    ceg = CubicElementGrid(a, ne, ng)
+    if mode == :normal
+        @info "Normal mode"
+        ct = CoulombTransformation(ceg, nt; tmax=tmax)
+    elseif mode == :log
+        @info "Logritmic mode"
+        ct = CoulombTransformationLog(ceg, nt; tmax=tmax)
+    else
+        error("Mode not known")
+    end
+
+    ρ = density_tensor(ceg)
+    V = coulomb_tensor(ρ, ct)
+    V = V .+ coulomb_correction(ρ, tmax)
+
+    ω = ω_tensor(ceg)
 
     cc = V.*ρ
     E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]

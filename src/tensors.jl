@@ -2,26 +2,74 @@ using TensorOperations
 using ProgressMeter
 using OffsetArrays
 using SpecialFunctions
+using StaticArrays
 
 
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 
+abstract type AbstractCoulombTransformation <: AbtractTransformationTensor{5} end
 
-struct CoulombTransformation <: AbtractTransformationTensor{5}
-    elementgrid::CubicElementGrid
-    t::Vector{Float64}
-    wt::Vector{Float64}
-    function CoulombTransformation(elementgrid::CubicElementGrid, )
-        nothing
+
+struct CoulombTransformation{NT, NE, NG} <: AbstractCoulombTransformation
+    elementgrid::SMatrix{NG,NE}
+    t::SVector{NT}{Float64}
+    wt::SVector{NT}{Float64}
+    w::SVector{NG}{Float64}
+    function CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25.)
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = grid1d(ceg)
+        s = size(grid)
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w)
     end
 end
 
-
-
-function coulombtransformation(r,t)
-    return exp(-t^2*r^2)
+struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformation
+    elementgrid::SMatrix{NG,NE}
+    t::SVector{NT}{Float64}
+    wt::SVector{NT}{Float64}
+    w::SVector{NG}{Float64}
+    function CoulombTransformationLog(ceg::CubicElementGrid, nt::Int;
+                                   tmin=0., tmax=25., ε=1e-12)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        grid = grid1d(ceg)
+        ss = size(grid)
+        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w)
+    end
 end
 
+# Gerate basic operatios for transformation tensors
+for op in (:CoulombTransformation, :CoulombTransformationLog)
+
+    @eval (ct::$op)(r,t) = exp(-t^2*r^2)
+    @eval (ct::$op)(r,p::Int) = exp(-ct.t[p]^2*r^2)
+    @eval Base.size(::$op{NT,NE,NG}) where {NT,NE,NG} = (NG,NG,NE,NE,NT)
+
+    eval(quote
+        function Base.getindex(ct::$op, α::Int, β::Int, I::Int, J::Int, p::Int)
+            r = ct.elementgrid[α,I] - ct.elementgrid[β,J]
+            return ct.w[β]*ct(r, p)
+        end
+    end)
+end
+
+
+function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformation)
+    print(io, "Coulomb transformation tensor size=$(size(cct))")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLog)
+    print(io, "Coulomb transformation tensor logaritmic size=$(size(cct))")
+end
+
+
+
+function ω_tensor(ceg::CubicElementGrid)
+    n = size(ceg)[end]
+    l = length(ceg.w)
+    ω = reshape( repeat(ceg.w, n), l, n )
+end
 
 
 function transformation_tensor(elements, gpoints, w, nt::Int; tmax=20, tmin=0)
@@ -190,7 +238,7 @@ end
 
 
 
-function density_tensor(elements, gpoints)
+function density_tensor_old(elements, gpoints)
     ρ = similar(elements,
         length(gpoints),
         length(gpoints),
@@ -212,6 +260,10 @@ function density_tensor(elements, gpoints)
 end
 
 
+
+function density_tensor(grid::AbstractArray, r=SVector(0.,0.,0.), a=1.)
+    return [ exp(-a*sum( (x-r).^2 )) for x in grid ]
+end
 
 
 function density_tensor(elements, gpoints, r::AbstractVector)
@@ -242,6 +294,32 @@ function density_tensor(elements, gpoints, r::AbstractVector)
 end
 
 
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor)
+    V = similar(ρ)
+    V .= 0
+    v = similar(ρ)
+
+    @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(transtensor.wt))
+        T = transtensor[:,:,:,:,p]
+        @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
+        V = V .+ transtensor.wt[p].*v
+    end
+    return V
+end
+
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector)
+    @assert size(transtensor)[end] == length(wt)
+    V = similar(ρ)
+    V .= 0
+    v = similar(ρ)
+
+    @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
+        T = @view transtensor[:,:,:,:,p]
+        @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
+        V = V .+ wt[p].*v
+    end
+    return  V
+end
 
 function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt)
     @assert length(gpoints) == length(wgp)
@@ -263,3 +341,6 @@ function coulomb_tensor(ρ, transtensor, gpoints, wgp, t, wt)
     end
     return V
 end
+
+
+coulomb_correction(ρ, tmax) = (π/tmax^2).*ρ

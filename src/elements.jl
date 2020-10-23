@@ -31,7 +31,7 @@ end
 """
     CubicElements <: AbstractCubicElements
 
-Struct to hold finite element center locations
+Struct to hold cubic elements in cubic form.
 
 # Fields
 - `low`  : lowes value for element boundary
@@ -39,13 +39,12 @@ Struct to hold finite element center locations
 - `npoints` : number of elements per degree of freedom
 """
 struct CubicElements
-    low::Float64
-    high::Float64
+    a::Float64
     npoints::Int
-    function CubicElements(low, high, npoints::Int)
-        @assert high > low
-        @assert npoints > 0
-        new(low, high, npoints)
+    function CubicElements(a, npoints::Int)
+        @assert a > 0  "Element needs to have positive size"
+        @assert npoints > 0 "Number of elements needs to be more than zero"
+        new(a, npoints)
     end
 end
 
@@ -53,24 +52,23 @@ end
 
 struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
     elements::CubicElements
-    ngpoints::Int
     ecenters::SVector{NE}{Float64}
     gpoints::SVector{NG}{Float64}
     w::SVector{NG}{Float64}
     origin::SVector{3}{Float64}
-    function CubicElementGrid(elow, ehigh, nelements, ngpoints; origin=SVector(0.,0.,0.))
-        ce = CubicElements(elow, ehigh, nelements)
+    function CubicElementGrid(a, nelements::Int, ngpoints::Int; origin=SVector(0.,0.,0.))
+        ce = CubicElements(a, nelements)
         x, w = gausspoints(ce, ngpoints)
-        new{ngpoints, nelements}(ce, ngpoints, getcenters(ce), x, w, origin)
+        new{ngpoints, nelements}(ce, getcenters(ce), x, w, origin)
     end
 end
 
-function Base.show(io::IO, ceg::CubicElementGrid)
-    print(io, "Cubic elements grid with $(size(ceg.elements)[1])^3 elements and $(ceg.ngpoints)^3 Gauss points")
+function Base.show(io::IO, ceg::CubicElementGrid{NG,NE}) where {NG,NE}
+    print(io, "Cubic elements grid with $(NE)^3 elements and $(NG)^3 Gauss points")
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ceg::CubicElementGrid)
-    print(io, "Cubic elements grid with $(size(ceg.elements)[1])^3 elements and $(ceg.ngpoints)^3 Gauss points")
+function Base.show(io::IO, ::MIME"text/plain", ceg::CubicElementGrid{NG, NE}) where {NG,NE}
+    print(io, "Cubic elements grid with $(NE)^3 elements and $(NG)^3 Gauss points")
 end
 
 function Base.show(io::IO, ce::CubicElements)
@@ -80,8 +78,8 @@ end
 
 Base.size(ce::CubicElements) = (ce.npoints, ce.npoints, ce.npoints)
 
-function Base.size(c::CubicElementGrid)
-    return ((c.ngpoints, c.ngpoints, c.ngpoints)..., size(c.elements)...)
+function Base.size(c::CubicElementGrid{NG,NE}) where {NG, NE}
+    return (NG, NG, NG, NE, NE, NE)
 end
 
 
@@ -94,7 +92,7 @@ end
 function Base.getindex(ce::CubicElements, i::Int)
     @assert i <= ce.npoints && i > 0
     s = elementsize(ce)
-    low = ce.low+(i-1)*s
+    low = -0.5ce.a+(i-1)*s
     return Element1D(low, low+s)
 end
 
@@ -103,7 +101,7 @@ function Base.getindex(ce::CubicElements, I, J, K)
 end
 
 
-elementsize(ce::CubicElements) = (ce.high - ce.low)/ce.npoints
+elementsize(ce::CubicElements) = ce.a/ce.npoints
 elementsize(e::Element1D) = e.high - e.low
 
 getcenter(e::Element1D) = 0.5*(e.high + e.low)
@@ -111,6 +109,7 @@ getcenter(e::Element1D) = 0.5*(e.high + e.low)
 xgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg.ecenters ])
 ygrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg.ecenters ])
 zgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[3] for x in ceg.gpoints, X in ceg.ecenters ])
+grid1d(ceg::CubicElementGrid) = SMatrix([x+X for x in ceg.gpoints, X in ceg.ecenters ])
 
 function getcenters(ce::CubicElements)
     return [ getcenter(ce[i]) for i ∈ 1:ce.npoints]
@@ -131,21 +130,4 @@ end
 function gausspoints(ce::CubicElements, npoints::Int)
     s = elementsize(ce)/2
     return gausspoints(npoints; elementsize=(-s, s))
-end
-
-function gausspoints3d(x::AbstractVector, w::AbstractVector)
-    xyz = collect(Base.Iterators.product(x,x,x))
-    ww = zeros(n,n,n)
-    for i ∈ 1:n
-        for j ∈ 1:n
-            for k ∈ 1:n
-                ww[i,j,k] = w[i] * w[j] * w[k]
-            end
-        end
-    end
-    return xyz, ww
-end
-
-function gausspoints3d(n; elementsize=(-1.0, 1.0))
-    return gausspoints3d( gausspoints(n; elementsize=elementsize) )
 end

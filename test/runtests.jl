@@ -7,7 +7,9 @@ using Test
     @test ce[1,2,3][3] == ce[1,4,3][3]
     @test ce[2,1,3] != ce[1,2,3]
 
-    eg = CubicElementGrid(-10,10, 4, 16)
+    eg = CubicElementGrid(10, 4, 16)
     @test size(eq) == (16,16,16,4,4,4)
 
 end
+
+@testset "Tensors" begin
