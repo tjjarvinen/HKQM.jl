@@ -10,7 +10,6 @@ export AbstractElementGrid,
        elementsize,
        gaussiandensity_self_energy,
        gausspoints,
-       xgrid,
        getcenter,
        getcenters,
        self_energy,
@@ -18,7 +17,10 @@ export AbstractElementGrid,
        transformation_tensor,
        transformation_tensor_alt,
        transformation_harrison,
-       transformation_tensor_alt
+       transformation_tensor_alt,
+       xgrid,
+       ygrid,
+       zgrid
 
 
 include("elements.jl")

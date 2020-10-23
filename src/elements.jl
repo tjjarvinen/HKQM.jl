@@ -4,7 +4,7 @@ using StaticArrays
 
 abstract type AbstractElement{Dims} end
 
-abstract type AbstractElementGrid{N} <: AbstractArray{Tuple{Float64,Float64,Float64}, N} end
+abstract type AbstractElementGrid{N} <: AbstractArray{SVector{3,Float64}, N} end
 
 
 struct Element1D <: AbstractElement{1}
@@ -57,10 +57,11 @@ struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
     ecenters::SVector{NE}{Float64}
     gpoints::SVector{NG}{Float64}
     w::SVector{NG}{Float64}
-    function CubicElementGrid(elow, ehigh, nelements, ngpoints)
+    origin::SVector{3}{Float64}
+    function CubicElementGrid(elow, ehigh, nelements, ngpoints; origin=SVector(0.,0.,0.))
         ce = CubicElements(elow, ehigh, nelements)
         x, w = gausspoints(ce, ngpoints)
-        new{ngpoints, nelements}(ce, ngpoints, getcenters(ce), x, w)
+        new{ngpoints, nelements}(ce, ngpoints, getcenters(ce), x, w, origin)
     end
 end
 
@@ -87,7 +88,7 @@ end
 Base.length(ce::CubicElements) = ce.npoints
 
 function Base.getindex(c::CubicElementGrid, i::Int,j::Int,k::Int, I::Int,J::Int,K::Int)
-    return (c.ecenters[I]+c.gpoints[i], c.ecenters[J]+c.gpoints[j], c.ecenters[K]+c.gpoints[k] )
+    return SVector(c.ecenters[I]+c.gpoints[i], c.ecenters[J]+c.gpoints[j], c.ecenters[K]+c.gpoints[k] )
 end
 
 function Base.getindex(ce::CubicElements, i::Int)
@@ -107,7 +108,9 @@ elementsize(e::Element1D) = e.high - e.low
 
 getcenter(e::Element1D) = 0.5*(e.high + e.low)
 
-get1dgrid(ceg::CubicElementGrid) = SMatrix([x+X for x in ceg.gpoints, X in ceg.ecenters ])
+xgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg.ecenters ])
+ygrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg.ecenters ])
+zgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[3] for x in ceg.gpoints, X in ceg.ecenters ])
 
 function getcenters(ce::CubicElements)
     return [ getcenter(ce[i]) for i ∈ 1:ce.npoints]
