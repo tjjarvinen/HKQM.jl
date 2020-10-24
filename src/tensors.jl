@@ -54,13 +54,23 @@ struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSi
     tmin::Float64
     tmax::Float64
     δ::Float64
+    δp::SMatrix{NG,NE}
+    δm::SMatrix{NG,NE}
     function CoulombTransformationLocal(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., δ=1e-4)
-        @assert δ > 0 "δ parameter needs to be > 0"
+                                   tmin=0., tmax=25., δ=0.1)
+        @assert 0 < δ <= 1
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         grid = grid1d(ceg)
         s = size(grid)
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, δ)
+        δp = zeros(s...)
+        δm = zeros(s...)
+        δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
+        δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
+        for j in 1:s[2]
+            δm[1,j] = ceg.elements[j].low - grid[1,j]
+            δp[end,j] = ceg.elements[j].high - grid[end,j]
+        end
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, δ, δ.*δp, δ.*δm)
     end
 end
 
@@ -75,6 +85,13 @@ mutable struct CoulombTransformationCombination{NE, NG} <: AbstractCoulombTransf
     end
 end
 
+function CoulombTransformationCombination(t...)
+    ct = CoulombTransformationCombination(t[1])
+    for x ∈ t[2:end]
+        push!(ct,x)
+    end
+    return ct
+end
 
 (ct::AbstractCoulombTransformation)(r,t) = exp(-t^2*r^2)
 (ct::AbstractCoulombTransformationSingle)(r,p::Int) = exp(-ct.t[p]^2*r^2)
@@ -110,6 +127,14 @@ end
 function Base.getindex(ct::AbstractCoulombTransformationSingle, α::Int, β::Int, I::Int, J::Int, p::Int)
     r = ct.elementgrid[α,I] - ct.elementgrid[β,J]
     return ct.w[β]*ct(r, p)
+end
+
+function Base.getindex(ct::CoulombTransformationLocal, α::Int, β::Int, I::Int, J::Int, p::Int)
+    r = abs(ct.elementgrid[α,I] - ct.elementgrid[β,J])
+    δ = min(abs(ct.δp[α,I]-ct.δm[β,J]), abs(ct.δm[α,I]-ct.δp[β,J]))
+    rmax = (r+δ)*ct.t[p]
+    rmin = (r-δ)*ct.t[p]
+    return ct.w[β]*0.5*√π*erf(rmin, rmax)/(rmax-rmin)
 end
 
 function Base.getindex(ct::CoulombTransformationCombination, α::Int, β::Int, I::Int, J::Int, p::Int)
@@ -150,6 +175,14 @@ function ω_tensor(ceg::CubicElementGrid)
     l = length(ceg.w)
     ω = reshape( repeat(ceg.w, n), l, n )
 end
+
+
+function integrate(ϕ, grid::CubicElementGrid, ψ)
+    ω = ω_tensor(grid)
+    c = ϕ.*ψ
+    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
+end
+
 
 
 function transformation_tensor(elements, gpoints, w, nt::Int; tmax=20, tmin=0)
@@ -376,7 +409,7 @@ function density_tensor(elements, gpoints, r::AbstractVector)
 end
 
 
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor)
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor; tmax=nothing)
     V = similar(ρ)
     V .= 0
     v = similar(ρ)
@@ -386,10 +419,13 @@ function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTen
         @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
         V = V .+ transtensor.wt[p].*v
     end
+    if tmax != nothing
+        V = V .+ coulomb_correction(ρ, tmax)
+    end
     return V
 end
 
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector)
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector; tmax=nothing)
     @assert size(transtensor)[end] == length(wt)
     V = similar(ρ)
     V .= 0
@@ -399,6 +435,9 @@ function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::Abstr
         T = @view transtensor[:,:,:,:,p]
         @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
         V = V .+ wt[p].*v
+    end
+    if tmax != nothing
+        V = V .+ coulomb_correction(ρ, tmax)
     end
     return  V
 end
