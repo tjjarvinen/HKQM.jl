@@ -9,25 +9,32 @@ abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 
 abstract type AbstractCoulombTransformation <: AbtractTransformationTensor{5} end
 
+abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulombTransformation where {NT, NE, NG} end
+abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
 
-struct CoulombTransformation{NT, NE, NG} <: AbstractCoulombTransformation
+
+struct CoulombTransformation{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
     wt::SVector{NT}{Float64}
     w::SVector{NG}{Float64}
+    tmin::Float64
+    tmax::Float64
     function CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25.)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         grid = grid1d(ceg)
         s = size(grid)
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w)
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax)
     end
 end
 
-struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformation
+struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
     wt::SVector{NT}{Float64}
     w::SVector{NG}{Float64}
+    tmin::Float64
+    tmax::Float64
     function CoulombTransformationLog(ceg::CubicElementGrid, nt::Int;
                                    tmin=0., tmax=25., ε=1e-12)
         s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
@@ -35,23 +42,90 @@ struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformation
         wt = ws .* t
         grid = grid1d(ceg)
         ss = size(grid)
-        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w)
+        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax)
     end
 end
 
-# Gerate basic operatios for transformation tensors
-for op in (:CoulombTransformation, :CoulombTransformationLog)
+struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+    elementgrid::SMatrix{NG,NE}
+    t::SVector{NT}{Float64}
+    wt::SVector{NT}{Float64}
+    w::SVector{NG}{Float64}
+    tmin::Float64
+    tmax::Float64
+    δ::Float64
+    function CoulombTransformationLocal(ceg::CubicElementGrid, nt::Int;
+                                   tmin=0., tmax=25., δ=1e-4)
+        @assert δ > 0 "δ parameter needs to be > 0"
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = grid1d(ceg)
+        s = size(grid)
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, δ)
+    end
+end
 
-    @eval (ct::$op)(r,t) = exp(-t^2*r^2)
-    @eval (ct::$op)(r,p::Int) = exp(-ct.t[p]^2*r^2)
-    @eval Base.size(::$op{NT,NE,NG}) where {NT,NE,NG} = (NG,NG,NE,NE,NT)
+mutable struct CoulombTransformationCombination{NE, NG} <: AbstractCoulombTransformationCombination
+    tensors::Vector{AbstractCoulombTransformation}
+    ref::Vector{Int}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    function CoulombTransformationCombination(ct::AbstractCoulombTransformationSingle)
+        s = size(ct)
+        new{s[3], s[2]}([ct], ones(s[end]), ct.t, ct.wt)
+    end
+end
 
-    eval(quote
-        function Base.getindex(ct::$op, α::Int, β::Int, I::Int, J::Int, p::Int)
-            r = ct.elementgrid[α,I] - ct.elementgrid[β,J]
-            return ct.w[β]*ct(r, p)
-        end
-    end)
+
+(ct::AbstractCoulombTransformation)(r,t) = exp(-t^2*r^2)
+(ct::AbstractCoulombTransformationSingle)(r,p::Int) = exp(-ct.t[p]^2*r^2)
+
+function (ct::CoulombTransformationLocal)(r,t)
+    rmax = (r+ct.δ)*t
+    rmin = (r-ct.δ)*t
+    return 0.5*√π*erf(rmin, rmax)/(rmax-rmin)
+end
+
+function (ct::CoulombTransformationLocal)(r,p::Int)
+    rmax = (r+ct.δ)*ct.t[p]
+    rmin = (r-ct.δ)*ct.t[p]
+    return 0.5*√π*erf(rmin, rmax)/(rmax-rmin)
+end
+
+function (ct::CoulombTransformationCombination)(r,p::Int)
+    i = ct.ref[p]
+    return ct.tensors[i](r, ct.t[p])
+end
+
+function Base.size(ct::AbstractCoulombTransformationSingle)
+    ng, ne = size(ct.elementgrid)
+    nt = length(ct.t)
+    return (ng,ng,ne,ne,nt)
+end
+
+function Base.size(ct::CoulombTransformationCombination{NE,NG}) where {NE,NG}
+    nt = length(ct.ref)
+    return (NG,NG,NE,NE,nt)
+end
+
+function Base.getindex(ct::AbstractCoulombTransformationSingle, α::Int, β::Int, I::Int, J::Int, p::Int)
+    r = ct.elementgrid[α,I] - ct.elementgrid[β,J]
+    return ct.w[β]*ct(r, p)
+end
+
+function Base.getindex(ct::CoulombTransformationCombination, α::Int, β::Int, I::Int, J::Int, p::Int)
+    i = ct.ref[p]
+    r = ct.tensors[i].elementgrid[α,I] - ct.tensors[i].elementgrid[β,J]
+    return ct.tensors[i].w[β]*ct(r, p)
+end
+
+function  Base.push!(ctc::CoulombTransformationCombination{NE,NG},
+            tt::AbstractCoulombTransformationSingle{NT,NE,NG}) where {NT,NE,NG}
+    @assert ctc.tensors[end].tmax <= tt.tmin
+    push!(ctc.tensors,tt)
+    ctc.ref = vcat(ctc.ref, ones(NT).*length(ctc.tensors))
+    ctc.t = vcat( ctc.t, tt.t)
+    ctc.wt = vcat( ctc.wt, tt.wt)
+    return ctc
 end
 
 
@@ -63,7 +137,13 @@ function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLog)
     print(io, "Coulomb transformation tensor logaritmic size=$(size(cct))")
 end
 
+function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLocal)
+    print(io, "Coulomb transformation tensor local means size=$(size(cct))")
+end
 
+function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationCombination)
+    print(io, "Coulomb transformation combination tensor size=$(size(cct))")
+end
 
 function ω_tensor(ceg::CubicElementGrid)
     n = size(ceg)[end]

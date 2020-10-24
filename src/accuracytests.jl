@@ -1,6 +1,5 @@
 using TensorOperations
 using QuadGK
-using FiniteDifferences
 using Zygote
 using ForwardDiff
 
@@ -90,7 +89,7 @@ function test_accuracy(n_elements, n_gaussp, n_tpoints;
 end
 
 
-function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal, ae=1.0)
+function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal, ae=1.0, δ=1e-4)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -98,6 +97,9 @@ function test_accuracy_new(a, ne, ng, nt; tmax=25, mode=:normal, ae=1.0)
     elseif mode == :log
         @info "Logritmic mode"
         ct = CoulombTransformationLog(ceg, nt; tmax=tmax)
+    elseif mode == :local
+        @info "Local mode"
+        ct = CoulombTransformationLocal(ceg, nt; tmax=tmax, δ=δ)
     else
         error("Mode not known")
     end
