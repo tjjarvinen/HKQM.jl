@@ -1,17 +1,38 @@
 module CoulombIntegral
 
-export CubicElements,
+export AbstractElementGrid,
+       CubicElementGrid,
+       CubicElement,
+       CubicElements,
+       coulomb_correction,
        coulomb_tensor,
+       CoulombTransformation,
+       CoulombTransformationCombination,
+       CoulombTransformationLocal,
+       CoulombTransformationLog,
+       CoulombTransformationLogLocal,
+       coulombtransformation,
+       Element1D,
        elementsize,
        gaussiandensity_self_energy,
        gausspoints,
+       getcenter,
        getcenters,
+       grid1d,
+       integrate,
+       loglocalct,
        self_energy,
        test_accuracy,
+       test_accuracy_new,
+       test_accuracy_ad,
        transformation_tensor,
        transformation_tensor_alt,
        transformation_harrison,
-       transformation_tensor_alt
+       transformation_tensor_alt,
+       xgrid,
+       ygrid,
+       zgrid,
+       ω_tensor
 
 
 include("elements.jl")
