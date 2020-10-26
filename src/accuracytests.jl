@@ -132,9 +132,9 @@ function test_accuracy_new(ceg::CubicElementGrid, ct::AbstractCoulombTransformat
     @info "Total Energy (reference) = $E_tot"
     @info "Integration error = $(round((E_int-E_true); sigdigits=2)) ; error/E = $( round((E_int-E_true)/E_true; sigdigits=2))"
     @info "Integration error relative to total energy = $( round((E_int-E_true)/E_tot; sigdigits=2))"
-    @info "Error to total energy error/E_tot = $(round((E-E_tot)/E_tot; sigdigits=2))"
     @info "Tail energy = $(round(E_tail; sigdigits=2)) ; E_tail/E_tot = $(round(E_tail/E_tot; sigdigits=2))"
     @info "Energy correction = $(round(E_cor; sigdigits=2))  ; (E_cor-E_tail)/E = $(round((E_cor-E_tail)/E_tot;sigdigits=2))"
+    @info "Error to total energy error/E_tot = $(round((E-E_tot)/E_tot; sigdigits=2))"
     return E
 end
 
