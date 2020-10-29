@@ -2,6 +2,7 @@ using TensorOperations
 using QuadGK
 using Zygote
 using ForwardDiff
+using StaticArrays
 
 
 
@@ -71,8 +72,10 @@ function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
                             α1=1, α2=1, d=0, correction=true)
     tmin = ct.tmin
     tmax = ct.tmax
-    ρ1 = density_tensor(ceg; a=α1)
-    ρ2 = density_tensor(ceg; a=α2)
+    r1 = SVector(0.5d, 0., 0.)
+    r2 = SVector(-0.5d, 0., 0.)
+    ρ1 = density_tensor(ceg; a=α1, r=r1)
+    ρ2 = density_tensor(ceg; a=α2, r=r2)
     V = coulomb_tensor(ρ1, ct)
 
     E_cor = integrate(ρ2, ceg, coulomb_correction(ρ1, tmax))
