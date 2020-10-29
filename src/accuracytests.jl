@@ -7,9 +7,21 @@ using ForwardDiff
 
 
 function gaussiandensity_self_energy(rtol=1e-12; tmin=0, tmax=Inf)
-    _f(x) = (π/sqrt(2x^2+1))^3
-    return quadgk(_f, tmin, tmax, rtol=rtol)
+    _f(x) = 1/(2x^2+1)^(3//2)
+    return 2π^(5//2).*quadgk(_f, tmin, tmax, rtol=rtol)
 end
+
+
+function gaussian_coulomb_integral(a₁=1, a₂=1,  d=0; rtol=1e-12, tmin=0, tmax=Inf)
+    @assert a₁>0
+    @assert a₂>0
+    function _f(t; a₁= a₁, a₂=a₂, d=d)
+        c = (a₁+a₂)*t^2 +  a₁*a₂
+        return exp(-( a₁*a₂/c)*t^2*d^2)/c^(3//2)
+    end
+    return 2π^(5//2).*quadgk(_f, tmin, tmax, rtol=rtol)
+end
+
 
 """
     test_accuracy(a::Real, ne::Int, ng::Int, nt::Int; kwords) -> Float64
@@ -31,7 +43,7 @@ Test accuracy on Gaussian charge distribution self energy.
 - `tboundary=20`      : Parameter for `:combination` mode. Switch to `:loglocal` for t>`tboundary` else use `:log`
 """
 function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
-     tmax=25, tmin=0, mode=:normal, δ=0.25, correction=true, tboundary=20)
+     tmax=25, tmin=0, mode=:normal, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0)
     ae=1.0
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
@@ -52,26 +64,27 @@ function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
     else
         error("Mode not known")
     end
-    test_accuracy(ceg, ct; correction=correction, ae=ae)
+    test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d)
 end
 
 function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
-                            ae=1.0, correction=true)
+                            α1=1, α2=1, d=0, correction=true)
     tmin = ct.tmin
     tmax = ct.tmax
-    ρ = density_tensor(ceg; a=ae)
-    V = coulomb_tensor(ρ, ct)
+    ρ1 = density_tensor(ceg; a=α1)
+    ρ2 = density_tensor(ceg; a=α2)
+    V = coulomb_tensor(ρ1, ct)
 
-    E_cor = integrate(ρ, ceg, coulomb_correction(ρ, tmax))
-    E_int = integrate(ρ, ceg, V)
-    E_tail = gaussiandensity_self_energy(;tmin=tmax)[1]
-    E_true = gaussiandensity_self_energy(;tmin=tmin, tmax=tmax)[1]
+    E_cor = integrate(ρ2, ceg, coulomb_correction(ρ1, tmax))
+    E_int = integrate(ρ2, ceg, V)
+    E_tail = gaussian_coulomb_integral(α1, α2, d;tmin=tmax)[1]
+    E_true = gaussian_coulomb_integral(α1, α2, d;tmin=tmin, tmax=tmax)[1]
     if correction
         E = E_int + E_cor
     else
         E = E_int
     end
-    E_tot = gaussiandensity_self_energy()[1]
+    E_tot = gaussian_coulomb_integral(α1, α2, d)[1]
     @info "Calculated energy = $E"
     @info "True inregration energy = $E_true"
     @info "Total Energy (reference) = $E_tot"
