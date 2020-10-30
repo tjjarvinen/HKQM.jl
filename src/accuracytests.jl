@@ -23,6 +23,20 @@ function gaussian_coulomb_integral(a₁=1, a₂=1,  d=0; rtol=1e-12, tmin=0, tma
     return 2π^(5//2).*quadgk(_f, tmin, tmax, rtol=rtol)
 end
 
+function gaussian_coulomb_integral_grad(a₁=1, a₂=1,  d=0; rtol=1e-12, tmin=0, tmax=Inf)
+    function eri_ssss(x)
+        a1 = x[1]
+        a2 = x[2]
+        d = x[3]
+        boys(x; n=0) = quadgk( t-> t^(2n)*exp(-x[1]*t^2), 0, 1; rtol=1e-13)[1]
+        θ = a1*a2/(a1+a2)
+        F₀=boys(θ*d^2)
+        return 2π^(5//2)*sqrt(θ)*F₀/(a1*a2)^(3//2)
+    end
+    h(x)=Zygote.gradient( z->Zygote.forwarddiff(eri_ssss, z), x)[1]
+    return h( [Float64(a₁), Float64(a₂), Float64(d)])
+end
+
 
 """
     test_accuracy(a::Real, ne::Int, ng::Int, nt::Int; kwords) -> Float64
@@ -36,16 +50,18 @@ Test accuracy on Gaussian charge distribution self energy.
 - `nt::Int`   : Number of Gausspoints per dimension for t
 
 # Keywords
-- `tmax=25`      : Maximum t-value for integration
-- `tmin=0`       : Minimum t-value for integration
-- `mode=:normal` : Integration type - options `:normal`, `:log`, `loglocal`, `:local` and `:combination`
-- `δ=0.25`       : Localization parameter for local integration types
+- `tmax=300`          : Maximum t-value for integration
+- `tmin=0`            : Minimum t-value for integration
+- `mode=:combination` : Integration type - options `:normal`, `:log`, `loglocal`, `:local` and `:combination`
+- `δ=0.25`            : Localization parameter for local integration types
 - `correction=true`   : Correction to `tmax`-> ∞ integration - `true` calculate correction, `false` do not calculate
 - `tboundary=20`      : Parameter for `:combination` mode. Switch to `:loglocal` for t>`tboundary` else use `:log`
+- `α1=1`              : 1st Gaussian is exp(-α1*r^2)
+- `α2=1`              : 2nd Gaussian is exp(-α2*r^2)
+- `d=0`               : Distance between two Gaussian centers
 """
 function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
-     tmax=25, tmin=0, mode=:normal, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0)
-    ae=1.0
+     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -99,40 +115,34 @@ function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
     return E
 end
 
-function test_accuracy_ad(a, ne, ng, nt; tmax=25, mode=:normal, ae=1., h=1e-3)
-    function f(aa)
-        ceg = CubicElementGrid(a, ne, ng)
-        if mode == :normal
-            @info "Normal mode"
-            ct = CoulombTransformation(ceg, nt; tmax=tmax)
-        elseif mode == :log
-            @info "Logritmic mode"
-            ct = CoulombTransformationLog(ceg, nt; tmax=tmax)
-        else
-            error("Mode not known")
-        end
-        ρ = density_tensor(ceg; a=aa[1])
-        V = coulomb_tensor(ρ, Array(ct), Array(ct.wt))
-        V = V .+ coulomb_correction(ρ, tmax)
-        ω = ω_tensor(ceg)
-        cc = V.*ρ
-        E = @tensor ω[α,I]*ω[β,J]*ω[γ,K]*cc[α,β,γ,I,J,K]
-        return E
+function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0, δ=0.25)
+    ceg = CubicElementGrid(a, ne, ng)
+    ct = loglocalct(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
+    return test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=α1, α2=α2, d=d)
+end
+
+
+function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=1, α2=1, d=0)
+    function f(x)
+        tmin = ct.tmin
+        tmax = ct.tmax
+        r1 = SVector(0.5x[3], 0., 0.)
+        r2 = SVector(-0.5x[3], 0., 0.)
+        ρ1 = density_tensor(ceg; a=x[1], r=r1)
+        ρ2 = density_tensor(ceg; a=x[2], r=r2)
+        V = coulomb_tensor(Array(ρ1), Array(ct), Array(ct.wt); tmax=tmax)
+        return integrate(ρ2, ceg, V)
     end
-    g = x -> ForwardDiff.gradient(f, [x])[1];
-    a2 = ae+h
-    a1 = ae-h
-    E1 = f(a1)
-    E2 = f(a2)
-    d_num = (E2-E1)/(a2-a1)
-    @info "Numerical derivative=$d_num"
+    x = [Float64(α1), Float64(α2), Float64(d)]
     @info "Zygote forward mode"
-    zd_ad = Zygote.forwarddiff(f, ae)
-    @info "Zygote = $zd_ad"
-    @info "ForwardDiff"
-    fd_ad = g(ae)
-    @info "ForwardDiff = $fd_ad"
-    @info "Difference between AD methods = $(zd_ad-fd_ad)"
-    @info "Difference between ForwardDiff and numerical = $(fd_ad-d_num)"
-    return fd_ad, d_num
+    g = Zygote.gradient( z->Zygote.forwarddiff(f, z), x)[1]
+    #@info "ForwardDiff"
+    #gf = x -> ForwardDiff.gradient(f, x)
+    #fd = gf(x)
+    g_ref = gaussian_coulomb_integral_grad(α1, α2, d)
+    @info "Zygote gradient $g"
+    #@info "ForwardDiff $fd"
+    @info "Analytic $g_ref"
+    @info "Relative error  $( round.((g.-g_ref)./g_ref; sigdigits=2))"
+    return (g, g_ref, gn)
 end
