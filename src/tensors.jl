@@ -260,7 +260,7 @@ function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTen
     if tmax != nothing
         V = V .+ coulomb_correction(ρ, tmax)
     end
-    return V
+    return 2/sqrt(π).*V
 end
 
 function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector; tmax=nothing)
@@ -277,8 +277,8 @@ function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::Abstr
     if tmax != nothing
         V = V .+ coulomb_correction(ρ, tmax)
     end
-    return  V
+    return  2/sqrt(π).*V
 end
 
 
-coulomb_correction(ρ, tmax) = (π/tmax^2).*ρ
+coulomb_correction(ρ, tmax) = 2/sqrt(π)*(π/tmax^2).*ρ
