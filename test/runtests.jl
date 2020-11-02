@@ -18,6 +18,7 @@ end
 end
 
 @testset "Forward mode AD" begin
-    d = test_accuracy_ad(10, 4, 16, 16; mode=:log, ae=1.3)
-    @test abs(d[1] - d[2]) < 1e-3
+    d = test_accuracy_ad(10, 4, 16, 96; α1=1.3, α2=0.8, d=0.5)
+    # Grid resolution is small so not very accurate
+    @test all(abs.(d[1] .- d[2])./d[2] .< 1e-2)
 end

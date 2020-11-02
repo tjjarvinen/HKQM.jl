@@ -140,9 +140,9 @@ function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformati
     #gf = x -> ForwardDiff.gradient(f, x)
     #fd = gf(x)
     g_ref = gaussian_coulomb_integral_grad(α1, α2, d)
-    @info "Zygote gradient $g"
+    @info "Zygote forward mode gradient $g"
     #@info "ForwardDiff $fd"
     @info "Analytic $g_ref"
     @info "Relative error  $( round.((g.-g_ref)./g_ref; sigdigits=2))"
-    return (g, g_ref, gn)
+    return (g, g_ref)
 end
