@@ -20,11 +20,13 @@ struct CoulombTransformation{NT, NE, NG} <: AbstractCoulombTransformationSingle{
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
-    function CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25.)
+    k::Float64
+    function CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25., k=0.)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         grid = grid1d(ceg)
         s = size(grid)
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
     end
 end
 
@@ -35,14 +37,16 @@ struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformationSing
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
+    k::Float64
     function CoulombTransformationLog(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., ε=1e-12)
+                                   tmin=0., tmax=25., ε=1e-12, k=0.)
         s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
         t = exp.(s)
         wt = ws .* t
         grid = grid1d(ceg)
         ss = size(grid)
-        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
     end
 end
 
@@ -53,11 +57,12 @@ struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationLo
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
+    k::Float64
     δ::Float64
     δp::SMatrix{NG,NE}
     δm::SMatrix{NG,NE}
     function CoulombTransformationLocal(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., δ=0.25)
+                                   tmin=0., tmax=25., δ=0.25, k=0.)
         @assert 0 < δ <= 1
         @assert 0 <= tmin < tmax
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
@@ -71,7 +76,8 @@ struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationLo
             δm[1,j] = ceg.elements[j].low - grid[1,j]
             δp[end,j] = ceg.elements[j].high - grid[end,j]
         end
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, δ, δ.*δp, δ.*δm)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
 end
 
@@ -82,11 +88,12 @@ struct CoulombTransformationLogLocal{NT, NE, NG} <: AbstractCoulombTransformatio
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
+    k::Float64
     δ::Float64
     δp::SMatrix{NG,NE}
     δm::SMatrix{NG,NE}
     function CoulombTransformationLogLocal(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., δ=0.25, ε=1e-12)
+                                   tmin=0., tmax=25., δ=0.25, ε=1e-12, k=0.)
         @assert 0 < δ <= 1
         @assert 0 <= tmin < tmax
         s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
@@ -103,7 +110,8 @@ struct CoulombTransformationLogLocal{NT, NE, NG} <: AbstractCoulombTransformatio
             δm[1,j] = ceg.elements[j].low - grid[1,j]
             δp[end,j] = ceg.elements[j].high - grid[end,j]
         end
-        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, δ, δ.*δp, δ.*δm)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
 end
 
@@ -115,9 +123,10 @@ mutable struct CoulombTransformationCombination{NE, NG} <: AbstractCoulombTransf
     tmin::Float64
     tmax::Float64
     tindex::Vector{Int}
+    k::Float64
     function CoulombTransformationCombination(ct::AbstractCoulombTransformationSingle)
         s = size(ct)
-        new{s[3], s[2]}([ct], ones(s[end]), ct.t, ct.wt, ct.tmin, ct.tmax, 1:length(ct.t))
+        new{s[3], s[2]}([ct], ones(s[end]), ct.t, ct.wt, ct.tmin, ct.tmax, 1:length(ct.t), ct.k)
     end
 end
 
@@ -129,13 +138,13 @@ function CoulombTransformationCombination(t...)
     return ct
 end
 
-function loglocalct(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=300, tboundary=20, ε=1e-12)
+function loglocalct(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=300, tboundary=20, ε=1e-12, k=0.)
     @assert 0 < tboundary < tmax
     s, ws = gausspoints(nt; elementsize=(log(ε), log(tmax)))
     t = exp.(s)
     l = length(t[t .< tboundary])
-    ct1 = CoulombTransformationLog(ceg, l, tmax=tboundary, ε=ε)
-    ct2 = CoulombTransformationLogLocal(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ)
+    ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, ε=ε, k=k)
+    ct2 = CoulombTransformationLogLocal(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ, k=k)
     return CoulombTransformationCombination(ct1,ct2)
 end
 
@@ -193,6 +202,7 @@ end
 function  Base.push!(ctc::CoulombTransformationCombination{NE,NG},
             tt::AbstractCoulombTransformationSingle{NT,NE,NG}) where {NT,NE,NG}
     @assert ctc.tensors[end].tmax <= tt.tmin
+    @assert ctc.k == tt.k
     push!(ctc.tensors,tt)
     ctc.ref = vcat(ctc.ref, ones(NT).*length(ctc.tensors))
     ctc.t = vcat( ctc.t, tt.t)

@@ -14,6 +14,9 @@ end
 @testset "Tensors" begin
     ceg = CubicElementGrid(10, 4, 16)
     ct = CoulombTransformation(ceg, 16)
+    clog = CoulombTransformationLog(ceg, 16)
+    ca = CoulombTransformationLocal(ceg, 16)
+    cll  = CoulombTransformationLogLocal(ceg, 16)
     @test size(ct) == (16,16,4,4,16)
 end
 
