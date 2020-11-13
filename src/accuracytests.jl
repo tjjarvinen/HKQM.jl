@@ -149,7 +149,7 @@ function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformati
 end
 
 
-##
+##  Kinetic energy tests
 
 function hermite_polynomial(ν)
     if ν == 0
