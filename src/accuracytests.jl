@@ -3,6 +3,7 @@ using QuadGK
 using Zygote
 using ForwardDiff
 using StaticArrays
+using LinearAlgebra
 
 
 
@@ -145,4 +146,58 @@ function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformati
     @info "Analytic $g_ref"
     @info "Relative error  $( round.((g.-g_ref)./g_ref; sigdigits=2))"
     return (g, g_ref)
+end
+
+
+##
+
+function hermite_polynomial(ν)
+    if ν == 0
+        return Polynomial([1])
+    elseif ν == 1
+        return Polynomial([0, 2])
+    else
+        p1 = Polynomial([0,2])*hermite_polynomial(ν-1)
+        p2 = 2(ν-1)*hermite_polynomial(ν-2)
+        return p1 - p2
+    end
+end
+
+
+struct HarmonicEigenstate
+    ν::Int
+    α::Float64
+    ω::Float64
+    N::Float64
+    hp::Polynomial{Int}
+    function HarmonicEigenstate(ν::Int; ω=1)
+        α = 1/sqrt(ω)
+        hp = hermite_polynomial(ν)
+        N = (2^ν*factorial(ν)*sqrt(π)*α)^(-1//2)
+        new(ν, α, ω, N, hp)
+    end
+end
+
+function (HE::HarmonicEigenstate)(v)
+    r = norm(v)/HE.α
+    xyz = v./HE.α
+    l = length(v)
+    return HE.N^l*prod(HE.hp, xyz)*exp(-0.5*r^2)
+end
+
+function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
+    ceg = CubicElementGrid(a, ne, ng)
+
+    dt = DerivativeTensor(ceg)
+
+    dtt = Array(dt);
+    h = HarmonicEigenstate(ν; ω=ω)
+    ψ = h.(ceg)
+    T = kinetic_energy(ceg, dtt, ψ)
+    Tref = 3*0.5ω*(ν+0.5)
+    @info "Calculated kinetic energy = $T"
+    @info "Reference kinetic energy = $Tref"
+    @info "Error = $(T-Tref)"
+    @info "Relative error = $((T-Tref)/Tref)"
+    return T, Tref
 end

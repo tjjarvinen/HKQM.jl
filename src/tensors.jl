@@ -355,3 +355,19 @@ Base.size(dt::DerivativeTensor) = size(dt.values)
 function Base.show(io::IO, ::MIME"text/plain", dt::DerivativeTensor)
     print(io, "Derivative tensor size=$(size(dt))")
 end
+
+
+function kinetic_energy(ceg::CubicElementGrid, dt, ψ)
+    tmp = similar(ψ)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[i,l] * ψ[l,j,k,I,J,K]
+    ex = 0.5*integrate(tmp, ceg, tmp)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[j,l] * ψ[i,l,k,I,J,K]
+    ey = 0.5*integrate(tmp, ceg, tmp)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[k,l] * ψ[i,j,l,I,J,K]
+    ez = 0.5*integrate(tmp, ceg, tmp)
+
+    return ex+ey+ez
+end
