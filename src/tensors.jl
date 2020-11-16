@@ -3,6 +3,7 @@ using ProgressMeter
 using OffsetArrays
 using SpecialFunctions
 using StaticArrays
+using Polynomials
 
 
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
@@ -255,7 +256,7 @@ end
 
 density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
-
+## Coulomb integral / Poisson equation
 
 function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor; tmax=nothing)
     V = similar(ρ)
@@ -292,3 +293,81 @@ end
 
 
 coulomb_correction(ρ, tmax) = 2/sqrt(π)*(π/tmax^2).*ρ
+
+
+
+## Derivative tensor
+
+abstract type AbstractDerivativeTensor <: AbtractTransformationTensor{2} end
+
+
+struct DerivativeTensor{NG} <: AbstractDerivativeTensor
+    gauss_points::SVector{NG}{Float64}
+    values::Matrix{Float64}
+    function DerivativeTensor(ceg::CubicElementGrid)
+        function _lpoly(x)
+            # Legendre polynomials (without prefactor)
+            l = length(x)
+            out = []
+            for i in 1:l
+                z = vcat(x[1:i-1],x[i+1:end])
+                push!(out, fromroots(z))
+            end
+            return out
+        end
+        function _pre_a(x)
+            # Legendre plynomial prefactors
+            l = length(x)
+            a = ones(l)
+            for i in 1:l
+                for j in 1:l
+                    if j != i
+                        a[i] *= x[i] - x[j]
+                    end
+                end
+            end
+            return a.^-1
+        end
+        x = BigFloat.(ceg.gpoints)
+        xmin=-0.5*elementsize(ceg.elements)
+        xmax=-xmin
+        grid = grid1d(ceg)
+        ng, ne = size(grid)
+        a=_pre_a(x)
+        p=_lpoly(x)
+        pd = derivative.(p)
+        ϕ = zeros(length(x), length(pd))
+        for i in eachindex(pd)
+            ϕ[:,i] = a[i]*pd[i].(x)
+        end
+        new{ng}(x, ϕ)
+    end
+end
+
+
+function Base.getindex(dt::DerivativeTensor, i::Int, j::Int)
+    return dt.values[i,j]
+end
+
+Base.size(dt::DerivativeTensor) = size(dt.values)
+
+
+function Base.show(io::IO, ::MIME"text/plain", dt::DerivativeTensor)
+    print(io, "Derivative tensor size=$(size(dt))")
+end
+
+
+function kinetic_energy(ceg::CubicElementGrid, dt, ψ)
+    tmp = similar(ψ)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[i,l] * ψ[l,j,k,I,J,K]
+    ex = 0.5*integrate(tmp, ceg, tmp)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[j,l] * ψ[i,l,k,I,J,K]
+    ey = 0.5*integrate(tmp, ceg, tmp)
+
+    @tensor tmp[i,j,k,I,J,K] = dt[k,l] * ψ[i,j,l,I,J,K]
+    ez = 0.5*integrate(tmp, ceg, tmp)
+
+    return ex+ey+ez
+end
