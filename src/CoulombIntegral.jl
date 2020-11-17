@@ -21,9 +21,12 @@ export AbstractElementGrid,
        getcenter,
        getcenters,
        grid1d,
+       Hamilton,
        integrate,
        kinetic_energy,
        loglocalct,
+       normalize!,
+       potential_energy,
        self_energy,
        test_accuracy,
        test_accuracy_new,
@@ -42,6 +45,7 @@ export AbstractElementGrid,
 include("elements.jl")
 include("tensors.jl")
 include("accuracytests.jl")
+include("scf.jl")
 
 # Benzene carbons
 const C6=[

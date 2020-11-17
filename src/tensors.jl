@@ -258,12 +258,13 @@ density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 ## Coulomb integral / Poisson equation
 
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor; tmax=nothing)
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
+                        tmax=nothing, showprogress=false)
     V = similar(ρ)
     V .= 0
     v = similar(ρ)
-
-    @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(transtensor.wt))
+    ptime = showprogress ? 1 : Inf
+    @showprogress ptime "Calculating v-tensor..." for p in Iterators.reverse(eachindex(transtensor.wt))
         T = transtensor[:,:,:,:,p]
         @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
         V = V .+ transtensor.wt[p].*v
@@ -274,13 +275,14 @@ function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTen
     return 2/sqrt(π).*V
 end
 
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector; tmax=nothing)
+function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector;
+                        tmax=nothing, showprogress=false)
     @assert size(transtensor)[end] == length(wt)
     V = similar(ρ)
     V .= 0
     v = similar(ρ)
-
-    @showprogress "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
+    ptime = showprogress ? 1 : Inf
+    @showprogress ptime "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
         T = @view transtensor[:,:,:,:,p]
         @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
         V = V .+ wt[p].*v
