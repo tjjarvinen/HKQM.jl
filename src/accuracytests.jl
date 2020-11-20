@@ -62,7 +62,7 @@ Test accuracy on Gaussian charge distribution self energy.
 - `d=0`               : Distance between two Gaussian centers
 """
 function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
-     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0)
+     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -82,18 +82,18 @@ function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
     else
         error("Mode not known")
     end
-    test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d)
+    test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
 function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
-                            α1=1, α2=1, d=0, correction=true)
+                            α1=1, α2=1, d=0, correction=true, showprogress=true)
     tmin = ct.tmin
     tmax = ct.tmax
     r1 = SVector(0.5d, 0., 0.)
     r2 = SVector(-0.5d, 0., 0.)
     ρ1 = density_tensor(ceg; a=α1, r=r1)
     ρ2 = density_tensor(ceg; a=α2, r=r2)
-    V = coulomb_tensor(ρ1, ct)
+    V = poisson_equation(ρ1, ct; showprogress=showprogress)
 
     E_cor = integrate(ρ2, ceg, coulomb_correction(ρ1, tmax))
     E_int = integrate(ρ2, ceg, V)
