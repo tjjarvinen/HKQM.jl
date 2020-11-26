@@ -234,6 +234,7 @@ function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLogLoca
     print(io, "Coulomb transformation logarimic local size=$(size(cct))")
 end
 
+## Integration weight tensor
 
 function ω_tensor(ceg::CubicElementGrid)
     n = size(ceg)[end]
@@ -241,60 +242,13 @@ function ω_tensor(ceg::CubicElementGrid)
     ω = reshape( repeat(ceg.w, n), l, n )
 end
 
-
-function integrate(ϕ, grid::CubicElementGrid, ψ)
-    ω = ω_tensor(grid)
-    c = ϕ.*ψ
-    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
-end
-
-
+## Help functions to create charge density
 
 function density_tensor(grid::AbstractArray, r::AbstractVector, a)
     return [ exp(-a*sum( (x-r).^2 )) for x in grid ]
 end
 
 density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
-
-## Coulomb integral / Poisson equation
-
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
-                        tmax=nothing, showprogress=false)
-    V = similar(ρ)
-    V .= 0
-    v = similar(ρ)
-    ptime = showprogress ? 1 : Inf
-    @showprogress ptime "Calculating v-tensor..." for p in Iterators.reverse(eachindex(transtensor.wt))
-        T = transtensor[:,:,:,:,p]
-        @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
-        V = V .+ transtensor.wt[p].*v
-    end
-    if tmax != nothing
-        V = V .+ coulomb_correction(ρ, tmax)
-    end
-    return 2/sqrt(π).*V
-end
-
-function coulomb_tensor(ρ::AbstractArray, transtensor::AbstractArray, wt::AbstractVector;
-                        tmax=nothing, showprogress=false)
-    @assert size(transtensor)[end] == length(wt)
-    V = similar(ρ)
-    V .= 0
-    v = similar(ρ)
-    ptime = showprogress ? 1 : Inf
-    @showprogress ptime "Calculating v-tensor..." for p in Iterators.reverse(eachindex(wt))
-        T = @view transtensor[:,:,:,:,p]
-        @tensoropt v[α,β,γ,I,J,K] = T[α,α',I,I']*T[β,β',J,J']*T[γ,γ',K,K']*ρ[α',β',γ',I',J',K']
-        V = V .+ wt[p].*v
-    end
-    if tmax != nothing
-        V = V .+ coulomb_correction(ρ, tmax)
-    end
-    return  2/sqrt(π).*V
-end
-
-
-coulomb_correction(ρ, tmax) = 2/sqrt(π)*(π/tmax^2).*ρ
 
 
 

@@ -4,6 +4,7 @@ authors = ["Teemu Järvinen <teemu.jarvinen@helsinki.fi> and contributors"]
 version = "0.1.0"
 
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

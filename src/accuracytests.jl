@@ -40,7 +40,7 @@ end
 
 
 """
-    test_accuracy(a::Real, ne::Int, ng::Int, nt::Int; kwords) -> Float64
+    test_accuracy(a::Real, ne::Int, ng::Int, nt::Int; kwords) -> Dict
 
 Test accuracy on Gaussian charge distribution self energy.
 
@@ -62,7 +62,7 @@ Test accuracy on Gaussian charge distribution self energy.
 - `d=0`               : Distance between two Gaussian centers
 """
 function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
-     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0)
+     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -82,18 +82,18 @@ function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
     else
         error("Mode not known")
     end
-    test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d)
+    return test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
 function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
-                            α1=1, α2=1, d=0, correction=true)
+                            α1=1, α2=1, d=0, correction=true, showprogress=true)
     tmin = ct.tmin
     tmax = ct.tmax
     r1 = SVector(0.5d, 0., 0.)
     r2 = SVector(-0.5d, 0., 0.)
     ρ1 = density_tensor(ceg; a=α1, r=r1)
     ρ2 = density_tensor(ceg; a=α2, r=r2)
-    V = coulomb_tensor(ρ1, ct)
+    V = poisson_equation(ρ1, ct; showprogress=showprogress)
 
     E_cor = integrate(ρ2, ceg, coulomb_correction(ρ1, tmax))
     E_int = integrate(ρ2, ceg, V)
@@ -113,17 +113,25 @@ function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
     @info "Tail energy = $(round(E_tail; sigdigits=5)) ; E_tail/E_tot = $(round(E_tail/E_tot; sigdigits=2))"
     @info "Energy correction = $(round(E_cor; sigdigits=5))  ; (E_cor-E_tail)/E_tot = $(round((E_cor-E_tail)/E_tot;sigdigits=2))"
     @info "Error to total energy error/E_tot = $(round((E-E_tot)/E_tot; sigdigits=2))"
-    return E
+    out = Dict("calculated"=>E,
+        "reference integral"=>E_true,
+        "calculated integral"=>E_int,
+        "correction"=>E_cor,
+        "reference tail"=>E_tail,
+        "total reference energy"=>E_tot
+        )
+    return out
 end
 
-function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0, δ=0.25)
+function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0.5, δ=0.25, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     ct = loglocalct(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
-    return test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=α1, α2=α2, d=d)
+    return test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
 
-function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=1, α2=1, d=0)
+function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
+                         α1=1., α2=1., d=0.5, showprogress=true)
     function f(x)
         tmin = ct.tmin
         tmax = ct.tmax
@@ -131,7 +139,7 @@ function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformati
         r2 = SVector(-0.5x[3], 0., 0.)
         ρ1 = density_tensor(ceg; a=x[1], r=r1)
         ρ2 = density_tensor(ceg; a=x[2], r=r2)
-        V = coulomb_tensor(Array(ρ1), Array(ct), Array(ct.wt); tmax=tmax)
+        V = poisson_equation(ρ1, ct; tmax=tmax, showprogress=showprogress)
         return integrate(ρ2, ceg, V)
     end
     x = [Float64(α1), Float64(α2), Float64(d)]

@@ -26,6 +26,8 @@ export AbstractElementGrid,
        kinetic_energy,
        loglocalct,
        normalize!,
+       poisson_equation,
+       poisson_equation!,
        potential_energy,
        self_energy,
        test_accuracy,
@@ -44,6 +46,7 @@ export AbstractElementGrid,
 
 include("elements.jl")
 include("tensors.jl")
+include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")
 
