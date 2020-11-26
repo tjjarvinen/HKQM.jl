@@ -69,18 +69,19 @@ function poisson_equation(ρ::AbstractArray,
 end
 
 
-function poisson_equation(ρ::AbstractArray,
+function poisson_equation(ρ::AbstractArray{<:Any,6},
                           transtensor::AbtractTransformationTensor,
                           t)
     V = similar(ρ)
-    T = transtensor[:,:,:,:,t]
+    T = similar(ρ, size(transtensor)[1:end-1])
+    T .= transtensor[:,:,:,:,t]
     @tensoropt V[α,β,γ,I,J,K] = T[α,α',I,I'] * T[β,β',J,J'] * T[γ,γ',K,K'] * ρ[α',β',γ',I',J',K']
     return  (2/sqrt(π)*transtensor.wt[t]).*V
 end
 
 
-function poisson_equation!(V::AbstractArray,
-                          ρ::AbstractArray,
+function poisson_equation!(V::AbstractArray{<:Any,6},
+                          ρ::AbstractArray{<:Any,6},
                           transtensor::AbtractTransformationTensor,
                           t)
     T = transtensor[:,:,:,:,t]
@@ -89,11 +90,11 @@ function poisson_equation!(V::AbstractArray,
 end
 
 
-function poisson_equation!(V::AbstractArray,
-                          ρ::AbstractArray,
-                          T::AbstractArray,
-                          t,
+function poisson_equation!(V::AbstractArray{<:Any,6},
+                          ρ::AbstractArray{<:Any,6},
+                          T::AbstractArray{<:Any,4},
                           wt)
+    @assert size(V) == size(ρ)
     @tensoropt V[α,β,γ,I,J,K] = T[α,α',I,I'] * T[β,β',J,J'] * T[γ,γ',K,K'] * ρ[α',β',γ',I',J',K']
     V .*= (2/sqrt(π)*wt)
     return V
@@ -106,14 +107,14 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
     nt = size(transtensor)[end]
     ptime = showprogress ? 0.3 : Inf
     if nworkers() > 1
-        @everywhere tmp = zeros($(size(ρ)))
+        tmp = similar(ρ) # Yes it is a hack
         V = @showprogress ptime "Poisson equation... " @distributed (+) for t in 1:nt
-            poisson_equation(ρ, transtensor,t)
+            poisson_equation!(tmp, ρ, transtensor, t)
         end
     else
         tmp = similar(ρ)
         @showprogress ptime "Poisson equation... " for t in 1:nt
-            V .+= poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.t[t], transtensor.wt[t])
+            V .+= poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
         end
     end
     if tmax != nothing
