@@ -103,16 +103,19 @@ end
 
 function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
                           tmax=nothing, showprogress=false)
-    V = similar(ρ)
+
+    V = ρ.*transtensor.wt[1]
     nt = size(transtensor)[end]
+    @info "nt=$nt"
+    @info "V type = $(typeof(V))"
     ptime = showprogress ? 0.3 : Inf
     if nworkers() > 1
-        tmp = similar(ρ) # Yes it is a hack
+        tmp = similar(V) # Yes it is a hack
         V = @showprogress ptime "Poisson equation... " @distributed (+) for t in 1:nt
             poisson_equation!(tmp, ρ, transtensor, t)
         end
     else
-        tmp = similar(ρ)
+        tmp = similar(V)
         @showprogress ptime "Poisson equation... " for t in 1:nt
             V .+= poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
         end

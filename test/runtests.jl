@@ -1,6 +1,7 @@
 using Test
 using CoulombIntegral
 using Logging
+using ForwardDiff
 
 disable_logging(Logging.Info)
 
@@ -40,6 +41,18 @@ end
     d = test_accuracy_ad(10, 4, 16, 96; α1=1.3, α2=0.8, d=0.5, showprogress=false)
     # Grid resolution is small so not very accurate
     @test all(abs.(d[1] .- d[2])./d[2] .< 1e-2)
+
+
+    # Helmholtz equation derivative
+    function f(k)
+        ceg = CubicElementGrid(10,2,16)
+        ct=loglocalct(ceg, 4; k=k)
+        ρ = CoulombIntegral.density_tensor(ceg)
+        V = poisson_equation(ρ, ct)
+        return integrate(ρ, ceg, V)
+    end
+    g(x) = ForwardDiff.derivative(f, x)
+    g(1.)
 end
 
 @testset "Derivative and kinetic energy" begin

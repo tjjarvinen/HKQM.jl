@@ -14,31 +14,31 @@ abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulom
 abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
 abstract type AbstractCoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG} end
 
-struct CoulombTransformation{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+struct CoulombTransformation{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
-    wt::SVector{NT}{Float64}
+    wt::Vector{T}
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
-    k::Float64
+    k::T
     function CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25., k=0.)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         grid = grid1d(ceg)
         s = size(grid)
         wt = wt .* exp.(-(k^2)./(4t.^2))
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
+        new{eltype(wt), nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
     end
 end
 
-struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+struct CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
-    wt::SVector{NT}{Float64}
+    wt::Vector{T}
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
-    k::Float64
+    k::T
     function CoulombTransformationLog(ceg::CubicElementGrid, nt::Int;
                                    tmin=0., tmax=25., ε=1e-12, k=0.)
         s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
@@ -47,18 +47,18 @@ struct CoulombTransformationLog{NT, NE, NG} <: AbstractCoulombTransformationSing
         grid = grid1d(ceg)
         ss = size(grid)
         wt = wt .* exp.(-(k^2)./(4t.^2))
-        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
+        new{eltype(wt), nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k)
     end
 end
 
-struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
+struct CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
-    wt::SVector{NT}{Float64}
+    wt::Vector{T}
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
-    k::Float64
+    k::T
     δ::Float64
     δp::SMatrix{NG,NE}
     δm::SMatrix{NG,NE}
@@ -78,18 +78,18 @@ struct CoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationLo
             δp[end,j] = ceg.elements[j].high - grid[end,j]
         end
         wt = wt .* exp.(-(k^2)./(4t.^2))
-        new{nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
+        new{eltype(wt), nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
 end
 
-struct CoulombTransformationLogLocal{NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
+struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
-    wt::SVector{NT}{Float64}
+    wt::Vector{T}
     w::SVector{NG}{Float64}
     tmin::Float64
     tmax::Float64
-    k::Float64
+    k::T
     δ::Float64
     δp::SMatrix{NG,NE}
     δm::SMatrix{NG,NE}
@@ -112,22 +112,22 @@ struct CoulombTransformationLogLocal{NT, NE, NG} <: AbstractCoulombTransformatio
             δp[end,j] = ceg.elements[j].high - grid[end,j]
         end
         wt = wt .* exp.(-(k^2)./(4t.^2))
-        new{nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
+        new{eltype(wt), nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
 end
 
-mutable struct CoulombTransformationCombination{NE, NG} <: AbstractCoulombTransformationCombination
+mutable struct CoulombTransformationCombination{T, NE, NG} <: AbstractCoulombTransformationCombination
     tensors::Vector{AbstractCoulombTransformation}
     ref::Vector{Int}
     t::Vector{Float64}
-    wt::Vector{Float64}
+    wt::Vector{T}
     tmin::Float64
     tmax::Float64
     tindex::Vector{Int}
-    k::Float64
+    k::T
     function CoulombTransformationCombination(ct::AbstractCoulombTransformationSingle)
         s = size(ct)
-        new{s[3], s[2]}([ct], ones(s[end]), ct.t, ct.wt, ct.tmin, ct.tmax, 1:length(ct.t), ct.k)
+        new{eltype(ct.wt), s[3], s[2]}([ct], ones(s[end]), ct.t, ct.wt, ct.tmin, ct.tmax, 1:length(ct.t), ct.k)
     end
 end
 
@@ -177,7 +177,7 @@ function Base.size(ct::AbstractCoulombTransformationSingle)
     return (ng,ng,ne,ne,nt)
 end
 
-function Base.size(ct::CoulombTransformationCombination{NE,NG}) where {NE,NG}
+function Base.size(ct::CoulombTransformationCombination{T,NE,NG}) where {T,NE,NG}
     nt = length(ct.ref)
     return (NG,NG,NE,NE,nt)
 end
@@ -200,8 +200,8 @@ function Base.getindex(ct::CoulombTransformationCombination, α::Int, β::Int, I
     return ct.tensors[i][α, β, I, J, ct.tindex[p]]
 end
 
-function  Base.push!(ctc::CoulombTransformationCombination{NE,NG},
-            tt::AbstractCoulombTransformationSingle{NT,NE,NG}) where {NT,NE,NG}
+function  Base.push!(ctc::CoulombTransformationCombination{T,NE,NG},
+            tt::AbstractCoulombTransformationSingle{NT,NE,NG}) where {T,NT,NE,NG}
     @assert ctc.tensors[end].tmax <= tt.tmin
     @assert ctc.k == tt.k
     push!(ctc.tensors,tt)
