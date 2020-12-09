@@ -7,6 +7,16 @@ function integrate(ϕ, grid::CubicElementGrid, ψ)
     return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
 end
 
+function integrate(ϕ::QuantumState, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    integrate(ϕ.ψ, ψ.elementgrid, ψ.ψ)
+end
+
+function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    integrate(conj.(ϕ.ψ), ψ.elementgrid, ψ.ψ)
+end
+
 ## Coulomb integral / Poisson equation
 
 function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor;

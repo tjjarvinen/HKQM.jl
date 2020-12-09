@@ -1,6 +1,7 @@
 module CoulombIntegral
 
 export AbstractElementGrid,
+       AbstractOperator,
        CubicElementGrid,
        CubicElement,
        CubicElements,
@@ -14,12 +15,14 @@ export AbstractElementGrid,
        coulombtransformation,
        DerivativeTensor,
        Element1D,
+       EM_Hamilton,
        elementsize,
        gaussian_coulomb_integral,
        gaussiandensity_self_energy,
        gausspoints,
        getcenter,
        getcenters,
+       GradientOperator,
        grid1d,
        Hamilton,
        integrate,
@@ -40,12 +43,24 @@ export AbstractElementGrid,
        transformation_tensor_alt,
        xgrid,
        ygrid,
-       zgrid,
+       zgrid
+
+# Functions
+export PositionOperator,
        ω_tensor
 
+# Types
+export AbstractQuantumState,
+       DerivativeOperator,
+       OperatorSum,
+       QuantumState,
+       ScalarOperator,
+       VectorOperator
 
 include("elements.jl")
+include("states.jl")
 include("tensors.jl")
+include("operators.jl")
 include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")

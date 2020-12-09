@@ -186,11 +186,13 @@ struct HarmonicEigenstate
     end
 end
 
-function (HE::HarmonicEigenstate)(v)
-    r = norm(v)/HE.α
-    xyz = v./HE.α
-    l = length(v)
-    return HE.N^l*prod(HE.hp, xyz)*exp(-0.5*r^2)
+function (HE::HarmonicEigenstate)(v::AbstractVector)
+    return prod(HE, v)
+end
+
+function (HE::HarmonicEigenstate)(x::Real)
+    y = x/HE.α
+    return HE.N*HE.hp(y)*exp(-0.5*y^2)
 end
 
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
