@@ -1,8 +1,3 @@
-import LinearAlgebra.dot
-import LinearAlgebra.cross
-using Unitful
-using UnitfulAtomic
-
 
 abstract type AbstractOperator{N} end
 
@@ -382,6 +377,8 @@ end
 function Base.:(*)(op1::AbstractOperator{1}, op2::AbstractOperator{1})
     return OperatorProduct(op1,op2)
 end
+
+(op::OperatorProduct)(qs::QuantumState) = op.op1(op.op2(qs))
 
 Unitful.unit(op::OperatorProduct) = unit(op.op1) * unit(op.op2)
 

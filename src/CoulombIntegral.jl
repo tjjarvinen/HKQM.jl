@@ -1,5 +1,17 @@
 module CoulombIntegral
 
+using OffsetArrays
+using Polynomials
+using ProgressMeter
+using SpecialFunctions
+using StaticArrays
+using TensorOperations
+using Unitful
+using UnitfulAtomic
+
+import LinearAlgebra.dot
+import LinearAlgebra.cross
+
 export AbstractElementGrid,
        AbstractOperator,
        CubicElementGrid,
@@ -45,7 +57,8 @@ export AbstractElementGrid,
        zgrid
 
 # Functions
-export momentum_operator,
+export bracket,
+       momentum_operator,
        position_operator,
        ω_tensor
 

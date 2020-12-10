@@ -1,10 +1,3 @@
-using TensorOperations
-using ProgressMeter
-using OffsetArrays
-using SpecialFunctions
-using StaticArrays
-using Polynomials
-
 
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 

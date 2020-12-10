@@ -1,4 +1,3 @@
-using TensorOperations
 
 
 function normalize!(ψ, ceg::CubicElementGrid)
