@@ -22,7 +22,6 @@ export AbstractElementGrid,
        gausspoints,
        getcenter,
        getcenters,
-       GradientOperator,
        grid1d,
        Hamilton,
        integrate,
@@ -46,12 +45,16 @@ export AbstractElementGrid,
        zgrid
 
 # Functions
-export PositionOperator,
+export momentum_operator,
+       position_operator,
        ω_tensor
 
 # Types
 export AbstractQuantumState,
        DerivativeOperator,
+       GradientOperator,
+       HamiltonOperator,
+       LaplaceOperator,
        OperatorSum,
        QuantumState,
        ScalarOperator,
