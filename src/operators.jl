@@ -54,6 +54,9 @@ function cross(v1::AbstractOperator{3}, v2::AbstractOperator{3})
     return VectorOperator(r1,r2,r3)
 end
 
+Base.:(*)(op::AbstractOperator{1}, qs::QuantumState) = op(qs)
+Base.:(*)(op::AbstractOperator, qs::QuantumState) = map(f->f(qs), op)
+
 ## Scalar Operator
 
 struct ScalarOperator{T} <: AbstractScalarOperator
@@ -212,17 +215,18 @@ struct DerivativeOperator{NG,N} <: AbstractOperator{1}
 end
 
 
-function (d::DerivativeOperator{<:Any,1})(ψ::AbstractArray{<:Any,6})
-    return QuantumState(d.elementgrid, operate_x(d.dt, ψ) )
+function (d::DerivativeOperator{<:Any,1})(qs::QuantumState)
+    return QuantumState(d.elementgrid, operate_x(d.dt, qs.ψ) )
 end
 
-function (d::DerivativeOperator{<:Any,2})(ψ::AbstractArray{<:Any,6})
-    return QuantumState(d.elementgrid, operate_y(d.dt, ψ) )
+function (d::DerivativeOperator{<:Any,2})(qs::QuantumState)
+    return QuantumState(d.elementgrid, operate_y(d.dt, qs.ψ) )
 end
 
-function (d::DerivativeOperator{<:Any,3})(ψ::AbstractArray{<:Any,6})
-    return QuantumState(d.elementgrid, operate_z(d.dt, ψ) )
+function (d::DerivativeOperator{<:Any,3})(qs::QuantumState)
+    return QuantumState(d.elementgrid, operate_z(d.dt, qs.ψ) )
 end
+
 
 Unitful.unit(::DerivativeOperator) = u"bohr"^-1
 
@@ -324,6 +328,10 @@ Base.getindex(cto::ConstantTimesOperator,i::Int) = cto.a*cto.op[i]
 
 Unitful.unit(op::ConstantTimesOperator) = unit(op.op) * unit(op.a)
 
+function (cto::ConstantTimesOperator{TO,T,1})(qs::QuantumState) where {TO,T}
+    return ustrip(cto.a) * (cto.op(qs))
+end
+
 
 ## Scalar operator sum
 
@@ -350,12 +358,13 @@ function Base.:(-)(op1::AbstractOperator{N}, op2::AbstractOperator{N}) where N
     return OperatorSum(op1,-op2)
 end
 
-function (os::OperatorSum)(ψ::AbstractArray{<:Any,6})
-    return sum(op->op(ψ), os.operators)
+function (os::OperatorSum{TO1,TO2, 1})(qs::QuantumState) where {TO1,TO2}
+    return os.op1(qs) + os.op2(qs)
 end
 
 Unitful.unit(sos::OperatorSum) = unit(sos.op1)
 
+Base.getindex(op::OperatorSum, i::Int) = op.op1[1] + op.op2[2]
 
 ## Scalar operator product
 
@@ -427,7 +436,7 @@ end
 
 function kinetic_energy_operator(ceg::CubicElementGrid, m=1u"me_au")
     @assert dimension(m) == dimension(u"kg")
-    c = 1u"ħ_au"^2/(2*m)
+    c = 1u"hartree * bohr^2"/(2*austrip(m))
     return c * LaplaceOperator(ceg)
 end
 

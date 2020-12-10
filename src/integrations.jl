@@ -7,6 +7,11 @@ function integrate(ϕ, grid::CubicElementGrid, ψ)
     return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
 end
 
+function integrate(grid::CubicElementGrid, ρ)
+    ω = ω_tensor(grid)
+    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
+end
+
 function integrate(ϕ::QuantumState, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
     integrate(ϕ.ψ, ψ.elementgrid, ψ.ψ)
@@ -15,6 +20,21 @@ end
 function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
     integrate(conj.(ϕ.ψ), ψ.elementgrid, ψ.ψ)
+end
+
+function bracket(ϕ::QuantumState, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    return integrate(ϕ.elementgrid, ϕ ⋆ ψ)
+end
+
+function bracket(ϕ::QuantumState, op::AbstractOperator{1}, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    return integrate(ϕ.elementgrid, ϕ ⋆ (op*ψ))
+end
+
+function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    return pmap( O->bracket(ϕ, O, ψ),  op)
 end
 
 ## Coulomb integral / Poisson equation

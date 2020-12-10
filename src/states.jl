@@ -27,16 +27,33 @@ Base.similar(qs::QuantumState) = QuantumState(qs.elementgrid, qs.ψ)
 
 
 function normalize!(qs::QuantumState)
-    N² = integrate(qs, qs)
-    qs .*= 1/√N²
+    N² = braket(qs, qs)
+    qs.ψ .*= 1/√N²
     return qs
 end
 
 
-function Base.:+(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function Base.:(+)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
     return QuantumState(qs1.elementgrid, qs1.ψ.+qs2.ψ)
 end
 
-function Base.:-(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function Base.:(-)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
     return QuantumState(qs1.elementgrid, qs1.ψ.-qs2.ψ)
+end
+
+function ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+    conj(qs1).ψ .* qs2.ψ
+end
+
+
+Base.:(*)(a::Number, qs::QuantumState) = QuantumState(qs.elementgrid, a.*qs.ψ)
+Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, a.*qs.ψ)
+Base.:(/)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, qs.ψ./a)
+
+Base.conj(qs::QuantumState) = qs
+Base.conj(qs::QuantumState{Any, Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.ψ))
+Base.conj!(qs::QuantumState) = qs
+function Base.conj(qs::QuantumState{Any, Any, Complex})
+    conj!.(qs.ψ)
+    return qs
 end

@@ -1,6 +1,7 @@
 using GaussQuadrature
 using StaticArrays
-
+using Unitful
+using UnitfulAtomic
 
 abstract type AbstractElement{Dims} end
 
@@ -64,6 +65,12 @@ struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
         ce = CubicElements(a, nelements)
         x, w = gausspoints(ce, ngpoints)
         new{ngpoints, nelements}(ce, getcenters(ce), x, w, origin)
+    end
+    function CubicElementGrid(a::Unitful.Quantity, nelements::Int, ngpoints::Int; origin=SVector(0.,0.,0.).*unit(a))
+        @assert dimension(a) == dimension(u"m") "Dimension for \"a\" needs to be distance"
+        ce = CubicElements(austrip(a), nelements)
+        x, w = gausspoints(ce, ngpoints)
+        new{ngpoints, nelements}(ce, getcenters(ce), x, w, austrip.(origin))
     end
 end
 
