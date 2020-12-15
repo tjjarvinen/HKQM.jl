@@ -7,7 +7,7 @@ mutable struct QuantumState{TG,TA,TE} <: AbstractQuantumState{TE}
     elementgrid::TG
     ψ::TA
     unit::Unitful.FreeUnits
-    function QuantumState(ceg, ψ::AbstractArray{<:Any,6}; unit::Unitful.FreeUnits=NoUnits)
+    function QuantumState(ceg, ψ::AbstractArray{<:Any,6}, unit::Unitful.FreeUnits=NoUnits)
         @assert size(ceg) == size(ψ)
         new{typeof(ceg),typeof(ψ),eltype(ψ)}(ceg, ψ, unit)
     end
@@ -46,7 +46,7 @@ function Base.:(+)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<
     @assert dimension(qs1) == dimension(qs2)
     @assert size(qs1) == size(qs2)
     if unit(qs1) == unit(qs2)
-        return QuantumState(qs1.elementgrid, qs1.ψ.+qs2.ψ)
+        return QuantumState(qs1.elementgrid, qs1.ψ.+qs2.ψ, unit(qs1))
     else
         error("Not done yet")
     end
@@ -55,7 +55,7 @@ end
 function Base.:(-)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
     @assert dimension(qs1) == dimension(qs2)
     @assert size(qs1) == size(qs2)
-    return QuantumState(qs1.elementgrid, qs1.ψ.-qs2.ψ)
+    return QuantumState(qs1.elementgrid, qs1.ψ.-qs2.ψ, unit(qs1))
 end
 
 function ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
@@ -64,12 +64,12 @@ function ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
 end
 
 
-Base.:(*)(a::Number, qs::QuantumState) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ; unit=unit(qs)*unit(a))
-Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ; unit=unit(qs)*unit(a))
-Base.:(/)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, qs.ψ./ustrip(a); unit=unit(qs)/unit(a))
+Base.:(*)(a::Number, qs::QuantumState) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ, unit(qs)*unit(a))
+Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ, unit(qs)*unit(a))
+Base.:(/)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, qs.ψ./ustrip(a), unit(qs)/unit(a))
 
 Base.conj(qs::QuantumState) = qs
-Base.conj(qs::QuantumState{Any, Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.ψ))
+Base.conj(qs::QuantumState{Any, Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.ψ), unit(qs))
 Base.conj!(qs::QuantumState) = qs
 function Base.conj!(qs::QuantumState{Any, Any, Complex})
     conj!.(qs.ψ)

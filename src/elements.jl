@@ -75,11 +75,11 @@ struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
 end
 
 function Base.show(io::IO, ceg::CubicElementGrid{NG,NE}) where {NG,NE}
-    print(io, "Cubic elements grid with $(NE)^3 elements and $(NG)^3 Gauss points")
+    print(io, "Cubic elements grid with $(NE)^3 elements with $(NG)^3 Gauss points")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ceg::CubicElementGrid{NG, NE}) where {NG,NE}
-    print(io, "Cubic elements grid with $(NE)^3 elements and $(NG)^3 Gauss points")
+    print(io, "Cubic elements grid with $(NE)^3 elements with $(NG)^3 Gauss points")
 end
 
 function Base.show(io::IO, ce::CubicElements)

@@ -203,6 +203,10 @@ function harmonic_state(ceg::CubicElementGrid, hx, hy=hx, hz=hx)
     return QuantumState(ceg, ψ)
 end
 
+function energy(he::HarmonicEigenstate)
+    return he.ω*(he.ν+0.5)*u"hartree"
+end
+
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
     ceg = CubicElementGrid(a, ne, ng)
 

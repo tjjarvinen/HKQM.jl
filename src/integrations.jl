@@ -24,12 +24,12 @@ end
 
 function bracket(ϕ::QuantumState, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
-    return integrate(ϕ.elementgrid, ϕ ⋆ ψ)
+    return integrate(ϕ.elementgrid, ϕ ⋆ ψ)*unit(ϕ)*unit(ψ)
 end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator{1}, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
-    return integrate(ϕ.elementgrid, ϕ ⋆ (op*ψ))
+    return integrate(ϕ.elementgrid, ϕ ⋆ (op*ψ))*unit(ϕ)*unit(ψ)*unit(op)
 end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)

@@ -60,6 +60,7 @@ export AbstractElementGrid,
 export bracket,
        momentum_operator,
        position_operator,
+       vector_potential,
        ω_tensor
 
 # Types
@@ -67,6 +68,8 @@ export AbstractQuantumState,
        DerivativeOperator,
        GradientOperator,
        HamiltonOperator,
+       HamiltonOperatorFreeParticle,
+       HamiltonOperatorMagneticField,
        LaplaceOperator,
        OperatorSum,
        QuantumState,

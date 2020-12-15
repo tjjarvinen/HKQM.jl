@@ -4,6 +4,7 @@ abstract type AbstractOperator{N} end
 abstract type AbstractScalarOperator <: AbstractOperator{1} end
 abstract type AbstractVectorOperator <: AbstractOperator{3} end
 abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
+abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
 Base.size(ao::AbstractOperator) = size(ao.elementgrid)
 Base.show(io::IO, ao::AbstractOperator) = print(io, "Operator size=$(size(ao))")
@@ -63,8 +64,11 @@ struct ScalarOperator{T} <: AbstractScalarOperator
     end
 end
 
-(so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ)
-
+(so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ, unit(so))
+function (so::ScalarOperator)(qs::QuantumState)
+    @assert size(so) == size(qs)
+    return QuantumState(so.elementgrid, so.vals.*qs.ψ, unit(so)*unit(qs))
+end
 
 for OP in (:(+), :(-))
     @eval begin
@@ -75,12 +79,12 @@ for OP in (:(+), :(-))
         end
         function Base.$OP(a::ScalarOperator, x::Number)
             @assert dimension(a) == dimension(x) "Dimension missmatch"
-            y = uconvert(unit(a), x)
+            y = ustrip(uconvert(unit(a), x))
             return ScalarOperator(a.elementgrid, $OP.(a.vals,y); unit=a.unit)
         end
         function Base.$OP(x::Number, a::ScalarOperator)
             @assert dimension(a) == dimension(x) "Dimension missmatch"
-            y = uconvert(unit(a), x)
+            y = ustrip(uconvert(unit(a), x))
             return ScalarOperator(a.elementgrid, $OP.(y,a.vals); unit=a.unit)
         end
     end
@@ -92,10 +96,10 @@ for OP in (:(/), :(*))
             ScalarOperator(a.elementgrid, $OP.(a.vals,b.vals); unit=$OP(unit(a), unit(b)))
         end
         function Base.$OP(a::ScalarOperator, x::Number)
-            return ScalarOperator(a.elementgrid, $OP.(a.vals,x); unit=$OP(unit(a), unit(x)))
+            return ScalarOperator(a.elementgrid, $OP.(a.vals,ustrip(x)); unit=$OP(unit(a), unit(x)))
         end
         function Base.$OP(x::Number, a::ScalarOperator)
-            return ScalarOperator(a.elementgrid, $OP.(x,a.vals); unit=$OP(unit(x), unit(a)))
+            return ScalarOperator(a.elementgrid, $OP.(ustrip(x),a.vals); unit=$OP(unit(x), unit(a)))
         end
     end
 end
@@ -211,15 +215,15 @@ end
 
 
 function (d::DerivativeOperator{<:Any,1})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_x(d.dt, qs.ψ) )
+    return QuantumState(d.elementgrid, operate_x(d.dt, qs.ψ), unit(qs)*unit(d) )
 end
 
 function (d::DerivativeOperator{<:Any,2})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_y(d.dt, qs.ψ) )
+    return QuantumState(d.elementgrid, operate_y(d.dt, qs.ψ), unit(qs)*unit(d) )
 end
 
 function (d::DerivativeOperator{<:Any,3})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_z(d.dt, qs.ψ) )
+    return QuantumState(d.elementgrid, operate_z(d.dt, qs.ψ), unit(qs)*unit(d) )
 end
 
 
@@ -252,7 +256,7 @@ function (go::GradientOperator)(a::AbstractVector{<:AbstractQuantumState})
     out = operate_x(go.dt, a[1].ψ)
     out .+= operate_y(go.dt, a[2].ψ)
     out .+= operate_z(go.dt, a[3].ψ)
-    return QuantumState(go.ceg, out)
+    return QuantumState(go.ceg, out, unit(a)*unit(g))
 end
 
 #(go::GradientOperator)(ψ::QuantumState) = go(ψ.ψ)
@@ -311,7 +315,11 @@ struct ConstantTimesOperator{TO,T,N} <: AbstractOperator{N}
     op::TO
     a::T
     function ConstantTimesOperator(op::AbstractOperator{N}, a=1) where N
-        new{typeof(op),typeof(a), N}(op.elementgrid, op, a)
+        if ustrip(imag(a)) ≈ 0
+            new{typeof(op),typeof(real(a)), N}(op.elementgrid, op, real(a))
+        else
+            new{typeof(op),typeof(a), N}(op.elementgrid, op, a)
+        end
     end
 end
 
@@ -324,8 +332,22 @@ Base.getindex(cto::ConstantTimesOperator,i::Int) = cto.a*cto.op[i]
 Unitful.unit(op::ConstantTimesOperator) = unit(op.op) * unit(op.a)
 
 function (cto::ConstantTimesOperator{TO,T,1})(qs::QuantumState) where {TO,T}
-    return ustrip(cto.a) * (cto.op(qs))
+    return cto.a * cto.op(qs)
 end
+
+function dot(cto1::ConstantTimesOperator{TO,T,N}, cto2::ConstantTimesOperator{TO,T,N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto1.op,cto2.op), cto1.a*cto2.a)
+end
+
+function dot(cto::ConstantTimesOperator{TO,T,N}, op::AbstractOperator{N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto.op,op), cto.a)
+end
+
+function dot(op::AbstractOperator{N}, cto::ConstantTimesOperator{TO,T,N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto.op,op), cto.a)
+end
+
+
 
 
 ## Scalar operator sum
@@ -421,6 +443,14 @@ Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
+function (lo::LaplaceOperator)(qs::QuantumState)
+    tmp = similar(qs.ψ, size(lo.g.dt))
+    tmp .= lo.g.dt
+    @tensor w[i,j]:=tmp[i,k]*tmp[k,j]
+    @tensor ϕ[i,j,k,I,J,K]:= w[i,ii]*qs.ψ[ii,j,k,I,J,K] + w[j,jj]*qs.ψ[i,jj,k,I,J,K] + w[k,kk]*qs.ψ[i,j,kk,I,J,K]
+    return QuantumState(qs.elementgrid, ϕ, unit(qs)*unit(lo.g)^2)
+end
+
 
 ## Special operators
 
@@ -433,23 +463,74 @@ end
 
 function kinetic_energy_operator(ceg::CubicElementGrid, m=1u"me_au")
     @assert dimension(m) == dimension(u"kg")
-    c = 1u"hartree * bohr^2"/(2*austrip(m))
+    c = -1u"hartree * bohr^2"/(2*austrip(m))
     return c * LaplaceOperator(ceg)
 end
 
 ## Hamilton operator
 
-struct HamiltonOperator{TV,TC} <: AbstractOperator{1}
+struct HamiltonOperatorFreeParticle{T} <: AbstractHamiltonOperator
     elementgrid::CubicElementGrid
     ∇²::LaplaceOperator
-    V::TV
-    c::TC
-    function HamiltonOperator(V::AbstractOperator{1}, m=1u"me_au")
-        @assert dimension(V) == dimension(u"J")
+    c::T
+    function HamiltonOperatorFreeParticle(ceg::CubicElementGrid;m=1u"me_au")
         @assert dimension(m) == dimension(u"kg")
-        c = 1u"hartree * bohr^2"/(2*austrip(m))
-        new{typeof(V), typeof(c)}(V.elementgrid, LaplaceOperator(V.elementgrid), V ,c)
+        c = -1u"hartree * bohr^2"/(2*austrip(m))
+        new{typeof(c)}(ceg, LaplaceOperator(ceg), c)
     end
 end
 
-Unitful.unit(H::HamiltonOperator) = unit( 1*unit(H.V) + H.c*(1*unit(H.∇²)) )
+Unitful.unit(H::HamiltonOperatorFreeParticle) = unit(H.c)*unit(H.∇²)
+
+(H::HamiltonOperatorFreeParticle)(qs::QuantumState) = H.c*(H.∇²*qs)
+
+
+struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
+    elementgrid::CubicElementGrid
+    T::HamiltonOperatorFreeParticle{TF}
+    V::TV
+    function HamiltonOperator(V::AbstractOperator{1}; m=1u"me_au")
+        @assert dimension(V) == dimension(u"J")
+        @assert dimension(m) == dimension(u"kg")
+        T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
+        new{typeof(T.c),typeof(V)}(V.elementgrid, T, V)
+    end
+end
+
+Unitful.unit(H::HamiltonOperator) = unit( 1*unit(H.V) + 1*unit(H.T) )
+
+(H::HamiltonOperator)(qs::QuantumState) = H.T*qs + H.V*qs
+
+
+struct HamiltonOperatorMagneticField{TF,TV,TA,Ta} <: AbstractHamiltonOperator
+    elementgrid::CubicElementGrid
+    T::HamiltonOperatorFreeParticle{TF}
+    V::TV
+    A::TA
+    q::Ta
+    function HamiltonOperatorMagneticField(
+            V::AbstractOperator{1},
+            A::AbstractOperator{3};
+            m=1u"me_au",
+            q=-1u"e_au"
+            )
+        @assert dimension(V) == dimension(u"J")
+        @assert dimension(A) == dimension(u"T*m")
+        @assert dimension(m) == dimension(u"kg")
+        @assert dimension(q) == dimension(u"e_au")
+        T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
+        new{typeof(T.c),typeof(V),typeof(A),typeof(q)}(V.elementgrid, T, V, A, q)
+    end
+end
+
+Unitful.unit(H::HamiltonOperatorMagneticField) = unit(H.T)
+
+function vector_potential(ceg, Bx, By, Bz)
+    @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")
+    r = position_operator(ceg)
+    # A = r×B/2
+    Ax = 0.5*(r[2]*Bz-r[3]*By)
+    Ay = 0.5*(r[3]*Bx-r[1]*Bz)
+    Az = 0.5*(r[1]*By-r[2]*Bx)
+    return VectorOperator(Ax, Ay, Az)
+end
