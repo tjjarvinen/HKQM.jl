@@ -381,7 +381,7 @@ end
 
 Unitful.unit(sos::OperatorSum) = unit(sos.op1)
 
-Base.getindex(op::OperatorSum, i::Int) = op.op1[1] + op.op2[2]
+Base.getindex(op::OperatorSum, i::Int) = op.op1[i] + op.op2[i]
 
 ## Scalar operator product
 
@@ -534,3 +534,11 @@ function vector_potential(ceg, Bx, By, Bz)
     Az = 0.5*(r[1]*By-r[2]*Bx)
     return VectorOperator(Ax, Ay, Az)
 end
+
+function momentum_operator(H::HamiltonOperatorMagneticField)
+    p = momentum_operator(H.elementgrid)
+    return p + H.q*H.A
+end
+
+momentum_operator(H::HamiltonOperator) = momentum_operator(H.elementgrid)
+momentum_operator(H::HamiltonOperatorFreeParticle) = momentum_operator(H.elementgrid)
