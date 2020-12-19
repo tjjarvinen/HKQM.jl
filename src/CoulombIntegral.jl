@@ -11,6 +11,7 @@ using UnitfulAtomic
 
 import LinearAlgebra.dot
 import LinearAlgebra.cross
+import LinearAlgebra.normalize!
 
 export AbstractElementGrid,
        AbstractOperator,
@@ -58,6 +59,8 @@ export AbstractElementGrid,
 
 # Functions
 export bracket,
+       helmholz_equation,
+       helmholz_equation!,
        momentum_operator,
        position_operator,
        vector_potential,

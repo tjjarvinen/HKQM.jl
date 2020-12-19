@@ -108,8 +108,16 @@ Base.:(-)(a::ScalarOperator) = -1*a
 Base.:(^)(a::ScalarOperator, x::Number) = ScalarOperator(a.elementgrid, (^).(a.vals,x); unit=unit(a)^x)
 
 
-for op in (:sin, :cos, :exp, :log, :sqrt, :cbrt, :real, :imag)
+for op in (:sqrt, :cbrt, :real, :imag)
     @eval Base.$op(so::ScalarOperator) = ScalarOperator(so.elementgrid, $op.(so.vals); unit=$op(so.unit))
+end
+
+for op in (:sin, :cos, :tan, :exp, :log)
+    @eval function Base.$op(so::ScalarOperator)
+        @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
+        so1 = auconvert(so)
+        return ScalarOperator(so1.elementgrid, $op.(so1.vals))
+     end
 end
 
 function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator)
@@ -472,17 +480,18 @@ end
 struct HamiltonOperatorFreeParticle{T} <: AbstractHamiltonOperator
     elementgrid::CubicElementGrid
     ∇²::LaplaceOperator
-    c::T
+    m::T
     function HamiltonOperatorFreeParticle(ceg::CubicElementGrid;m=1u"me_au")
         @assert dimension(m) == dimension(u"kg")
-        c = -1u"hartree * bohr^2"/(2*austrip(m))
-        new{typeof(c)}(ceg, LaplaceOperator(ceg), c)
+        new{typeof(m)}(ceg, LaplaceOperator(ceg), m)
     end
 end
 
-Unitful.unit(H::HamiltonOperatorFreeParticle) = unit(H.c)*unit(H.∇²)
+Unitful.unit(H::HamiltonOperatorFreeParticle) =u"hartree*bohr^2"*unit(H.∇²)
 
-(H::HamiltonOperatorFreeParticle)(qs::QuantumState) = H.c*(H.∇²*qs)
+function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
+    return uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))*(H.∇²*qs)
+end
 
 
 struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
@@ -493,11 +502,11 @@ struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
         @assert dimension(V) == dimension(u"J")
         @assert dimension(m) == dimension(u"kg")
         T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
-        new{typeof(T.c),typeof(V)}(V.elementgrid, T, V)
+        new{typeof(T.m),typeof(V)}(V.elementgrid, T, V)
     end
 end
 
-Unitful.unit(H::HamiltonOperator) = unit( 1*unit(H.V) + 1*unit(H.T) )
+Unitful.unit(H::HamiltonOperator) = unit(H.T)
 
 (H::HamiltonOperator)(qs::QuantumState) = H.T*qs + H.V*qs
 
@@ -519,11 +528,23 @@ struct HamiltonOperatorMagneticField{TF,TV,TA,Ta} <: AbstractHamiltonOperator
         @assert dimension(m) == dimension(u"kg")
         @assert dimension(q) == dimension(u"e_au")
         T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
-        new{typeof(T.c),typeof(V),typeof(A),typeof(q)}(V.elementgrid, T, V, A, q)
+        new{typeof(T.m),typeof(V),typeof(A),typeof(q)}(V.elementgrid, T, V, A, q)
     end
 end
 
 Unitful.unit(H::HamiltonOperatorMagneticField) = unit(H.T)
+
+function (H::HamiltonOperatorMagneticField)(ψ::QuantumState)
+    #TODO make this better
+    p = momentum_operator(H.T)
+    ϕ = H.q^2*(H.A⋅H.A)*ψ
+    ϕ += H.q*(p⋅H.A)*ψ
+    ϕ += H.q*(H.A⋅p)*ψ
+    ϕ /= 2H.T.m
+    ϕ += H.V*ψ
+    return H.T*ψ + ϕ
+end
+
 
 function vector_potential(ceg, Bx, By, Bz)
     @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")

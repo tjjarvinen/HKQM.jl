@@ -136,8 +136,8 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
 
     V = ρ.*transtensor.wt[1]
     nt = size(transtensor)[end]
-    @info "nt=$nt"
-    @info "V type = $(typeof(V))"
+    @debug "nt=$nt"
+    @debug "V type = $(typeof(V))"
     ptime = showprogress ? 0.3 : Inf
     if nworkers() > 1
         tmp = similar(V) # Yes it is a hack
@@ -154,4 +154,12 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
         return V .+ coulomb_correction(ρ, tmax)
     end
     return V
+end
+
+function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
+                          tmax=nothing, showprogress=false)
+    @assert dimension(ψ) == dimension(u"bohr^-2")
+    ψ = uconvert(u"bohr^-2", ψ)
+    V = poisson_equation(ψ.ψ, transtensor, tmax=tmax, showprogress=showprogress)
+    return QuantumState(ψ.elementgrid, V)
 end

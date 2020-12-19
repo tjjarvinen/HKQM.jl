@@ -87,3 +87,45 @@ function jacobi_iterations(ceg::CubicElementGrid, h::Hamilton, ψ0; n=10)
     end
     return E[2:end], ψ
 end
+
+function helmholz_equation(ψ::QuantumState, H::HamiltonOperator;
+                            tn=96, tmax=300, showprogress=false)
+    normalize!(ψ)
+    E = real(bracket(ψ,H,ψ))
+    @info "E=$E"
+    k  = sqrt( -2(austrip(E)) )
+    ct = loglocalct(H.elementgrid, tn; k=k);
+    ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
+    ϕ = poisson_equation(ϕ, ct; tmax=tmax, showprogress=showprogress);
+    normalize!(ϕ)
+    return ϕ
+end
+
+function helmholz_equation!(ψ::QuantumState, H::HamiltonOperator;
+                            tn=96, tmax=300, showprogress=false)
+    normalize!(ψ)
+    E = real(bracket(ψ,H,ψ))
+    @info "E=$E"
+    k  = sqrt( -2(austrip(E)) )
+    ct = loglocalct(H.elementgrid, tn; k=k);
+    ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
+    ψ .= poisson_equation(ϕ, ct; tmax=tmax, showprogress=showprogress);
+    normalize!(ψ)
+    return ψ
+end
+
+
+function helmholz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
+                            tn=96, tmax=300, showprogress=false)
+    normalize!(ψ)
+    E = real(bracket(ψ,H,ψ))
+    @info "E=$E"
+    k  = sqrt( -2(austrip(E)) )
+    ct = loglocalct(H.elementgrid, tn; k=k);
+    p = momentum_operator(H.T)
+    ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ + (H.q^2*u"ħ_au^-2")*(H.A⋅H.A)*ψ
+    ϕ += (H.q*u"ħ_au^-2")*(H.A⋅p + p⋅H.A) * ψ
+    ϕ = poisson_equation(ϕ, ct; tmax=tmax, showprogress=showprogress);
+    normalize!(ϕ)
+    return ϕ
+end

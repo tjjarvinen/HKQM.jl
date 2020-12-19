@@ -36,7 +36,7 @@ function Unitful.uconvert(u::Unitful.Units, qs::QuantumState)
 end
 
 function normalize!(qs::QuantumState)
-    N² = braket(qs, qs)
+    N² = bracket(qs, qs)
     qs.ψ .*= 1/√N²
     return qs
 end
@@ -48,7 +48,7 @@ function Base.:(+)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<
     if unit(qs1) == unit(qs2)
         return QuantumState(qs1.elementgrid, qs1.ψ.+qs2.ψ, unit(qs1))
     else
-        error("Not done yet")
+        return qs1 + uconvert(unit(qs1), qs2)
     end
 end
 
