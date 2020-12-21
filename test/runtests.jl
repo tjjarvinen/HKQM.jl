@@ -32,12 +32,14 @@ end
 
 @testset "Operators" begin
     ceg = CubicElementGrid(10, 4, 16)
-    r = PositionOperator(ceg)
+    r = position_operator(ceg)
+    p = momentum_operator(ceg)
     x = r[1]
     @test x == r.operators[1]
     @test x != r.operators[2]
     @test x != r.operators[3]
     @test size(x) == size(r)
+    @test_throws AssertionError r + p
     #@test sin(x).vals == sin.(x.vals)
     #for OP in [:sin, :cos, :exp]
     #    @eval begin
