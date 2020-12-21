@@ -37,6 +37,25 @@ function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
     return pmap( O->bracket(ϕ, O, ψ),  op)
 end
 
+
+function magnetic_current(ψ::QuantumState, H::HamiltonOperator)
+    p = momentum_operator(H) * (-1u"e_au"/(2H.T.m))
+    ϕ = conj(ψ)
+    jx = ψ⋆(p[1]*ψ) .+ ϕ⋆(p[1]*ϕ)
+    jy = ψ⋆(p[2]*ψ) .+ ϕ⋆(p[2]*ϕ)
+    jz = ψ⋆(p[3]*ψ) .+ ϕ⋆(p[3]*ϕ)
+    return [real.(jx), real.(jy), real.(jz)]
+end
+
+function magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
+    p = momentum_operator(H) * (H.q/(2H.T.m))
+    ϕ = conj(ψ)
+    jx = ψ⋆(p[1]*ψ) .+ ϕ⋆(p[1]*ϕ)
+    jy = ψ⋆(p[2]*ψ) .+ ϕ⋆(p[2]*ϕ)
+    jz = ψ⋆(p[3]*ψ) .+ ϕ⋆(p[3]*ϕ)
+    return [real.(jx), real.(jy), real.(jz)]
+end
+
 ## Coulomb integral / Poisson equation
 
 function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor;

@@ -58,6 +58,14 @@ function Base.:(-)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<
     return QuantumState(qs1.elementgrid, qs1.ψ.-qs2.ψ, unit(qs1))
 end
 
+"""
+    ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
+
+Return probability density ψ†ψ
+
+## Example
+julia> ψ⋆ψ
+"""
 function ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
     @assert size(qs1) == size(qs2)
     conj(qs1).ψ .* qs2.ψ

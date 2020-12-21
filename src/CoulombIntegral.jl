@@ -61,8 +61,10 @@ export AbstractElementGrid,
 export bracket,
        helmholz_equation,
        helmholz_equation!,
+       magnetic_current,
        momentum_operator,
        position_operator,
+       ⋆,
        vector_potential,
        ω_tensor
 
