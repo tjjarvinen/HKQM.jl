@@ -1,10 +1,3 @@
-using TensorOperations
-using ProgressMeter
-using OffsetArrays
-using SpecialFunctions
-using StaticArrays
-using Polynomials
-
 
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 
@@ -326,4 +319,27 @@ function kinetic_energy(ceg::CubicElementGrid, dt, ψ)
     ez = 0.5*integrate(tmp, ceg, tmp)
 
     return ex+ey+ez
+end
+
+
+
+## Momentum tensor
+
+struct MomentumTensor{NG} <: AbstractArray{ComplexF64, 3}
+    dt::DerivativeTensor{NG}
+    function MomentumTensor(dt::DerivativeTensor{T}) where T
+        new{T}(dt)
+    end
+end
+
+function MomentumTensor(ceg::CubicElementGrid)
+    return MomentumTensor(DerivativeTensor(ceg))
+end
+
+Base.size(mt::MomentumTensor) = (size(mt.dt)...,3)
+
+Base.getindex(mt::MomentumTensor,i::Int,j::Int,xyz::Int) = -ComplexF64(0,mt.dt[i,j])
+
+function Base.show(io::IO, ::MIME"text/plain", mt::MomentumTensor)
+    print(io, "Momentum tensor size=$(size(mt))")
 end

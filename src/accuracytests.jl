@@ -186,11 +186,25 @@ struct HarmonicEigenstate
     end
 end
 
-function (HE::HarmonicEigenstate)(v)
-    r = norm(v)/HE.α
-    xyz = v./HE.α
-    l = length(v)
-    return HE.N^l*prod(HE.hp, xyz)*exp(-0.5*r^2)
+function (HE::HarmonicEigenstate)(v::AbstractVector)
+    return prod(HE, v)
+end
+
+function (HE::HarmonicEigenstate)(x::Real)
+    y = x/HE.α
+    return HE.N*HE.hp(y)*exp(-0.5*y^2)
+end
+
+function harmonic_state(ceg::CubicElementGrid, hx, hy=hx, hz=hx)
+    r = position_operator(ceg)
+    ψ = hx.(r[1].vals)
+    ψ .*= hy.(r[2].vals)
+    ψ .*= hz.(r[3].vals)
+    return QuantumState(ceg, ψ)
+end
+
+function energy(he::HarmonicEigenstate)
+    return he.ω*(he.ν+0.5)*u"hartree"
 end
 
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)

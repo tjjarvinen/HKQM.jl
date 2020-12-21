@@ -1,6 +1,20 @@
 module CoulombIntegral
 
+using OffsetArrays
+using Polynomials
+using ProgressMeter
+using SpecialFunctions
+using StaticArrays
+using TensorOperations
+using Unitful
+using UnitfulAtomic
+
+import LinearAlgebra.dot
+import LinearAlgebra.cross
+import LinearAlgebra.normalize!
+
 export AbstractElementGrid,
+       AbstractOperator,
        CubicElementGrid,
        CubicElement,
        CubicElements,
@@ -14,6 +28,7 @@ export AbstractElementGrid,
        coulombtransformation,
        DerivativeTensor,
        Element1D,
+       EM_Hamilton,
        elementsize,
        gaussian_coulomb_integral,
        gaussiandensity_self_energy,
@@ -40,12 +55,34 @@ export AbstractElementGrid,
        transformation_tensor_alt,
        xgrid,
        ygrid,
-       zgrid,
+       zgrid
+
+# Functions
+export bracket,
+       helmholz_equation,
+       helmholz_equation!,
+       momentum_operator,
+       position_operator,
+       vector_potential,
        ω_tensor
 
+# Types
+export AbstractQuantumState,
+       DerivativeOperator,
+       GradientOperator,
+       HamiltonOperator,
+       HamiltonOperatorFreeParticle,
+       HamiltonOperatorMagneticField,
+       LaplaceOperator,
+       OperatorSum,
+       QuantumState,
+       ScalarOperator,
+       VectorOperator
 
 include("elements.jl")
+include("states.jl")
 include("tensors.jl")
+include("operators.jl")
 include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")

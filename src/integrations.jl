@@ -7,6 +7,36 @@ function integrate(ϕ, grid::CubicElementGrid, ψ)
     return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
 end
 
+function integrate(grid::CubicElementGrid, ρ)
+    ω = ω_tensor(grid)
+    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
+end
+
+function integrate(ϕ::QuantumState, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    integrate(ϕ.ψ, ψ.elementgrid, ψ.ψ)
+end
+
+function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    integrate(conj.(ϕ.ψ), ψ.elementgrid, ψ.ψ)
+end
+
+function bracket(ϕ::QuantumState, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid
+    return integrate(ϕ.elementgrid, ϕ ⋆ ψ)*unit(ϕ)*unit(ψ)
+end
+
+function bracket(ϕ::QuantumState, op::AbstractOperator{1}, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    return integrate(ϕ.elementgrid, ϕ ⋆ (op*ψ))*unit(ϕ)*unit(ψ)*unit(op)
+end
+
+function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
+    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    return pmap( O->bracket(ϕ, O, ψ),  op)
+end
+
 ## Coulomb integral / Poisson equation
 
 function coulomb_tensor(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
@@ -106,8 +136,8 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
 
     V = ρ.*transtensor.wt[1]
     nt = size(transtensor)[end]
-    @info "nt=$nt"
-    @info "V type = $(typeof(V))"
+    @debug "nt=$nt"
+    @debug "V type = $(typeof(V))"
     ptime = showprogress ? 0.3 : Inf
     if nworkers() > 1
         tmp = similar(V) # Yes it is a hack
@@ -124,4 +154,12 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
         return V .+ coulomb_correction(ρ, tmax)
     end
     return V
+end
+
+function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
+                          tmax=nothing, showprogress=false)
+    @assert dimension(ψ) == dimension(u"bohr^-2")
+    ψ = uconvert(u"bohr^-2", ψ)
+    V = poisson_equation(ψ.ψ, transtensor, tmax=tmax, showprogress=showprogress)
+    return QuantumState(ψ.elementgrid, V)
 end

@@ -30,6 +30,27 @@ end
     @test ct.w[1]*cll[1,3,2,4,4] ≈ ct.w[3]*cll[3,1,4,2,4]
 end
 
+@testset "Operators" begin
+    ceg = CubicElementGrid(10, 4, 16)
+    r = position_operator(ceg)
+    p = momentum_operator(ceg)
+    x = r[1]
+    @test x == r.operators[1]
+    @test x != r.operators[2]
+    @test x != r.operators[3]
+    @test size(x) == size(r)
+    @test_throws AssertionError r + p
+    #@test sin(x).vals == sin.(x.vals)
+    #for OP in [:sin, :cos, :exp]
+    #    @eval begin
+    #        v = $OP(x);
+    #        vv = $OP.(x.vals);
+    #    end
+    #    @test v.vals == vv;
+    #end
+end
+
+
 @testset "Poisson equation" begin
     ec = test_accuracy(10,4,24,48; showprogress=false)  # Poor accuracy
     eref = gaussian_coulomb_integral()[1]
