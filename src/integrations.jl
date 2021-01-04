@@ -34,26 +34,25 @@ end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
     @assert size(ϕ) == size(ψ) == size(op)
-    return pmap( O->bracket(ϕ, O, ψ),  op)
+    #NOTE this could be pmap, but needs to be tested
+    return map( O->bracket(ϕ, O, ψ),  op)
 end
 
 
 function magnetic_current(ψ::QuantumState, H::HamiltonOperator)
     p = momentum_operator(H) * (-1u"e_au"/(2H.T.m))
-    ϕ = conj(ψ)
-    jx = ψ⋆(p[1]*ψ) .+ ϕ⋆(p[1]*ϕ)
-    jy = ψ⋆(p[2]*ψ) .+ ϕ⋆(p[2]*ϕ)
-    jz = ψ⋆(p[3]*ψ) .+ ϕ⋆(p[3]*ϕ)
-    return [real.(jx), real.(jy), real.(jz)]
+    return _magnetic_current(p, ψ)
 end
 
 function magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
     p = momentum_operator(H) * (H.q/(2H.T.m))
+    return _magnetic_current(p, ψ)
+end
+
+function _magnetic_current(p, ψ)
     ϕ = conj(ψ)
-    jx = ψ⋆(p[1]*ψ) .+ ϕ⋆(p[1]*ϕ)
-    jy = ψ⋆(p[2]*ψ) .+ ϕ⋆(p[2]*ϕ)
-    jz = ψ⋆(p[3]*ψ) .+ ϕ⋆(p[3]*ϕ)
-    return [real.(jx), real.(jy), real.(jz)]
+    #NOTE this could be pmap, but needs to be tested
+    return map( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
 end
 
 ## Coulomb integral / Poisson equation
