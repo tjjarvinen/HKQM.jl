@@ -13,27 +13,27 @@ function integrate(grid::CubicElementGrid, ρ)
 end
 
 function integrate(ϕ::QuantumState, ψ::QuantumState)
-    @assert ϕ.elementgrid == ψ.elementgrid
+    @assert size(ϕ) == size(ψ)
     integrate(ϕ.ψ, ψ.elementgrid, ψ.ψ)
 end
 
 function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
-    integrate(conj.(ϕ.ψ), ψ.elementgrid, ψ.ψ)
+    integrate(conj(ϕ).ψ, ψ.elementgrid, ψ.ψ)
 end
 
 function bracket(ϕ::QuantumState, ψ::QuantumState)
-    @assert ϕ.elementgrid == ψ.elementgrid
+    @assert size(ϕ) == size(ψ)
     return integrate(ϕ.elementgrid, ϕ ⋆ ψ)*unit(ϕ)*unit(ψ)
 end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator{1}, ψ::QuantumState)
-    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    @assert size(ϕ) == size(ψ) == size(op)
     return integrate(ϕ.elementgrid, ϕ ⋆ (op*ψ))*unit(ϕ)*unit(ψ)*unit(op)
 end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
-    @assert ϕ.elementgrid == ψ.elementgrid == op.elementgrid
+    @assert size(ϕ) == size(ψ) == size(op)
     return pmap( O->bracket(ϕ, O, ψ),  op)
 end
 
