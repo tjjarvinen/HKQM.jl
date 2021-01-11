@@ -1,14 +1,17 @@
 module CoulombIntegral
 
+using Reexport
+
 using GaussQuadrature
-using OffsetArrays
+using LinearAlgebra: dot, ⋅
+using LinearAlgebra: cross, ×
 using Polynomials
 using ProgressMeter
 using SpecialFunctions
 using StaticArrays
 using TensorOperations
-using Unitful
-using UnitfulAtomic
+@reexport using Unitful
+@reexport using UnitfulAtomic
 
 import LinearAlgebra.dot
 import LinearAlgebra.cross
@@ -29,7 +32,6 @@ export AbstractElementGrid,
        coulombtransformation,
        DerivativeTensor,
        Element1D,
-       EM_Hamilton,
        elementsize,
        gaussian_coulomb_integral,
        gaussiandensity_self_energy,
@@ -37,14 +39,7 @@ export AbstractElementGrid,
        getcenter,
        getcenters,
        grid1d,
-       Hamilton,
-       integrate,
-       kinetic_energy,
-       loglocalct,
        normalize!,
-       poisson_equation,
-       poisson_equation!,
-       potential_energy,
        self_energy,
        test_accuracy,
        test_accuracy_new,
@@ -58,14 +53,20 @@ export AbstractElementGrid,
        ygrid,
        zgrid
 
-# Functions
+# Methods
 export bracket,
-       helmholz_equation,
-       helmholz_equation!,
+       cross, ×,
+       dot, ⋅,
+       helmholtz_equation,
+       helmholtz_equation!,
+       ketbra, ⋆,
        magnetic_current,
        momentum_operator,
+       optimal_coulomb_tranformation,
+       para_magnetic_current,
+       poisson_equation,
+       poisson_equation!,
        position_operator,
-       ⋆,
        vector_potential,
        ω_tensor
 

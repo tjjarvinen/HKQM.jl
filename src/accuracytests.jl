@@ -78,7 +78,7 @@ function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
         ct = CoulombTransformationLogLocal(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
     elseif mode == :combination
         @info "Combination mode"
-        ct = loglocalct(ceg, nt; tmax=tmax, δ=δ, tboundary=tboundary)
+        ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=tboundary)
     else
         error("Mode not known")
     end
@@ -125,7 +125,7 @@ end
 
 function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0.5, δ=0.25, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
-    ct = loglocalct(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
+    ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
     return test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 

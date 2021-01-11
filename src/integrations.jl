@@ -1,6 +1,12 @@
 using Distributed
 
+"""
+    integrate(ϕ, grid::CubicElementGrid, ψ)
+    integrate(grid::CubicElementGrid, ρ)
+    integrate(ϕ::QuantumState, ψ::QuantumState)
 
+Low lever integration routines. (users should not use these, as they can change)
+"""
 function integrate(ϕ, grid::CubicElementGrid, ψ)
     ω = ω_tensor(grid)
     c = ϕ.*ψ
@@ -22,6 +28,15 @@ function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
     integrate(conj(ϕ).ψ, ψ.elementgrid, ψ.ψ)
 end
 
+
+
+"""
+    bracket(ϕ::QuantumState, ψ::QuantumState)
+    bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
+
+Equivalent to Dirac bracket notation <ϕ|ψ> and <ϕ|op|ψ>.
+Returns expectation value.
+"""
 function bracket(ϕ::QuantumState, ψ::QuantumState)
     @assert size(ϕ) == size(ψ)
     return integrate(ϕ.elementgrid, ϕ ⋆ ψ)*unit(ϕ)*unit(ψ)
@@ -34,25 +49,46 @@ end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
     @assert size(ϕ) == size(ψ) == size(op)
-    #NOTE this could be pmap, but needs to be tested
-    return map( O->bracket(ϕ, O, ψ),  op)
+    return pmap( O->bracket(ϕ, O, ψ),  op)
 end
 
 
+"""
+    magnetic_current(ψ::QuantumState, H::HamiltonOperator)
+    magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
+
+Return magnetic current for systen with given Hamiltonian.
+
+# Returns
+`Vector{AbstractArray{Float,6}}`
+"""
 function magnetic_current(ψ::QuantumState, H::HamiltonOperator)
     p = momentum_operator(H) * (-1u"e_au"/(2H.T.m))
     return _magnetic_current(p, ψ)
 end
+
 
 function magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
     p = momentum_operator(H) * (H.q/(2H.T.m))
     return _magnetic_current(p, ψ)
 end
 
+"""
+    para_magnetic_current(ψ::QuantumState)
+
+Calculates para magnetic current.
+
+# Returns
+`Vector{AbstractArray{Float,6}}`
+"""
+function para_magnetic_current(ψ::QuantumState)
+    p = momentum_operator(ψ)
+    return _magnetic_current(p, ψ)
+end
+
 function _magnetic_current(p, ψ)
     ϕ = conj(ψ)
-    #NOTE this could be pmap, but needs to be tested
-    return map( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
+    return pmap( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
 end
 
 ## Coulomb integral / Poisson equation

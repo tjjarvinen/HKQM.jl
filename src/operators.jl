@@ -39,8 +39,6 @@ end
 Base.:(+)(ao::AbstractOperator) = ao
 Base.:(-)(ao::AbstractOperator) = -1*ao
 
-#Base.:(*)()
-
 dot(v1::AbstractOperator{N}, v2::AbstractOperator{N}) where N = sum(v1.*v2)
 
 function cross(v1::AbstractOperator{3}, v2::AbstractOperator{3})
@@ -51,7 +49,7 @@ function cross(v1::AbstractOperator{3}, v2::AbstractOperator{3})
 end
 
 Base.:(*)(op::AbstractOperator{1}, qs::QuantumState) = op(qs)
-Base.:(*)(op::AbstractOperator, qs::QuantumState) = map(f->f(qs), op)
+Base.:(*)(op::AbstractOperator, qs::QuantumState) = pmap(f->f(qs), op)
 
 ## Scalar Operator
 
@@ -358,7 +356,7 @@ end
 
 
 
-## Scalar operator sum
+## Operator sum
 
 struct OperatorSum{TO1, TO2, N} <: AbstractCompositeOperator{N}
     elementgrid::CubicElementGrid
@@ -462,12 +460,23 @@ end
 
 ## Special operators
 
+"""
+    momentum_operator(ceg::CubicElementGrid)
+    momentum_operator(qs::QuantumState)
+    momentum_operator(H::HamiltonOperator)
+    momentum_operator(H::HamiltonOperatorFreeParticle)
+    momentum_operator(H::HamiltonOperatorMagneticField)
 
+Return momentum operator. For Hamiltonian operator input this returns
+canonical momentum.
+"""
 function momentum_operator(ceg::CubicElementGrid)
-    c = - im * 1u"ħ_au"
+    c = -im * 1u"ħ_au"
     g = GradientOperator(ceg)
     return c*g
 end
+
+momentum_operator(qs::QuantumState) = momentum_operator(qs.elementgrid)
 
 function kinetic_energy_operator(ceg::CubicElementGrid, m=1u"me_au")
     @assert dimension(m) == dimension(u"kg")

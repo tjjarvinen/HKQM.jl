@@ -3,6 +3,7 @@ using CoulombIntegral
 using Logging
 using ForwardDiff
 
+
 disable_logging(Logging.Info)
 
 
@@ -22,6 +23,9 @@ end
     ca = CoulombTransformationLocal(ceg, 16)
     cll  = CoulombTransformationLogLocal(ceg, 16)
     @test size(ct) == (16,16,4,4,16)
+    @test size(ct) == size(clog)
+    @test size(ct) == size(ca)
+    @test size(ct) == size(cll)
 
     # Symmetry
     @test ct.w[1]*ct[1,3,2,4,1] ≈ ct.w[3]*ct[3,1,4,2,1]
@@ -35,19 +39,23 @@ end
     r = position_operator(ceg)
     p = momentum_operator(ceg)
     x = r[1]
+    @test unit(x) == u"bohr"
     @test x == r.operators[1]
     @test x != r.operators[2]
     @test x != r.operators[3]
     @test size(x) == size(r)
     @test_throws AssertionError r + p
-    #@test sin(x).vals == sin.(x.vals)
-    #for OP in [:sin, :cos, :exp]
-    #    @eval begin
-    #        v = $OP(x);
-    #        vv = $OP.(x.vals);
-    #    end
-    #    @test v.vals == vv;
-    #end
+    @test sin(1u"bohr^-1"*x).vals == sin.(x.vals)
+    @test cos(1u"bohr^-1"*x).vals == cos.(x.vals)
+    @test exp(1u"bohr^-1"*x).vals == exp.(x.vals)
+    @test (x + x).vals == 2.0 .* x.vals
+    @test (2x).vals ==  (x + x).vals
+    @test (x^2).vals == x.vals.^2
+    @test sqrt(x^2).vals ≈ abs.(x.vals)
+    @test (x^2).vals == (x*x).vals
+    @test unit(x^2) == u"bohr^2"
+    @test unit(x+x) == u"bohr"
+    @test unit(sqrt(x^2)) == u"bohr"
 end
 
 
@@ -67,10 +75,10 @@ end
     # Helmholtz equation derivative
     function f(k)
         ceg = CubicElementGrid(10,2,16)
-        ct=loglocalct(ceg, 4; k=k)
+        ct=optimal_coulomb_tranformation(ceg, 4; k=k)
         ρ = CoulombIntegral.density_tensor(ceg)
         V = poisson_equation(ρ, ct)
-        return integrate(ρ, ceg, V)
+        return CoulombIntegral.integrate(ρ, ceg, V)
     end
     g(x) = ForwardDiff.derivative(f, x)
     g(1.)
