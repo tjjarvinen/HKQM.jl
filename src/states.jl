@@ -14,6 +14,9 @@ Type to hold and manipulate quantum states
 - `ψ::TA`            : array holding "values"
 - `unit::Unitful.FreeUnits`  : unit for quantum state
 
+# Creation
+    QuantumState(ceg, ψ::AbstractArray{<:Any,6}, unit::Unitful.FreeUnits=NoUnits)
+
 # Example
 ```jldoctest
 julia> ceg = CubicElementGrid(5, 2, 32)
