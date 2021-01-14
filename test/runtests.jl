@@ -1,5 +1,5 @@
 using Test
-using CoulombIntegral
+using HKQM
 using Logging
 using ForwardDiff
 
@@ -76,9 +76,9 @@ end
     function f(k)
         ceg = CubicElementGrid(10,2,16)
         ct=optimal_coulomb_tranformation(ceg, 4; k=k)
-        ρ = CoulombIntegral.density_tensor(ceg)
+        ρ = HKQM.density_tensor(ceg)
         V = poisson_equation(ρ, ct)
-        return CoulombIntegral.integrate(ρ, ceg, V)
+        return HKQM.integrate(ρ, ceg, V)
     end
     g(x) = ForwardDiff.derivative(f, x)
     g(1.)
