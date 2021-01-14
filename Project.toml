@@ -1,7 +1,7 @@
-name = "CoulombIntegral"
+name = "HKQM"
 uuid = "95871d0a-b0d4-4f82-9ec8-411977f2e218"
 authors = ["Teemu Järvinen <teemu.jarvinen@helsinki.fi> and contributors"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
