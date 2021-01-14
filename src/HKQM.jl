@@ -1,4 +1,4 @@
-module CoulombIntegral
+module HKQM
 
 using Reexport
 
