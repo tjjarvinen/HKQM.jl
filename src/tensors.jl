@@ -7,6 +7,47 @@ abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulom
 abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
 abstract type AbstractCoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG} end
 
+
+"""
+    CoulombTransformation{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+
+Coulomb transformation tensor with even spacing for t-points.
+
+If `k` is zero this tensor solves Poisson equation. If nonzero it works as
+Helmholz equation Greens function.
+
+# Fields
+- `elementgrid::SMatrix{NG,NE}` : Gauss points in elements
+- `t::SVector{NT}{Float64}`     : t-coordinates
+- `wt::Vector{T}`               : Weights for t-integration
+- `w::SVector{NG}{Float64}`     : Weights for position coordinate integration
+- `tmin::Float64`               : t-integration lower limit  (default=0.)
+- `tmax::Float64`               : t-integration upper limit  (default=25.)
+- `k::T`                        : Helmholz equation constant (default=0.)
+
+
+# Contruction
+    CoulombTransformation(ceg::CubicElementGrid, nt::Int; tmin=0., tmax=25., k=0.)
+
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> CoulombTransformation(ceg, 48)
+Coulomb transformation tensor for 48 t-points, tmin=0.0 tmax=25.0 and k=0.0
+
+julia> ct = CoulombTransformation(ceg, 48; tmin=4., tmax=30., k=0.1)
+Coulomb transformation tensor for 48 t-points, tmin=4.0 tmax=30.0 and k=0.1
+
+julia> typeof(ct) <: AbstractArray{Float64,5}
+true
+
+julia> ct[3,3,1,1,5] ≈ 0.0158700408
+true
+```
+"""
 struct CoulombTransformation{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
@@ -24,6 +65,52 @@ struct CoulombTransformation{T, NT, NE, NG} <: AbstractCoulombTransformationSing
     end
 end
 
+
+"""
+    CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+
+Coulomb transformation tensor with logarithmic spacing for t-points.
+
+If `k` is zero this tensor solves Poisson equation. If nonzero it works as
+Helmholz equation Greens function.
+
+# Fields
+- `elementgrid::SMatrix{NG,NE}` : Gauss points in elements
+- `t::SVector{NT}{Float64}`     : t-coordinates
+- `wt::Vector{T}`               : Weights for t-integration
+- `w::SVector{NG}{Float64}`     : Weights for position coordinate integration
+- `tmin::Float64`               : t-integration lower limit
+- `tmax::Float64`               : t-integration upper limit
+- `k::T`                        : Helmholz equation constant
+
+
+# Construction
+    CoulombTransformationLog(ceg::CubicElementGrid, nt::Int; kwargs...)
+
+## Keywords
+- `tmin=0.`
+- `tmax=25.`
+- `k=0.`
+
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> CoulombTransformationLog(ceg, 48)
+Logarithmic Coulomb transformation tensor for 48 t-points, tmin=0.0, tmax=25.0 and k=0.0
+
+julia> ct = CoulombTransformationLog(ceg, 48; tmin=4., tmax=30., k=0.1)
+Logarithmic Coulomb transformation tensor for 48 t-points, tmin=4.0, tmax=30.0 and k=0.1
+
+julia> typeof(ct) <: AbstractArray{Float64,5}
+true
+
+julia> ct[3,3,1,1,5] ≈ 0.0594740698
+true
+```
+"""
 struct CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
@@ -33,8 +120,8 @@ struct CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationS
     tmax::Float64
     k::T
     function CoulombTransformationLog(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., ε=1e-12, k=0.)
-        s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
+                                      tmin=0., tmax=25., k=0.)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
         t = exp.(s)
         wt = ws .* t
         grid = grid1d(ceg)
@@ -44,6 +131,55 @@ struct CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationS
     end
 end
 
+
+"""
+    CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+
+Coulomb transformation tensor with even spacing for t-points and t-integration
+local average correction.
+
+If `k` is zero this tensor solves Poisson equation. If nonzero it works as
+Helmholz equation Greens function.
+
+# Fields
+- `elementgrid::SMatrix{NG,NE}` : Gauss points in elements
+- `t::SVector{NT}{Float64}`     : t-coordinates
+- `wt::Vector{T}`               : Weights for t-integration
+- `w::SVector{NG}{Float64}`     : Weights for position coordinate integration
+- `tmin::Float64`               : t-integration lower limit
+- `tmax::Float64`               : t-integration upper limit
+- `k::T`                        : Helmholz equation constant
+- `δ::Float64`                  : Correction constant for t-integration ∈ ]0,1]
+- `δp::SMatrix{NG,NE}`          : Upper average points for t-integration correction
+- `δm::SMatrix{NG,NE}`          : Lower average points for t-integration correction
+
+# Construction
+    CoulombTransformationLocal(ceg::CubicElementGrid, nt::Int; kwargs...)
+
+## Keywords
+- `tmin=0.`
+- `tmax=25.`
+- `δ=0.25`
+- `k=0.`
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> CoulombTransformationLocal(ceg, 48)
+Coulomb transformation tensor with local correction for 48 t-points, tmin=0.0, tmax=25.0 and k=0.0
+
+julia> ct = CoulombTransformationLocal(ceg, 48; tmin=4., tmax=30., k=0.1)
+Coulomb transformation tensor with local correction for 48 t-points, tmin=4.0, tmax=30.0 and k=0.1
+
+julia> typeof(ct) <: AbstractArray{Float64,5}
+true
+
+julia> ct[3,3,1,1,5] ≈ 0.0591078365
+true
+```
+"""
 struct CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
@@ -75,6 +211,55 @@ struct CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformatio
     end
 end
 
+
+"""
+    CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
+
+Coulomb transformation tensor with logarithmic spacing for t-points and
+t-integration local average correction.
+
+If `k` is zero this tensor solves Poisson equation. If nonzero it works as
+Helmholz equation Greens function.
+
+# Fields
+- `elementgrid::SMatrix{NG,NE}` : Gauss points in elements
+- `t::SVector{NT}{Float64}`     : t-coordinates
+- `wt::Vector{T}`               : Weights for t-integration
+- `w::SVector{NG}{Float64}`     : Weights for position coordinate integration
+- `tmin::Float64`               : t-integration lower limit
+- `tmax::Float64`               : t-integration upper limit
+- `k::T`                        : Helmholz equation constant
+- `δ::Float64`                  : Correction constant for t-integration ∈ ]0,1]
+- `δp::SMatrix{NG,NE}`          : Upper average points for t-integration correction
+- `δm::SMatrix{NG,NE}`          : Lower average points for t-integration correction
+
+# Construction
+    CoulombTransformationLogLocal(ceg::CubicElementGrid, nt::Int; kwargs...)
+
+## Keywords
+- `tmin=0.`
+- `tmax=25.`
+- `δ=0.25`
+- `k=0.`
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> CoulombTransformationLogLocal(ceg, 48)
+Logarithmic Coulomb transformation tensor with local correction for 48 t-points, tmin=0.0, tmax=25.0 and k=0.0
+
+julia> ct = CoulombTransformationLogLocal(ceg, 48; tmin=4., tmax=30., k=0.1)
+Logarithmic Coulomb transformation tensor with local correction for 48 t-points, tmin=4.0, tmax=30.0 and k=0.1
+
+julia> typeof(ct) <: AbstractArray{Float64,5}
+true
+
+julia> ct[3,3,1,1,5] ≈ 0.0591078365
+true
+```
+"""
 struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransformationLocal{NT, NE, NG}
     elementgrid::SMatrix{NG,NE}
     t::SVector{NT}{Float64}
@@ -87,10 +272,10 @@ struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransforma
     δp::SMatrix{NG,NE}
     δm::SMatrix{NG,NE}
     function CoulombTransformationLogLocal(ceg::CubicElementGrid, nt::Int;
-                                   tmin=0., tmax=25., δ=0.25, ε=1e-12, k=0.)
+                                   tmin=0., tmax=25., δ=0.25, k=0.)
         @assert 0 < δ <= 1
         @assert 0 <= tmin < tmax
-        s, ws = gausspoints(nt; elementsize=(log(tmin+ε), log(tmax)))
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
         t = exp.(s)
         wt = ws .* t
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
@@ -109,6 +294,50 @@ struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransforma
     end
 end
 
+
+"""
+    CoulombTransformationCombination{T, NE, NG} <: AbstractCoulombTransformationCombination
+
+Coulomb transformation tensor that is composed of different types of tensors
+with different t-integration ranges.
+
+This tensor is intended to to be used to control how t-integration is performed.
+
+# Fields
+- `tensors::Vector{AbstractCoulombTransformation}` : Coulomb transformation subtensors
+- `ref::Vector{Int}`  : index of tensor wich is referenced at given t-point index
+- `t::Vector{Float64}`  : t-integration points
+- `wt::Vector{T}`  : weights for t-integration
+- `tmin::Float64`               : t-integration lower limit
+- `tmax::Float64`               : t-integration upper limit
+- `tindex::Vector{Int}`         : Index of t in subtensor
+- `k::T`                        : Helmholz equation constant
+
+# Construction
+    CoulombTransformationCombination(t::AbstractCoulombTransformation...)
+
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> ct1 = CoulombTransformationLog(ceg, 48)
+Logarithmic Coulomb transformation tensor for 48 t-points, tmin=0.0, tmax=25.0 and k=0.0
+
+julia> ct2 = CoulombTransformationLogLocal(ceg, 48; tmin=25, tmax=50)
+Logarithmic Coulomb transformation tensor with local correction for 48 t-points, tmin=4.0, tmax=30.0 and k=0.1
+
+julia> cc = CoulombTransformationCombination(ct1)
+Coulomb transformation combination tensor for 48 t-points, tmin=0.0, tmax=25.0 and k=0.0
+
+julia> push!(cc, ct2)
+Coulomb transformation combination tensor for 96 t-points, tmin=0.0, tmax=50.0 and k=0.0
+
+julia> CoulombTransformationCombination(ct1, ct2)
+Coulomb transformation combination tensor for 96 t-points, tmin=0.0, tmax=50.0 and k=0.0
+```
+"""
 mutable struct CoulombTransformationCombination{T, NE, NG} <: AbstractCoulombTransformationCombination
     tensors::Vector{AbstractCoulombTransformation}
     ref::Vector{Int}
@@ -124,20 +353,47 @@ mutable struct CoulombTransformationCombination{T, NE, NG} <: AbstractCoulombTra
     end
 end
 
-function CoulombTransformationCombination(t...)
+
+function CoulombTransformationCombination(t::AbstractCoulombTransformationSingle...)
     ct = CoulombTransformationCombination(t[1])
-    for x ∈ t[2:end]
+    for x in t[2:end]
         push!(ct,x)
     end
     return ct
 end
 
-function loglocalct(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=300, tboundary=20, ε=1e-12, k=0.)
+function loglocalct(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=300, tboundary=20, k=0.)
+    @warn "loglocalct is depricated use optimal_coulomb_tranformation"
     @assert 0 < tboundary < tmax
-    s, ws = gausspoints(nt; elementsize=(log(ε), log(tmax)))
+    s, ws = gausspoints(nt; elementsize=(log(1e-12), log(tmax)))
     t = exp.(s)
     l = length(t[t .< tboundary])
-    ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, ε=ε, k=k)
+    ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, k=k)
+    ct2 = CoulombTransformationLogLocal(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ, k=k)
+    return CoulombTransformationCombination(ct1,ct2)
+end
+
+"""
+    optimal_coulomb_tranformation(args...; kwargs...)
+
+Returns Coulomb transformation tensor with optimal pre tested parameters.
+
+# Args
+- `ceg::CubicElementGrid`  :  grid where transformation is done
+- `nt::Int`                :  number of t-points
+
+# Keywords
+- `δ=0.25`          : parameter for local average correction
+- `tmax=700`        : maximum t value
+- `tboundary=20`    : point after which local average correction is applied
+- `k=0.`            : constant for Helmholz equation
+"""
+function optimal_coulomb_tranformation(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=700, tboundary=20, k=0.)
+    @assert 0 < tboundary < tmax
+    s, ws = gausspoints(nt; elementsize=(log(1e-12), log(tmax)))
+    t = exp.(s)
+    l = length(t[t .< tboundary])
+    ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, k=k)
     ct2 = CoulombTransformationLogLocal(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ, k=k)
     return CoulombTransformationCombination(ct1,ct2)
 end
@@ -208,27 +464,48 @@ end
 
 
 function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformation)
-    print(io, "Coulomb transformation tensor size=$(size(cct))")
+    s = size(cct)
+    print(io, "Coulomb transformation tensor for $(s[end]) t-points,"*
+              " tmin=$(cct.tmin), tmax=$(cct.tmax) and k=$(cct.k)"
+    )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLog)
-    print(io, "Coulomb transformation tensor logaritmic size=$(size(cct))")
+    s = size(cct)
+    print(io, "Logarithmic Coulomb transformation tensor for $(s[end]) t-points,"*
+              " tmin=$(cct.tmin), tmax=$(cct.tmax) and k=$(cct.k)"
+    )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLocal)
-    print(io, "Coulomb transformation tensor local means size=$(size(cct))")
+    s = size(cct)
+    print(io, "Coulomb transformation tensor with local correction for $(s[end])"*
+              " t-points, tmin=$(cct.tmin), tmax=$(cct.tmax) and k=$(cct.k)"
+    )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationCombination)
-    print(io, "Coulomb transformation combination tensor size=$(size(cct))")
+    s = size(cct)
+    print(io, "Coulomb transformation combination tensor for $(s[end])"*
+              " t-points, tmin=$(cct.tmin), tmax=$(cct.tmax) and k=$(cct.k)"
+    )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", cct::CoulombTransformationLogLocal)
-    print(io, "Coulomb transformation logarimic local size=$(size(cct))")
+    s = size(cct)
+    print(io, "Logarithmic Coulomb transformation tensor with local correction for $(s[end])"*
+              " t-points, tmin=$(cct.tmin), tmax=$(cct.tmax) and k=$(cct.k)"
+    )
 end
 
 ## Integration weight tensor
 
+"""
+    ω_tensor(ceg::CubicElementGrid) -> Matrix{Float64}
+
+Return a tensor that contains integration constants to perform integral over
+element grid.
+"""
 function ω_tensor(ceg::CubicElementGrid)
     n = size(ceg)[end]
     l = length(ceg.w)
@@ -249,7 +526,18 @@ density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 abstract type AbstractDerivativeTensor <: AbtractTransformationTensor{2} end
 
+"""
+    DerivativeTensor{NG} <: AbstractDerivativeTensor
 
+Tensor that performs derivate over [`CubicElementGrid`](@ref).
+
+# Fields
+- `gauss_points::SVector{NG}{Float64}`  : point for integration
+- `values::Matrix{Float64}`             : tensor values
+
+# Construction
+    DerivativeTensor(ceg::CubicElementGrid)
+"""
 struct DerivativeTensor{NG} <: AbstractDerivativeTensor
     gauss_points::SVector{NG}{Float64}
     values::Matrix{Float64}
@@ -277,6 +565,9 @@ struct DerivativeTensor{NG} <: AbstractDerivativeTensor
             end
             return a.^-1
         end
+        # Derivative is done by analytically deriving Gauss-Legendre basis
+        # functions and then calculating values over the derivatives.
+        # f(x) = ∑aᵢpᵢ(x) → f'(x) = ∑aᵢpᵢ'(x)
         x = BigFloat.(ceg.gpoints)
         xmin=-0.5*elementsize(ceg.elements)
         xmax=-xmin
@@ -307,6 +598,7 @@ end
 
 
 function kinetic_energy(ceg::CubicElementGrid, dt, ψ)
+    @warn "kinetic_energy is deprecated use operators instead"
     tmp = similar(ψ)
 
     @tensor tmp[i,j,k,I,J,K] = dt[i,l] * ψ[l,j,k,I,J,K]
@@ -328,6 +620,7 @@ end
 struct MomentumTensor{NG} <: AbstractArray{ComplexF64, 3}
     dt::DerivativeTensor{NG}
     function MomentumTensor(dt::DerivativeTensor{T}) where T
+        @warn "MomentumTensor is deprecated use operators instead"
         new{T}(dt)
     end
 end

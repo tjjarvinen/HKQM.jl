@@ -3,6 +3,47 @@ using LinearAlgebra
 
 abstract type AbstractQuantumState{T} <: AbstractArray{T,6} end
 
+
+"""
+    QuantumState{TG,TA,TE}
+
+Type to hold and manipulate quantum states
+
+# Fields
+- `elementgrid::TG`  : grid where quantum state is "=basis"
+- `ψ::TA`            : array holding "values"
+- `unit::Unitful.FreeUnits`  : unit for quantum state
+
+# Creation
+    QuantumState(ceg, ψ::AbstractArray{<:Any,6}, unit::Unitful.FreeUnits=NoUnits)
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5, 2, 32)
+Cubic elements grid with 2^3 elements with 32^3 Gauss points
+
+julia> ψ = QuantumState(ceg, ones(size(ceg)))
+Quantum state
+
+julia> normalize!(ψ)
+Quantum state
+
+julia> bracket(ψ, ψ) ≈ 1
+true
+
+julia> ϕ = ψ + 2ψ
+Quantum state
+
+julia> bracket(ψ, ϕ) ≈ 3
+true
+
+julia> unit(ψ)
+
+
+julia> unit(1u"bohr"*ψ)
+a₀
+```
+"""
 mutable struct QuantumState{TG,TA,TE} <: AbstractQuantumState{TE}
     elementgrid::TG
     ψ::TA
@@ -37,7 +78,9 @@ end
 
 function normalize!(qs::QuantumState)
     N² = bracket(qs, qs)
-    qs.ψ .*= 1/√N²
+    if real(N²) > 1e-10
+        qs.ψ .*= 1/√N²
+    end
     return qs
 end
 
@@ -60,17 +103,21 @@ end
 
 """
     ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
+    ketbra(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
 
-Return probability density ψ†ψ
+Return probability density ψ†ψ = |ψ><ψ|
 
 ## Example
+```julia
 julia> ψ⋆ψ
+```
 """
-function ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function ketbra(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
     @assert size(qs1) == size(qs2)
     conj(qs1).ψ .* qs2.ψ
 end
 
+const ⋆ = ketbra
 
 Base.:(*)(a::Number, qs::QuantumState) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ, unit(qs)*unit(a))
 Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, ustrip(a).*qs.ψ, unit(qs)*unit(a))

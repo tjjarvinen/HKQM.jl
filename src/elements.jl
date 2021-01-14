@@ -1,13 +1,20 @@
-using GaussQuadrature
-using StaticArrays
-using Unitful
-using UnitfulAtomic
+
+
+
 
 abstract type AbstractElement{Dims} end
 
 abstract type AbstractElementGrid{N} <: AbstractArray{SVector{3,Float64}, N} end
 
+"""
+    Element1D <: AbstractElement{1}
 
+Stores information for 1D element.
+
+# Fields
+- `low::Float64` : lowest value within element
+- `high::Float64` : highest value within element
+"""
 struct Element1D <: AbstractElement{1}
     low::Float64
     high::Float64
@@ -17,15 +24,35 @@ struct Element1D <: AbstractElement{1}
     end
 end
 
+"""
+    CubicElement <: AbstractElement{3}
+
+Cubic 3D element.
+
+# Fields
+- `center::SVector{3,Float64}`  : center location of element
+- `a::Float64` : side length of the cube
+"""
 struct CubicElement <: AbstractElement{3}
     center::SVector{3,Float64}
     a::Float64
 end
 
+"""
+    CubicElement(a) -> CubicElement
+
+Return `CubicElement` with center at origin and side length `a`.
+"""
 function CubicElement(a)
     return CubicElement((0.,0.,0.), a)
 end
 
+"""
+    CubicElement(xe::Element1D, ye::Element1D, ze::Element1D) -> CubicElement
+
+Construct `CubicElement` from three `Element1D`. Center is taken from elements,
+which need to have same `elementsize`.
+"""
 function CubicElement(xe::Element1D, ye::Element1D, ze::Element1D)
     @assert elementsize(xe) == elementsize(ye) == elementsize(ze)
     center = SVector(getcenter(xe), getcenter(ye), getcenter(ze))
@@ -34,16 +61,15 @@ end
 
 
 """
-    CubicElements <: AbstractCubicElements
+    CubicElements <: AbstractElement{3}
 
-Struct to hold cubic elements in cubic form.
+Cubic element that is divided to smaller cubic elments.
 
 # Fields
-- `low`  : lowes value for element boundary
-- `high` : highest value for element boundary
+- `a::Float64` : cubid side lenght
 - `npoints` : number of elements per degree of freedom
 """
-struct CubicElements
+struct CubicElements <: AbstractElement{3}
     a::Float64
     npoints::Int
     function CubicElements(a, npoints::Int)
@@ -53,9 +79,31 @@ struct CubicElements
     end
 end
 
+"""
+    CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
 
+Cube that is divided to smaller cubes that have integration grid.
+Elements and integration points are symmetric for x-, y- and z-axes.
 
-struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6} where {NG}
+# Fields
+- `elements::CubicElements` : cubic elements
+- `ecenters::SVector{NE}{Float64}` : center locations for the subcube elements
+- `gpoints::SVector{NG}{Float64}`  : integration grid definition, in 1D
+- `w::SVector{NG}{Float64}`  :  integration weights
+- `origin::SVector{3}{Float64}`  : origin location of the supercube
+
+# Example
+```jldoctest
+julia> CubicElementGrid(5, 4, 32)  # 5 is in ångstöms
+Cubic elements grid with 4^3 elements with 32^3 Gauss points
+
+julia> using Unitful
+
+julia> CubicElementGrid(5u"pm", 4, 32; origin=[1., 0., 0.].*u"nm)
+Cubic elements grid with 4^3 elements with 32^3 Gauss points
+```
+"""
+struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
     elements::CubicElements
     ecenters::SVector{NE}{Float64}
     gpoints::SVector{NG}{Float64}
@@ -83,7 +131,7 @@ function Base.show(io::IO, ::MIME"text/plain", ceg::CubicElementGrid{NG, NE}) wh
 end
 
 function Base.show(io::IO, ce::CubicElements)
-    print(io, "Cubit elements=$(size(ce))")
+    print(io, "Cubic elements=$(size(ce))")
 end
 
 
@@ -111,17 +159,66 @@ function Base.getindex(ce::CubicElements, I, J, K)
     return CubicElement(ce[I], ce[J], ce[K])
 end
 
+"""
+    elementsize(ce::CubicElements) -> Float64
 
+Cubes 1D side length
+"""
 elementsize(ce::CubicElements) = ce.a/ce.npoints
+
+"""
+    elementsize(e::Element1D) -> Float64
+
+Element length/size
+"""
 elementsize(e::Element1D) = e.high - e.low
 
+"""
+    getcenter(e::Element1D) -> Float64
+
+Center location of element
+"""
 getcenter(e::Element1D) = 0.5*(e.high + e.low)
 
+"""
+    xgrid(ceg::CubicElementGrid) -> SMatrix
+
+x-axis coordinated of for elements and grids.
+First index is for grids and second for elements.
+"""
 xgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg.ecenters ])
+
+"""
+    ygrid(ceg::CubicElementGrid) -> SMatrix
+
+y-axis coordinated of for elements and grids.
+First index is for grids and second for elements.
+"""
 ygrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg.ecenters ])
+
+"""
+    zgrid(ceg::CubicElementGrid) -> SMatrix
+
+z-axis coordinated of for elements and grids.
+First index is for grids and second for elements.
+"""
 zgrid(ceg::CubicElementGrid) = SMatrix([x+X+ceg.origin[3] for x in ceg.gpoints, X in ceg.ecenters ])
+
+"""
+    grid1d(ceg::CubicElementGrid) -> SMatrix
+
+Return matrix of grid points in elements.
+First index is for grids and second for elements.
+Differs from [`xgrid`](@ref), [`ygrid`](@ref) and [`zgrid`](@ref) in that
+the origin of grid is not specified. Which is equal to origin at 0,0,0.
+"""
 grid1d(ceg::CubicElementGrid) = SMatrix([x+X for x in ceg.gpoints, X in ceg.ecenters ])
 
+"""
+    getcenters(ce::CubicElements) -> Vector{Float64}
+
+Return element centers.
+"""
 function getcenters(ce::CubicElements)
     return [ getcenter(ce[i]) for i ∈ 1:ce.npoints]
 end
@@ -134,10 +231,30 @@ function gausspoints(n; elementsize=(-1.0, 1.0))
     return SVector{n}(x), SVector{n}(w)
 end
 
-function gausspoints(el::Element1D, n)
+
+"""
+    gausspoints(el::Element1D, n::Int) -> (SVector, SVector)
+
+Create `n` Gauss-Legendre points for element.
+
+Returns a tuple with first index having Gauss points and
+second integration weights.
+"""
+function gausspoints(el::Element1D, n::Int)
     return gausspoints(n; elementsize=(el.low, el.high) )
 end
 
+"""
+    gausspoints(ce::CubicElements, npoints::Int) -> (SVector, SVector)
+
+Create `npoints` Gauss-Legendre points for element.
+
+Returns a tuple with first index having Gauss points and
+second integration weights.
+
+Only one set of Gauss points that can be used for all elements is returned.
+The returned points have center at 0 and need to be shifted for different elements.
+"""
 function gausspoints(ce::CubicElements, npoints::Int)
     s = elementsize(ce)/2
     return gausspoints(npoints; elementsize=(-s, s))

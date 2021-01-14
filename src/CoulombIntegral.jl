@@ -1,13 +1,17 @@
 module CoulombIntegral
 
-using OffsetArrays
+using Reexport
+
+using GaussQuadrature
+using LinearAlgebra: dot, ⋅
+using LinearAlgebra: cross, ×
 using Polynomials
 using ProgressMeter
 using SpecialFunctions
 using StaticArrays
 using TensorOperations
-using Unitful
-using UnitfulAtomic
+@reexport using Unitful
+@reexport using UnitfulAtomic
 
 import LinearAlgebra.dot
 import LinearAlgebra.cross
@@ -28,7 +32,6 @@ export AbstractElementGrid,
        coulombtransformation,
        DerivativeTensor,
        Element1D,
-       EM_Hamilton,
        elementsize,
        gaussian_coulomb_integral,
        gaussiandensity_self_energy,
@@ -36,14 +39,7 @@ export AbstractElementGrid,
        getcenter,
        getcenters,
        grid1d,
-       Hamilton,
-       integrate,
-       kinetic_energy,
-       loglocalct,
        normalize!,
-       poisson_equation,
-       poisson_equation!,
-       potential_energy,
        self_energy,
        test_accuracy,
        test_accuracy_new,
@@ -57,14 +53,20 @@ export AbstractElementGrid,
        ygrid,
        zgrid
 
-# Functions
+# Methods
 export bracket,
-       helmholz_equation,
-       helmholz_equation!,
+       cross, ×,
+       dot, ⋅,
+       helmholtz_equation,
+       helmholtz_equation!,
+       ketbra, ⋆,
        magnetic_current,
        momentum_operator,
+       optimal_coulomb_tranformation,
+       para_magnetic_current,
+       poisson_equation,
+       poisson_equation!,
        position_operator,
-       ⋆,
        vector_potential,
        ω_tensor
 
@@ -89,14 +91,5 @@ include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")
 
-# Benzene carbons
-const C6=[
-(1.548314974868006, -2.24845283486348, 0.10613968032401824),
- (-2.682787487347467, -0.15842197712358957, 0.5086519117871446),
- (2.6764758020912174, 0.1533828334396625, -0.5269180045077774),
- (1.1287957752010853, 2.409722062339043, -0.6629782854808328),
- (-1.55839477401676, 2.243426163371976, -0.14330416812658342),
- (-1.1124194086050785, -2.399630924833542, 0.7184115116206051),
-]
 
 end
