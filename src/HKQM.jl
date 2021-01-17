@@ -2,7 +2,7 @@ module HKQM
 
 using Reexport
 
-using GaussQuadrature
+using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
 using Polynomials
