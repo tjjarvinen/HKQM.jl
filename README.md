@@ -1,4 +1,8 @@
 # HKQM (Helmholtz Kernel Quantum Mechanics)
+[![][CI-img]][CI-url] [![][codecov-img]][codecov-url]
+
+
+
 This package is under development and not ready for use yet!
 
 The main idea here is to transform 3D Coulomb Integral to four one dimensional
@@ -12,7 +16,7 @@ quantum mechanics in general or any field that needs to solve Helmholtz or Poiss
 equations in 3D. If you are integrested in using on other fields please be free to
 contact us.
 
-## Higlighted Features (when complete)
+## Highlighted Features (when complete)
 - Solve Poisson equation (3D) - ready
 - Solve Helmholtz equation (3D) - ready
 - Solve Schrödinger equation with Helmholtz kernel Greens function - (1 particle ready)
@@ -43,3 +47,9 @@ tmax=700 # maximum t-value in integration
 
 test_accuracy(a, ne, ng, nt; tmax=tmax)
 ```
+
+[CI-img]: https://github.com/tjjarvinen/HKQM.jl/workflows/CI/badge.svg
+[CI-url]: https://github.com/tjjarvinen/HKQM.jl/actions?query=workflow%3ACI
+
+[codecov-img]: https://codecov.io/gh/tjjarvinen/HKQM.jl/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/tjjarvinen/HKQM.jl
