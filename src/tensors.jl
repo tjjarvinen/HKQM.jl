@@ -636,3 +636,101 @@ Base.getindex(mt::MomentumTensor,i::Int,j::Int,xyz::Int) = -ComplexF64(0,mt.dt[i
 function Base.show(io::IO, ::MIME"text/plain", mt::MomentumTensor)
     print(io, "Momentum tensor size=$(size(mt))")
 end
+
+
+## Nuclear potential tensors
+
+abstract type AbstractNuclearPotential <: AbtractTransformationTensor{3} end
+abstract type AbstractNuclearPotentialSingle <: AbstractNuclearPotential end
+abstract type AbstractNuclearPotentialCombination <: AbstractNuclearPotential end
+
+struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    function NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax)
+    end
+end
+
+
+struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    function NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax)
+    end
+end
+
+
+struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle
+    elementgrid::Matrix{Float64}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    δ::Float64
+    δp::Matrix{T}
+    δm::Matrix{T}
+    function NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int;
+                                           tmin=0., tmax=25., δ=0.25)
+        @assert 0 < δ <= 1
+        @assert 0 <= tmin < tmax
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = Array(grid1d(ceg)) .- r
+        ss = size(grid)
+
+        # get range around points [x+δm, x+δp]
+        # and calculate average on that range (later on)
+        δp = zeros(ss...)
+        δm = zeros(ss...)
+        δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
+        δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
+        for j in 1:ss[2]
+            δm[1,j] = ceg.elements[j].low - grid[1,j]
+            δp[end,j] = ceg.elements[j].high - grid[end,j]
+        end
+        new{eltype(δm)}(grid, t, wt, tmin, tmax, r, δ, δ.*δp, δ.*δm)
+    end
+end
+
+
+
+function Base.show(io::IO, ::MIME"text/plain", npt::AbstractNuclearPotential)
+    print(io, "Nuclear potential tensor for $(length(npt.t)) t-points,"*
+              " tmin=$(npt.tmin), tmax=$(npt.tmax)"
+    )
+end
+
+
+Base.size(npt::AbstractNuclearPotential) = (size(npt.elementgrid)..., length(npt.t))
+
+
+function Base.getindex(npt::AbstractNuclearPotential, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    return exp(-npt.t[p]^2 * r^2)
+end
+
+
+function Base.getindex(npt::NuclearPotentialTensorLogLocal, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    δ = abs(npt.δp[i,j] - npt.δm[i,j])
+    rmax = (r+δ) * npt.t[p]
+    rmin = (r-δ) * npt.t[p]
+    return 0.5 * √π * erf(rmin, rmax) / (rmax-rmin)
+end

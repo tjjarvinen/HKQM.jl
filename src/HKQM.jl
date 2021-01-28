@@ -70,14 +70,19 @@ export bracket,
        vector_potential,
        ω_tensor
 
-# Types
-export AbstractQuantumState,
-       DerivativeOperator,
+# Abstract Types
+export AbstractQuantumState
+
+# Concrete Types
+export DerivativeOperator,
        GradientOperator,
        HamiltonOperator,
        HamiltonOperatorFreeParticle,
        HamiltonOperatorMagneticField,
        LaplaceOperator,
+       NuclearPotentialTensor,
+       NuclearPotentialTensorLog,
+       NuclearPotentialTensorLogLocal,
        OperatorSum,
        QuantumState,
        ScalarOperator,
