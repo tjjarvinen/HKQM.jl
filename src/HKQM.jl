@@ -10,6 +10,7 @@ using ProgressMeter
 using SpecialFunctions
 using StaticArrays
 using TensorOperations
+using Tullio
 @reexport using Unitful
 @reexport using UnitfulAtomic
 
@@ -81,6 +82,7 @@ export DerivativeOperator,
        HamiltonOperatorMagneticField,
        LaplaceOperator,
        NuclearPotentialTensor,
+       NuclearPotentialTensorCombination,
        NuclearPotentialTensorLog,
        NuclearPotentialTensorLogLocal,
        OperatorSum,

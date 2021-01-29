@@ -641,41 +641,43 @@ end
 ## Nuclear potential tensors
 
 abstract type AbstractNuclearPotential <: AbtractTransformationTensor{3} end
-abstract type AbstractNuclearPotentialSingle <: AbstractNuclearPotential end
-abstract type AbstractNuclearPotentialCombination <: AbstractNuclearPotential end
+abstract type AbstractNuclearPotentialSingle{T} <: AbstractNuclearPotential end
+abstract type AbstractNuclearPotentialCombination{T} <: AbstractNuclearPotential end
 
-struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle
+struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
     wt::Vector{Float64}
     tmin::Float64
     tmax::Float64
+    r::T
     function NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         grid = Array(grid1d(ceg)) .- r
-        new{eltype(grid)}(grid, t, wt, tmin, tmax)
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r)
     end
 end
 
 
-struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle
+struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
     wt::Vector{Float64}
     tmin::Float64
     tmax::Float64
+    r::T
     function NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
         s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
         t = exp.(s)
         wt = ws .* t
         grid = Array(grid1d(ceg)) .- r
-        new{eltype(grid)}(grid, t, wt, tmin, tmax)
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r)
     end
 end
 
 
-struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle
-    elementgrid::Matrix{Float64}
+struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
     t::Vector{Float64}
     wt::Vector{Float64}
     tmin::Float64
@@ -710,6 +712,37 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle
 end
 
 
+mutable struct NuclearPotentialTensorCombination{T} <: AbstractNuclearPotentialCombination{T}
+    subtensors::Vector{AbstractNuclearPotentialSingle{T}}
+    ref::Vector{Int}
+    index::Vector{Int}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    function NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle)
+        nt = size(npt)[end]
+        new{eltype(npt.elementgrid)}([npt],
+                   ones(nt),
+                   1:nt,
+                   deepcopy(npt.t),
+                   deepcopy(npt.wt),
+                   npt.tmin,
+                   npt.tmax,
+                   npt.r
+                   )
+    end
+end
+
+function NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle{T}...) where {T}
+    tmp = NuclearPotentialTensorCombination(npt[1])
+    for x in npt[2:end]
+        push!(tmp, x)
+    end
+    return tmp
+end
+
 
 function Base.show(io::IO, ::MIME"text/plain", npt::AbstractNuclearPotential)
     print(io, "Nuclear potential tensor for $(length(npt.t)) t-points,"*
@@ -719,6 +752,10 @@ end
 
 
 Base.size(npt::AbstractNuclearPotential) = (size(npt.elementgrid)..., length(npt.t))
+
+function Base.size(npct::NuclearPotentialTensorCombination)
+    return (size(npct.subtensors[1])[1:2]..., length(npct.t))
+end
 
 
 function Base.getindex(npt::AbstractNuclearPotential, i::Int, j::Int, p::Int)
@@ -733,4 +770,66 @@ function Base.getindex(npt::NuclearPotentialTensorLogLocal, i::Int, j::Int, p::I
     rmax = (r+δ) * npt.t[p]
     rmin = (r-δ) * npt.t[p]
     return 0.5 * √π * erf(rmin, rmax) / (rmax-rmin)
+end
+
+
+function Base.getindex(npct::NuclearPotentialTensorCombination, i::Int, j::Int, p::Int)
+    s = npct.ref[p]
+    t = npct.index[p]
+    return npct.subtensors[s][i,j,t]
+end
+
+
+function Base.push!(nptc::NuclearPotentialTensorCombination{T},
+                    npt::AbstractNuclearPotentialSingle{T}) where {T}
+    @assert nptc.r == npt.r
+    @assert nptc.tmax <= npt.tmin
+    push!(nptc.subtensors, npt)
+    n = size(npt)[end]
+    append!(nptc.ref, (length(nptc.subtensors))*ones(n))
+    append!(nptc.t, npt.t)
+    append!(nptc.wt, npt.wt)
+    append!(nptc.index, 1:n)
+    nptc.tmax = npt.tmax
+    return nptc
+end
+
+
+struct PotentialTensor{Tx<:AbstractNuclearPotential,
+                       Ty<:AbstractNuclearPotential,
+                       Tz<:AbstractNuclearPotential}
+    x::Tx
+    y::Ty
+    z::Tz
+    function PotentialTensor(npx, npy, npz)
+        @assert size(npx)[end] == size(npy)[end] == size(npz)[end]
+        @assert npx.tmin == npy.tmin == npx.tmin
+        @assert npx.tmax == npy.tmax == npx.tmax
+        new{typeof(npx), typeof(npy), typeof(npz)}(npx, npy, npz)
+    end
+end
+
+Base.show(io::IO, ::MIME"text/plain", pt::PotentialTensor) = print(io, "PotentialTensor")
+
+function Base.size(pt::PotentialTensor)
+    s1 = size(pt.x)
+    s2 = size(pt.y)
+    s3 = size(pt.z)
+    return s1[1], s2[1], s3[1], s1[2], s2[2], s3[2]
+end
+
+
+function Base.getindex(pt::PotentialTensor, i::Int, j::Int, k::Int, I::Int, J::Int, K::Int)
+    out = pt.x[i,I,:]
+    out .*= pt.y[j,J,:]
+    out .* pt.z[k,K,:]
+    out .* pt.x.wt
+    return out
+end
+
+function Base.Array(pt::PotentialTensor)
+    x = Array(pt.x)
+    y = Array(pt.y)
+    z = Array(pt.z)
+    @tullio out[i,j,k,I,J,K] := x[i,I,t] * y[j,J,t] * z[k,K,t] * pt.x.wt[t]
 end
