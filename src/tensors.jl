@@ -832,4 +832,36 @@ function Base.Array(pt::PotentialTensor)
     y = Array(pt.y)
     z = Array(pt.z)
     @tullio out[i,j,k,I,J,K] := x[i,I,t] * y[j,J,t] * z[k,K,t] * pt.x.wt[t]
+    return 2/sqrt(π) .* out
+end
+
+function nuclear_potential(ceg::CubicElementGrid, q, r)
+    function give_tensor(x)
+        np = NuclearPotentialTensor(x, ceg, 64; tmin=0, tmax=70)
+        npl = NuclearPotentialTensorLog(x, ceg, 32; tmin=70, tmax=500)
+        npll = NuclearPotentialTensorLog(x, ceg, 16; tmin=500, tmax=1000)
+        nplll = NuclearPotentialTensorLogLocal(x, ceg, 16; tmin=1000, tmax=5000, δ=0.25)
+        return NuclearPotentialTensorCombination(np, npl, npll, nplll)
+    end
+    @assert dimension(q) == dimension(u"C") || dimension(q) == NoDims
+    qau = austrip(q)
+
+    ncx = give_tensor(r[1])
+    ncy = give_tensor(r[2])
+    ncz = give_tensor(r[3])
+
+    pt = PotentialTensor(ncx, ncy, ncz)
+
+    return (qau*u"hartree/e_au") * ScalarOperator(ceg, Array(pt))
+end
+
+
+function nuclear_potential(ceg::CubicElementGrid, aname::String, r; δ=0.25)
+    if length(aname) <= 2    # is atomic symbol
+        e = elements[Symbol(aname)]
+    else
+        e = elements[aname]
+    end
+    @info "elemet numbers $(e.number)"
+    return nuclear_potential(ceg, e.number, r; δ=δ)
 end

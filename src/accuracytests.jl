@@ -39,6 +39,61 @@ function gaussian_coulomb_integral_grad(a₁=1, a₂=1,  d=0; rtol=1e-12, tmin=0
 end
 
 
+function gaussian_density_nuclear_potential(a=1, d=0; rtol=1e-12, tmin=0, tmax=Inf)
+    #f(t) = exp(-a*t^2*d^2/(t^2+a)) * (t^2+a)^(-3//2)
+    f(t) = (t^2+a)^(-3//2)
+    return 2π.*quadgk(f, tmin, tmax; rtol=rtol)
+end
+
+
+function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
+                                α=1, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
+    @assert dimension(a) == dimension(u"m") || dimension(a) == NoDims
+    ceg = CubicElementGrid(a, ne, ng)
+    if mode == "normal"
+        @info "normal mode"
+        npt = NuclearPotentialTensor(origin, ceg, nt; tmin=tmin, tmax=tmax)
+    elseif mode == "log"
+        @info "logarithmic mode"
+        npt = NuclearPotentialTensorLog(origin, ceg, nt; tmin=tmin, tmax=tmax)
+    elseif mode == "loglocal"
+        @info "logarithmic mode with local correction δ=$δ"
+        npt = NuclearPotentialTensorLogLocal(origin, ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
+    elseif mode == "preset"
+        @info "Preset mode"
+        @info "tmin is set to 0"
+        @info "tmax is set to 5000"
+        tmin = 0
+        tmax = 5000
+        v = nuclear_potential(ceg, 1, (origin, origin, origin))
+        V = v.vals
+    else
+        error("mode not recognized")
+    end
+    if mode != "preset"
+        pt = PotentialTensor(npt, npt, npt)
+        V = Array(pt)
+    end
+    r = norm.(ceg)
+    Va = r.^-1
+    ρ = exp.(-α.*r.^2)
+    integral = integrate(ρ, ceg, V)
+    plain = integrate(ρ, ceg, Va)
+    ref = gaussian_density_nuclear_potential(α; tmin=tmin, tmax=tmax)
+    ref_tot = gaussian_density_nuclear_potential(α)
+    tail = gaussian_density_nuclear_potential(α; tmin=tmax)
+    @info "Integral = $(integral)"
+    @info "Reference = $(ref[1])"
+    @info "Relative error = $( round((integral-ref[1])/ref[1]; sigdigits=2) )"
+    @info "Total reference = $(ref_tot[1])"
+    @info "Relative error to total = $( round((integral-ref[1])/ref_tot[1]; sigdigits=2) )"
+    @info "Tail energy = $(round(tail[1]; sigdigits=2))"
+    @info "Tail relativer to total = $(round(tail[1]/ref_tot[1]; sigdigits=2))"
+    return integral, ref[1]
+end
+
+
+
 """
     test_accuracy(a::Real, ne::Int, ng::Int, nt::Int; kwords) -> Dict
 
