@@ -636,3 +636,345 @@ Base.getindex(mt::MomentumTensor,i::Int,j::Int,xyz::Int) = -ComplexF64(0,mt.dt[i
 function Base.show(io::IO, ::MIME"text/plain", mt::MomentumTensor)
     print(io, "Momentum tensor size=$(size(mt))")
 end
+
+
+## Nuclear potential tensors
+
+abstract type AbstractNuclearPotential <: AbtractTransformationTensor{3} end
+abstract type AbstractNuclearPotentialSingle{T} <: AbstractNuclearPotential end
+abstract type AbstractNuclearPotentialCombination{T} <: AbstractNuclearPotential end
+
+
+"""
+    NuclearPotentialTensor{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+
+# Creation
+    NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
+struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    function NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r)
+    end
+end
+
+"""
+    NuclearPotentialTensorLog{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+
+# Creation
+    NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
+struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    function NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r)
+    end
+end
+
+
+"""
+    NuclearPotentialTensorLogLocal{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points and
+local average correction.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+- `δ::Float64`               : Correction parameter ∈[0,1]
+- `δp::Matrix{T}`            : Upper limits for correction
+- `δm::Matrix{T}`            : Lower limits for correction
+
+# Creation
+    NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30, δ=0.25)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
+struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    δ::Float64
+    δp::Matrix{T}
+    δm::Matrix{T}
+    function NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int;
+                                           tmin=0, tmax=30, δ=0.25)
+        @assert 0 < δ <= 1
+        @assert 0 <= tmin < tmax
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = Array(grid1d(ceg)) .- r
+        ss = size(grid)
+
+        # get range around points [x+δm, x+δp]
+        # and calculate average on that range (later on)
+        δp = zeros(ss...)
+        δm = zeros(ss...)
+        δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
+        δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
+        for j in 1:ss[2]
+            δm[1,j] = ceg.elements[j].low - grid[1,j]
+            δp[end,j] = ceg.elements[j].high - grid[end,j]
+        end
+        new{eltype(δm)}(grid, t, wt, tmin, tmax, r, δ, δ.*δp, δ.*δm)
+    end
+end
+
+
+"""
+    NuclearPotentialTensorCombination{T}
+
+Combine different tensors to bigger one. Allows combining normal, logarithmic
+and local correction ones to one tensor.
+
+# Fields
+- `subtensors::Vector{AbstractNuclearPotentialSingle{T}}`  :  combination of these
+- `ref::Vector{Int}`    :  transforms t-index to subtensor index
+- `index::Vector{Int}`  :  transforms t-index to subtensors t-index
+- `wt::Vector{Float64}` :  t-integration weight
+- `tmin::Float64`       :  minimum t-value
+- `tmax::Float64`       :  maximum t-value
+- `r::T`                :  nuclear coordinate
+
+# Creation
+    NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle{T}...)
+"""
+mutable struct NuclearPotentialTensorCombination{T} <: AbstractNuclearPotentialCombination{T}
+    subtensors::Vector{AbstractNuclearPotentialSingle{T}}
+    ref::Vector{Int}
+    index::Vector{Int}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    function NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle)
+        nt = size(npt)[end]
+        new{eltype(npt.elementgrid)}([npt],
+                   ones(nt),
+                   1:nt,
+                   deepcopy(npt.t),
+                   deepcopy(npt.wt),
+                   npt.tmin,
+                   npt.tmax,
+                   npt.r
+                   )
+    end
+end
+
+function NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle{T}...) where {T}
+    tmp = NuclearPotentialTensorCombination(npt[1])
+    for x in npt[2:end]
+        push!(tmp, x)
+    end
+    return tmp
+end
+
+
+function Base.show(io::IO, ::MIME"text/plain", npt::AbstractNuclearPotential)
+    print(io, "Nuclear potential tensor for $(length(npt.t)) t-points,"*
+              " tmin=$(npt.tmin), tmax=$(npt.tmax)"
+    )
+end
+
+
+Base.size(npt::AbstractNuclearPotential) = (size(npt.elementgrid)..., length(npt.t))
+
+function Base.size(npct::NuclearPotentialTensorCombination)
+    return (size(npct.subtensors[1])[1:2]..., length(npct.t))
+end
+
+
+function Base.getindex(npt::AbstractNuclearPotential, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    return exp(-npt.t[p]^2 * r^2)
+end
+
+
+function Base.getindex(npt::NuclearPotentialTensorLogLocal, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    δ = abs(npt.δp[i,j] - npt.δm[i,j])
+    rmax = (r+δ) * npt.t[p]
+    rmin = (r-δ) * npt.t[p]
+    return 0.5 * √π * erf(rmin, rmax) / (rmax-rmin)
+end
+
+
+function Base.getindex(npct::NuclearPotentialTensorCombination, i::Int, j::Int, p::Int)
+    s = npct.ref[p]
+    t = npct.index[p]
+    return npct.subtensors[s][i,j,t]
+end
+
+
+function Base.push!(nptc::NuclearPotentialTensorCombination{T},
+                    npt::AbstractNuclearPotentialSingle{T}) where {T}
+    @assert nptc.r == npt.r
+    @assert nptc.tmax <= npt.tmin
+    push!(nptc.subtensors, npt)
+    n = size(npt)[end]
+    append!(nptc.ref, (length(nptc.subtensors))*ones(n))
+    append!(nptc.t, npt.t)
+    append!(nptc.wt, npt.wt)
+    append!(nptc.index, 1:n)
+    nptc.tmax = npt.tmax
+    return nptc
+end
+
+
+"""
+    PotentialTensor{Tx,Ty,Tz}
+
+Used to create nuclear potential.
+
+# Creation
+    PotentialTensor(npx, npy, npz)
+
+`npx`, `npy` and `npz` are nuclear potential tensors.
+To get the best result usually they should be [`NuclearPotentialTensorCombination`](@ref).
+
+# Usage
+Create tensor and then call `Array` on it to get nuclear potential.
+
+"""
+struct PotentialTensor{Tx<:AbstractNuclearPotential,
+                       Ty<:AbstractNuclearPotential,
+                       Tz<:AbstractNuclearPotential}
+    x::Tx
+    y::Ty
+    z::Tz
+    function PotentialTensor(npx, npy, npz)
+        @assert size(npx)[end] == size(npy)[end] == size(npz)[end]
+        @assert npx.tmin == npy.tmin == npx.tmin
+        @assert npx.tmax == npy.tmax == npx.tmax
+        new{typeof(npx), typeof(npy), typeof(npz)}(npx, npy, npz)
+    end
+end
+
+Base.show(io::IO, ::MIME"text/plain", pt::PotentialTensor) = print(io, "PotentialTensor")
+
+function Base.size(pt::PotentialTensor)
+    s1 = size(pt.x)
+    s2 = size(pt.y)
+    s3 = size(pt.z)
+    return s1[1], s2[1], s3[1], s1[2], s2[2], s3[2]
+end
+
+
+function Base.getindex(pt::PotentialTensor, i::Int, j::Int, k::Int, I::Int, J::Int, K::Int)
+    out = pt.x[i,I,:]
+    out .*= pt.y[j,J,:]
+    out .* pt.z[k,K,:]
+    out .* pt.x.wt
+    return out
+end
+
+function Base.Array(pt::PotentialTensor)
+    x = Array(pt.x)
+    y = Array(pt.y)
+    z = Array(pt.z)
+    @tullio out[i,j,k,I,J,K] := x[i,I,t] * y[j,J,t] * z[k,K,t] * pt.x.wt[t]
+    return 2/sqrt(π) .* out
+end
+
+
+"""
+    nuclear_potential(ceg::CubicElementGrid, q, r)
+    nuclear_potential(ceg::CubicElementGrid, aname::String, r)
+
+Gives nuclear potential for given nuclear charge or atom name.
+"""
+function nuclear_potential(ceg::CubicElementGrid, q, r)
+    function give_tensor(x)
+        np = NuclearPotentialTensor(x, ceg, 64; tmin=0, tmax=70)
+        npl = NuclearPotentialTensorLog(x, ceg, 32; tmin=70, tmax=500)
+        npll = NuclearPotentialTensorLog(x, ceg, 16; tmin=500, tmax=1000)
+        nplll = NuclearPotentialTensorLogLocal(x, ceg, 16; tmin=1000, tmax=5000, δ=0.25)
+        return NuclearPotentialTensorCombination(np, npl, npll, nplll)
+    end
+    @assert dimension(q) == dimension(u"C") || dimension(q) == NoDims
+    qau = austrip(q)
+
+    ncx = give_tensor(r[1])
+    ncy = give_tensor(r[2])
+    ncz = give_tensor(r[3])
+
+    pt = PotentialTensor(ncx, ncy, ncz)
+
+    return (qau*u"hartree/e_au") * ScalarOperator(ceg, Array(pt))
+end
+
+
+function nuclear_potential(ceg::CubicElementGrid, aname::String, r)
+    if length(aname) <= 2    # is atomic symbol
+        e = elements[Symbol(aname)]
+    else
+        e = elements[aname]
+    end
+    @info "elemet numbers $(e.number)"
+    return nuclear_potential(ceg, e.number, r)
+end

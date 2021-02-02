@@ -10,6 +10,8 @@ using ProgressMeter
 using SpecialFunctions
 using StaticArrays
 using TensorOperations
+using Tullio
+@reexport using PeriodicTable
 @reexport using Unitful
 @reexport using UnitfulAtomic
 
@@ -62,22 +64,30 @@ export bracket,
        ketbra, ⋆,
        magnetic_current,
        momentum_operator,
+       nuclear_potential,
        optimal_coulomb_tranformation,
        para_magnetic_current,
        poisson_equation,
        poisson_equation!,
        position_operator,
+       test_nuclear_potential,
        vector_potential,
        ω_tensor
 
-# Types
-export AbstractQuantumState,
-       DerivativeOperator,
+# Abstract Types
+export AbstractQuantumState
+
+# Concrete Types
+export DerivativeOperator,
        GradientOperator,
        HamiltonOperator,
        HamiltonOperatorFreeParticle,
        HamiltonOperatorMagneticField,
        LaplaceOperator,
+       NuclearPotentialTensor,
+       NuclearPotentialTensorCombination,
+       NuclearPotentialTensorLog,
+       NuclearPotentialTensorLogLocal,
        OperatorSum,
        QuantumState,
        ScalarOperator,
