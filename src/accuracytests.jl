@@ -45,7 +45,25 @@ function gaussian_density_nuclear_potential(a=1, d=0; rtol=1e-12, tmin=0, tmax=I
     return 2π.*quadgk(f, tmin, tmax; rtol=rtol)
 end
 
+"""
+    test_nuclear_potential(a, ne::Int, ng::Int, nt::Int; Kwargs...) -> Dict
 
+Test nuclear potential accuracy to Gaussien electron density.
+
+# Arguments
+- `a`        : Grid box size in bohr or unitful unit if given
+- `ne::Int`  : Number of elements per dimension
+- `ng::Int`  : Number of Gauss points per element per dimension
+- `nt::Int`  : Number of Gauss points for t-integration
+
+# Keywords
+- `α=1`           :  Width of Gaussian
+- `origin=0.`     :  Nuclear coordinate -> (origin, origin, origin)
+- `tmin=0`        :  Minimum t-value
+- `tmax=30`       :  Maximum t-value
+- `δ=0.25`        :  Local correction parameter, if used
+- `mode="normal"` :  Sets mode, options are: normal, log, loglocal, preset
+"""
 function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
                                 α=1, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
     @assert dimension(a) == dimension(u"m") || dimension(a) == NoDims
@@ -89,7 +107,10 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
     @info "Relative error to total = $( round((integral-ref[1])/ref_tot[1]; sigdigits=2) )"
     @info "Tail energy = $(round(tail[1]; sigdigits=2))"
     @info "Tail relativer to total = $(round(tail[1]/ref_tot[1]; sigdigits=2))"
-    return integral, ref[1]
+    return Dict("integral"=>integral,
+                "reference"=>ref[1],
+                "total reference"=>ref_tot[1],
+                "tail"=>tail[1])
 end
 
 

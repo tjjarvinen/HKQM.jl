@@ -64,6 +64,9 @@ end
     eref = gaussian_coulomb_integral()[1]
     e = ec["calculated"]
     @test abs((e-eref)/eref) < 1e-3  # Calculation had poor accuracy
+
+    nc = test_nuclear_potential(5u"Å", 2 ,64, 64; mode="preset")
+    @test abs(nc["integral"] - nc["total reference"])/nc["total reference"] < 1e-5
 end
 
 @testset "Forward mode AD" begin

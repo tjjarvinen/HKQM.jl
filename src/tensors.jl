@@ -644,6 +644,30 @@ abstract type AbstractNuclearPotential <: AbtractTransformationTensor{3} end
 abstract type AbstractNuclearPotentialSingle{T} <: AbstractNuclearPotential end
 abstract type AbstractNuclearPotentialCombination{T} <: AbstractNuclearPotential end
 
+
+"""
+    NuclearPotentialTensor{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+
+# Creation
+    NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
 struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
@@ -658,7 +682,29 @@ struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle{T}
     end
 end
 
+"""
+    NuclearPotentialTensorLog{T}
 
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+
+# Creation
+    NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
 struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
@@ -676,6 +722,33 @@ struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle{T}
 end
 
 
+"""
+    NuclearPotentialTensorLogLocal{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points and
+local average correction.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+- `δ::Float64`               : Correction parameter ∈[0,1]
+- `δp::Matrix{T}`            : Upper limits for correction
+- `δm::Matrix{T}`            : Lower limits for correction
+
+# Creation
+    NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30, δ=0.25)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
 struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
@@ -687,7 +760,7 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
     δp::Matrix{T}
     δm::Matrix{T}
     function NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int;
-                                           tmin=0., tmax=25., δ=0.25)
+                                           tmin=0, tmax=30, δ=0.25)
         @assert 0 < δ <= 1
         @assert 0 <= tmin < tmax
         s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
@@ -712,6 +785,24 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
 end
 
 
+"""
+    NuclearPotentialTensorCombination{T}
+
+Combine different tensors to bigger one. Allows combining normal, logarithmic
+and local correction ones to one tensor.
+
+# Fields
+- `subtensors::Vector{AbstractNuclearPotentialSingle{T}}`  :  combination of these
+- `ref::Vector{Int}`    :  transforms t-index to subtensor index
+- `index::Vector{Int}`  :  transforms t-index to subtensors t-index
+- `wt::Vector{Float64}` :  t-integration weight
+- `tmin::Float64`       :  minimum t-value
+- `tmax::Float64`       :  maximum t-value
+- `r::T`                :  nuclear coordinate
+
+# Creation
+    NuclearPotentialTensorCombination(npt::AbstractNuclearPotentialSingle{T}...)
+"""
 mutable struct NuclearPotentialTensorCombination{T} <: AbstractNuclearPotentialCombination{T}
     subtensors::Vector{AbstractNuclearPotentialSingle{T}}
     ref::Vector{Int}
@@ -795,6 +886,21 @@ function Base.push!(nptc::NuclearPotentialTensorCombination{T},
 end
 
 
+"""
+    PotentialTensor{Tx,Ty,Tz}
+
+Used to create nuclear potential.
+
+# Creation
+    PotentialTensor(npx, npy, npz)
+
+`npx`, `npy` and `npz` are nuclear potential tensors.
+To get the best result usually they should be [`NuclearPotentialTensorCombination`](@ref).
+
+# Usage
+Create tensor and then call `Array` on it to get nuclear potential.
+
+"""
 struct PotentialTensor{Tx<:AbstractNuclearPotential,
                        Ty<:AbstractNuclearPotential,
                        Tz<:AbstractNuclearPotential}
@@ -835,6 +941,13 @@ function Base.Array(pt::PotentialTensor)
     return 2/sqrt(π) .* out
 end
 
+
+"""
+    nuclear_potential(ceg::CubicElementGrid, q, r)
+    nuclear_potential(ceg::CubicElementGrid, aname::String, r)
+
+Gives nuclear potential for given nuclear charge or atom name.
+"""
 function nuclear_potential(ceg::CubicElementGrid, q, r)
     function give_tensor(x)
         np = NuclearPotentialTensor(x, ceg, 64; tmin=0, tmax=70)
@@ -856,12 +969,12 @@ function nuclear_potential(ceg::CubicElementGrid, q, r)
 end
 
 
-function nuclear_potential(ceg::CubicElementGrid, aname::String, r; δ=0.25)
+function nuclear_potential(ceg::CubicElementGrid, aname::String, r)
     if length(aname) <= 2    # is atomic symbol
         e = elements[Symbol(aname)]
     else
         e = elements[aname]
     end
     @info "elemet numbers $(e.number)"
-    return nuclear_potential(ceg, e.number, r; δ=δ)
+    return nuclear_potential(ceg, e.number, r)
 end
