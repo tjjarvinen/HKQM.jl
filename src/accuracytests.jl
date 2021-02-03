@@ -62,7 +62,7 @@ Test nuclear potential accuracy to Gaussien electron density.
 - `tmin=0`        :  Minimum t-value
 - `tmax=30`       :  Maximum t-value
 - `δ=0.25`        :  Local correction parameter, if used
-- `mode="normal"` :  Sets mode, options are: normal, log, loglocal, preset
+- `mode="normal"` :  Sets mode, options are: "normal", "log", "loglocal", "preset"
 """
 function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
                                 α=1, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
@@ -92,6 +92,11 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
         pt = PotentialTensor(npt, npt, npt)
         V = Array(pt)
     end
+    @info "Using using cubic box of size ($a)^3 = $(a^3)"
+    @info "Using $ne^3 = $(ne^3) elements"
+    @info "Using $ng^3 = $(ng^3) Gauss points per element"
+    @info "Total ammount of points is $((ne*ng)^3)"
+    @info "t-integration is using $nt points"
     r = norm.(ceg)
     Va = r.^-1
     ρ = exp.(-α.*r.^2)
@@ -106,7 +111,7 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
     @info "Total reference = $(ref_tot[1])"
     @info "Relative error to total = $( round((integral-ref[1])/ref_tot[1]; sigdigits=2) )"
     @info "Tail energy = $(round(tail[1]; sigdigits=2))"
-    @info "Tail relativer to total = $(round(tail[1]/ref_tot[1]; sigdigits=2))"
+    @info "Tail relative to total = $(round(tail[1]/ref_tot[1]; sigdigits=2))"
     return Dict("integral"=>integral,
                 "reference"=>ref[1],
                 "total reference"=>ref_tot[1],
@@ -129,7 +134,7 @@ Test accuracy on Gaussian charge distribution self energy.
 # Keywords
 - `tmax=300`          : Maximum t-value for integration
 - `tmin=0`            : Minimum t-value for integration
-- `mode=:combination` : Integration type - options `:normal`, `:log`, `loglocal`, `:local` and `:combination`
+- `mode=:combination` : Integration type - options `:normal`, `:log`, `:loglocal`, `:local` and `:combination`
 - `δ=0.25`            : Localization parameter for local integration types
 - `correction=true`   : Correction to `tmax`-> ∞ integration - `true` calculate correction, `false` do not calculate
 - `tboundary=20`      : Parameter for `:combination` mode. Switch to `:loglocal` for t>`tboundary` else use `:log`
