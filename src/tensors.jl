@@ -785,6 +785,24 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
 end
 
 
+struct NuclearPotentialTensorGaussian{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    α::Float64
+    function NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; α=100, tmin=0, tmax=20)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r, α)
+    end
+end
+
+
 """
     NuclearPotentialTensorCombination{T}
 
@@ -861,6 +879,14 @@ function Base.getindex(npt::NuclearPotentialTensorLogLocal, i::Int, j::Int, p::I
     rmax = (r+δ) * npt.t[p]
     rmin = (r-δ) * npt.t[p]
     return 0.5 * √π * erf(rmin, rmax) / (rmax-rmin)
+end
+
+function Base.getindex(npt::NuclearPotentialTensorGaussian, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    t = npt.t[p]
+    a = npt.α
+    q = a * t^2 / (t^2 + a)
+    return sqrt(a) * (t^2+1)^(-1//2) * exp(-q * r^2)
 end
 
 
