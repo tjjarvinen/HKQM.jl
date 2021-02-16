@@ -78,15 +78,16 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
         npt = NuclearPotentialTensorLogLocal(origin, ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
     elseif mode == "preset"
         @info "Preset mode"
-        @info "tmin is set to 0"
-        @info "tmax is set to 5000"
-        tmin = 0
-        tmax = 5000
-        v = nuclear_potential(ceg, 1, (origin, origin, origin))
-        V = v.vals
+        v = optimal_nuclear_tensor(ceg, origin)
+        tmin = v.tmin
+        tmax = v.tmax
+        @info "tmin is set to $tmin"
+        @info "tmax is set to $tmax"
+        vv = nuclear_potential(ceg, 1, v,v,v)
+        V = vv.vals
     elseif mode == "gaussian"
         @info "Gaussian mode"
-        npt = NuclearPotentialTensorGaussian(origin, ceg, nt; tmin=tmin, tmax=tmax, α=β)
+        npt = NuclearPotentialTensorGaussian(origin, ceg, nt; tmin=tmin, tmax=tmax, β=β)
     else
         error("mode not recognized")
     end
