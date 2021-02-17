@@ -784,7 +784,31 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
     end
 end
 
+"""
+    NuclearPotentialTensorGaussian{T}
 
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points
+with gaussian nuclear density.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+- `β::Float64`               : Width of Gaussian exp(-βr²)
+
+# Creation
+    NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; β=100, tmin=0, tmax=20)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
 struct NuclearPotentialTensorGaussian{T} <: AbstractNuclearPotentialSingle{T}
     elementgrid::Matrix{T}
     t::Vector{Float64}
