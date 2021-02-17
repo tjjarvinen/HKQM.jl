@@ -130,3 +130,6 @@ function Base.conj!(qs::QuantumState{Any, Any, Complex})
     conj!.(qs.ψ)
     return qs
 end
+
+
+get_elementgrid(qs::QuantumState) = qs.elementgrid

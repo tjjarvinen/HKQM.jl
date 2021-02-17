@@ -90,6 +90,7 @@ export DerivativeOperator,
        NuclearPotentialTensorLog,
        NuclearPotentialTensorLogLocal,
        OperatorSum,
+       ProjectionOperator,
        QuantumState,
        ScalarOperator,
        VectorOperator

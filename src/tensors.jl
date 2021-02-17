@@ -1004,7 +1004,7 @@ function nuclear_potential(ceg::CubicElementGrid, q, r)
     ncy = optimal_nuclear_tensor(ceg, r[2])
     ncz = optimal_nuclear_tensor(ceg, r[3])
 
-    return nuclear_potential(ncx, ncy, ncz, q)
+    return nuclear_potential(ceg, q, ncx, ncy, ncz)
 end
 
 function optimal_nuclear_tensor(ceg, x)
@@ -1033,6 +1033,6 @@ function nuclear_potential(ceg::CubicElementGrid, aname::String, r)
     else
         e = elements[aname]
     end
-    @info "elemet numbers $(e.number)"
+    @debug "element number $(e.number)"
     return nuclear_potential(ceg, e.number, r)
 end
