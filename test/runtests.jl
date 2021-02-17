@@ -58,6 +58,11 @@ end
     @test unit(sqrt(x^2)) == u"bohr"
 end
 
+@testset "Nuclear potential" begin
+    tn = test_nuclear_potential(5u"Å", 4, 64, 64; mode="preset")
+    @test abs( (tn["integral"] - tn["total reference"]) / tn["total reference"]) < 1e-6
+end
+
 
 @testset "Poisson equation" begin
     ec = test_accuracy(10,4,24,48; showprogress=false)  # Poor accuracy

@@ -784,6 +784,48 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
     end
 end
 
+"""
+    NuclearPotentialTensorGaussian{T}
+
+Tensor for nuclear potential in 1D. To get 3D you need 3 of these tensors and
+integrate t-coordinate. This version has logarithmic spacing for t-points
+with gaussian nuclear density.
+
+Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
+
+# Fields
+- `elementgrid::Matrix{T}`   : Grid definition, collums are elements, rows Gauss points
+- `t::Vector{Float64}`       : t-coordinate
+- `wt::Vector{Float64}`      : Integration weights for t
+- `tmin::Float64`            : Minimum t-value
+- `tmax::Float64`            : Maximum t-value
+- `r::T`                     : Nuclear coordinate
+- `β::Float64`               : Width of Gaussian exp(-βr²)
+
+# Creation
+    NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; β=100, tmin=0, tmax=20)
+
+- `r`                       : Nuclear coordinate (1D)
+- `ceg::CubicElementGrid`   : Grid for the potential
+- `nt::Int`                 : Number of t-points
+"""
+struct NuclearPotentialTensorGaussian{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::Matrix{T}
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    β::Float64
+    function NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; β=100, tmin=0, tmax=20)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        grid = Array(grid1d(ceg)) .- r
+        new{eltype(grid)}(grid, t, wt, tmin, tmax, r, β)
+    end
+end
+
 
 """
     NuclearPotentialTensorCombination{T}
@@ -861,6 +903,14 @@ function Base.getindex(npt::NuclearPotentialTensorLogLocal, i::Int, j::Int, p::I
     rmax = (r+δ) * npt.t[p]
     rmin = (r-δ) * npt.t[p]
     return 0.5 * √π * erf(rmin, rmax) / (rmax-rmin)
+end
+
+function Base.getindex(npt::NuclearPotentialTensorGaussian, i::Int, j::Int, p::Int)
+    r = npt.elementgrid[i,j]
+    t = npt.t[p]
+    a = npt.β
+    q = a * t^2 / (t^2 + a)
+    return sqrt(a/(t^2+a)) * exp(-q * r^2)
 end
 
 
@@ -949,22 +999,30 @@ end
 Gives nuclear potential for given nuclear charge or atom name.
 """
 function nuclear_potential(ceg::CubicElementGrid, q, r)
-    function give_tensor(x)
-        np = NuclearPotentialTensor(x, ceg, 64; tmin=0, tmax=70)
-        npl = NuclearPotentialTensorLog(x, ceg, 32; tmin=70, tmax=500)
-        npll = NuclearPotentialTensorLog(x, ceg, 16; tmin=500, tmax=1000)
-        nplll = NuclearPotentialTensorLogLocal(x, ceg, 16; tmin=1000, tmax=5000, δ=0.25)
-        return NuclearPotentialTensorCombination(np, npl, npll, nplll)
-    end
+
+    ncx = optimal_nuclear_tensor(ceg, r[1])
+    ncy = optimal_nuclear_tensor(ceg, r[2])
+    ncz = optimal_nuclear_tensor(ceg, r[3])
+
+    return nuclear_potential(ncx, ncy, ncz, q)
+end
+
+function optimal_nuclear_tensor(ceg, x)
+    np = NuclearPotentialTensor(x, ceg, 64; tmin=0, tmax=70)
+    npl = NuclearPotentialTensorLog(x, ceg, 16; tmin=70, tmax=120)
+    npll = NuclearPotentialTensorGaussian(x, ceg, 16;  β=8.2e4, tmin=120, tmax=300)
+    nplll = NuclearPotentialTensorGaussian(x, ceg, 32; tmin=300, tmax=20000, β=3.4e4)
+    return NuclearPotentialTensorCombination(np, npl, npll, nplll)
+end
+
+function nuclear_potential(ceg,
+                           q,
+                           npx::AbstractNuclearPotential,
+                           npy::AbstractNuclearPotential,
+                           npz::AbstractNuclearPotential)
     @assert dimension(q) == dimension(u"C") || dimension(q) == NoDims
+    pt = PotentialTensor(npx, npy, npz)
     qau = austrip(q)
-
-    ncx = give_tensor(r[1])
-    ncy = give_tensor(r[2])
-    ncz = give_tensor(r[3])
-
-    pt = PotentialTensor(ncx, ncy, ncz)
-
     return (qau*u"hartree/e_au") * ScalarOperator(ceg, Array(pt))
 end
 

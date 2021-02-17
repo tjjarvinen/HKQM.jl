@@ -65,8 +65,7 @@ Test nuclear potential accuracy to Gaussien electron density.
 - `mode="normal"` :  Sets mode, options are: "normal", "log", "loglocal", "preset"
 """
 function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
-                                α=1, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
-    @assert dimension(a) == dimension(u"m") || dimension(a) == NoDims
+                                α=1, β=100, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
     ceg = CubicElementGrid(a, ne, ng)
     if mode == "normal"
         @info "normal mode"
@@ -79,12 +78,16 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
         npt = NuclearPotentialTensorLogLocal(origin, ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
     elseif mode == "preset"
         @info "Preset mode"
-        @info "tmin is set to 0"
-        @info "tmax is set to 5000"
-        tmin = 0
-        tmax = 5000
-        v = nuclear_potential(ceg, 1, (origin, origin, origin))
-        V = v.vals
+        v = optimal_nuclear_tensor(ceg, origin)
+        tmin = v.tmin
+        tmax = v.tmax
+        @info "tmin is set to $tmin"
+        @info "tmax is set to $tmax"
+        vv = nuclear_potential(ceg, 1, v,v,v)
+        V = vv.vals
+    elseif mode == "gaussian"
+        @info "Gaussian mode"
+        npt = NuclearPotentialTensorGaussian(origin, ceg, nt; tmin=tmin, tmax=tmax, β=β)
     else
         error("mode not recognized")
     end
@@ -142,7 +145,7 @@ Test accuracy on Gaussian charge distribution self energy.
 - `α2=1`              : 2nd Gaussian is exp(-α2*r^2)
 - `d=0`               : Distance between two Gaussian centers
 """
-function test_accuracy(a::Real, ne::Int, ng::Int, nt::Int;
+function test_accuracy(a, ne::Int, ng::Int, nt::Int;
      tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
