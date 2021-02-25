@@ -6,7 +6,9 @@ abstract type AbstractVectorOperator <: AbstractOperator{3} end
 abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
 abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
-Base.size(ao::AbstractOperator) = size(ao.elementgrid)
+get_elementgrid(ao::AbstractOperator) = ao.elementgrid
+
+Base.size(ao::AbstractOperator) = size(get_elementgrid(ao))
 
 function Base.show(io::IO, ao::AbstractOperator)
     s = size(ao)
@@ -469,7 +471,7 @@ struct OperatorSum{TO1, TO2, N} <: AbstractCompositeOperator{N}
         if unit(op1) == unit(op2)
             new{typeof(op1),typeof(op2),N}(op1.elementgrid, op1, op2)
         else
-            new{typeof(op1),typeof(op2),N}(op1.elementgrid, op1, uconvert(unit(op1), op2))
+            new{typeof(op1),typeof(op2),N}(get_elementgrid(op1), op1, uconvert(unit(op1), op2))
         end
     end
 end
@@ -511,7 +513,7 @@ struct OperatorProduct{TO1, TO2} <: AbstractCompositeOperator{1}
     function OperatorProduct(op1::AbstractOperator{1}, op2::AbstractOperator{1})
         @assert size(op1) == size(op2)
         @assert length(op1) == length(op2)  "Operators have different length"
-        new{typeof(op1),typeof(op2)}(op1.elementgrid, op1, op2)
+        new{typeof(op1),typeof(op2)}(get_elementgrid(op1), op1, op2)
     end
 end
 
@@ -522,6 +524,8 @@ end
 (op::OperatorProduct)(qs::QuantumState) = op.op1(op.op2(qs))
 
 Unitful.unit(op::OperatorProduct) = unit(op.op1) * unit(op.op2)
+
+get_elementgrid(op::OperatorProduct) = get_elementgrid(op.op1)
 
 
 ## Laplace Operator
@@ -729,3 +733,18 @@ end
 
 momentum_operator(H::HamiltonOperator) = momentum_operator(H.elementgrid)
 momentum_operator(H::HamiltonOperatorFreeParticle) = momentum_operator(H.elementgrid)
+
+
+## Projection operator
+
+struct ProjectionOperator <: AbstractOperator{1}
+    state::QuantumState
+end
+
+function (po::ProjectionOperator)(qs::QuantumState)
+    s = bracket(po.state,qs)
+    return s * po.state
+end
+
+get_elementgrid(po::ProjectionOperator) = get_elementgrid(po.state)
+Unitful.unit(po::ProjectionOperator) = unit(po.state)
