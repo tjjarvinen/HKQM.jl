@@ -15,6 +15,10 @@ using Tullio
 @reexport using Unitful
 @reexport using UnitfulAtomic
 
+# Submodule
+include("submodules/ReferenceStates.jl")
+using .ReferenceStates
+
 import LinearAlgebra.dot
 import LinearAlgebra.cross
 import LinearAlgebra.normalize!
@@ -102,6 +106,7 @@ include("operators.jl")
 include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")
+
 
 
 end
