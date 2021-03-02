@@ -65,34 +65,44 @@ Test nuclear potential accuracy to Gaussien electron density.
 - `mode="normal"` :  Sets mode, options are: "normal", "log", "loglocal", "preset"
 """
 function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
-                                α=1, β=100, origin=0., tmin=0, tmax=30, δ=0.25, mode="normal")
+                                α=1, σ=0.1, origin=zeros(3), tmin=0, tmax=30, δ=0.25, mode="normal")
     ceg = CubicElementGrid(a, ne, ng)
     if mode == "normal"
         @info "normal mode"
-        npt = NuclearPotentialTensor(origin, ceg, nt; tmin=tmin, tmax=tmax)
+        npt1 = NuclearPotentialTensor(origin[1], ceg, nt; tmin=tmin, tmax=tmax)
+        npt2 = NuclearPotentialTensor(origin[2], ceg, nt; tmin=tmin, tmax=tmax)
+        npt3 = NuclearPotentialTensor(origin[3], ceg, nt; tmin=tmin, tmax=tmax)
     elseif mode == "log"
         @info "logarithmic mode"
-        npt = NuclearPotentialTensorLog(origin, ceg, nt; tmin=tmin, tmax=tmax)
+        npt1 = NuclearPotentialTensorLog(origin[1], ceg, nt; tmin=tmin, tmax=tmax)
+        npt2 = NuclearPotentialTensorLog(origin[2], ceg, nt; tmin=tmin, tmax=tmax)
+        npt3 = NuclearPotentialTensorLog(origin[3], ceg, nt; tmin=tmin, tmax=tmax)
     elseif mode == "loglocal"
         @info "logarithmic mode with local correction δ=$δ"
-        npt = NuclearPotentialTensorLogLocal(origin, ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
+        npt1 = NuclearPotentialTensorLogLocal(origin[1], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
+        npt2 = NuclearPotentialTensorLogLocal(origin[2], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
+        npt3 = NuclearPotentialTensorLogLocal(origin[3], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
     elseif mode == "preset"
         @info "Preset mode"
-        v = optimal_nuclear_tensor(ceg, origin)
-        tmin = v.tmin
-        tmax = v.tmax
+        v1 = optimal_nuclear_tensor(ceg, origin[1])
+        v2 = optimal_nuclear_tensor(ceg, origin[2])
+        v3 = optimal_nuclear_tensor(ceg, origin[3])
+        tmin = v1.tmin
+        tmax = v1.tmax
         @info "tmin is set to $tmin"
         @info "tmax is set to $tmax"
-        vv = nuclear_potential(ceg, 1, v,v,v)
+        vv = nuclear_potential(ceg, 1, v1,v2,v3)
         V = vv.vals
     elseif mode == "gaussian"
         @info "Gaussian mode"
-        npt = NuclearPotentialTensorGaussian(origin, ceg, nt; tmin=tmin, tmax=tmax, β=β)
+        npt1 = NuclearPotentialTensorGaussian(origin[1], ceg, nt; tmin=tmin, tmax=tmax, σ=σ)
+        npt2 = NuclearPotentialTensorGaussian(origin[2], ceg, nt; tmin=tmin, tmax=tmax, σ=σ)
+        npt3 = NuclearPotentialTensorGaussian(origin[3], ceg, nt; tmin=tmin, tmax=tmax, σ=σ)
     else
         error("mode not recognized")
     end
     if mode != "preset"
-        pt = PotentialTensor(npt, npt, npt)
+        pt = PotentialTensor(npt1, npt2, npt3)
         V = Array(pt)
     end
     @info "Using using cubic box of size ($a)^3 = $(a^3)"
@@ -100,11 +110,11 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
     @info "Using $ng^3 = $(ng^3) Gauss points per element"
     @info "Total ammount of points is $((ne*ng)^3)"
     @info "t-integration is using $nt points"
-    r = norm.(ceg)
-    Va = r.^-1
-    ρ = exp.(-α.*r.^2)
+    r = position_operator(ceg)
+    r0 = r - austrip.(collect(origin)).*u"bohr"
+    r2 = r0⋅r0
+    ρ = exp(-1u"bohr^-2"*α*r2).vals
     integral = integrate(ρ, ceg, V)
-    plain = integrate(ρ, ceg, Va)
     ref = gaussian_density_nuclear_potential(α; tmin=tmin, tmax=tmax)
     ref_tot = gaussian_density_nuclear_potential(α)
     tail = gaussian_density_nuclear_potential(α; tmin=tmax)
@@ -242,55 +252,6 @@ end
 
 
 ##  Kinetic energy tests
-
-function hermite_polynomial(ν)
-    if ν == 0
-        return Polynomial([1])
-    elseif ν == 1
-        return Polynomial([0, 2])
-    else
-        p1 = Polynomial([0,2])*hermite_polynomial(ν-1)
-        p2 = 2(ν-1)*hermite_polynomial(ν-2)
-        return p1 - p2
-    end
-end
-
-
-struct HarmonicEigenstate
-    ν::Int
-    α::Float64
-    ω::Float64
-    N::Float64
-    hp::Polynomial{Int}
-    function HarmonicEigenstate(ν::Int; ω=1)
-        α = 1/sqrt(ω)
-        hp = hermite_polynomial(ν)
-        N = (2^ν*factorial(ν)*sqrt(π)*α)^(-1//2)
-        new(ν, α, ω, N, hp)
-    end
-end
-
-function (HE::HarmonicEigenstate)(v::AbstractVector)
-    return prod(HE, v)
-end
-
-function (HE::HarmonicEigenstate)(x::Real)
-    y = x/HE.α
-    return HE.N*HE.hp(y)*exp(-0.5*y^2)
-end
-
-function harmonic_state(ceg::CubicElementGrid, hx, hy=hx, hz=hx)
-    r = position_operator(ceg)
-    ψ = hx.(r[1].vals)
-    ψ .*= hy.(r[2].vals)
-    ψ .*= hz.(r[3].vals)
-    return QuantumState(ceg, ψ)
-end
-
-function energy(he::HarmonicEigenstate)
-    return he.ω*(he.ν+0.5)*u"hartree"
-end
-
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
     ceg = CubicElementGrid(a, ne, ng)
 
@@ -306,4 +267,40 @@ function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
     @info "Error = $(T-Tref)"
     @info "Relative error = $((T-Tref)/Tref)"
     return T, Tref
+end
+
+# Wave function test
+function test_atom_wavefunction(a, ne, nt; r=zeros(3), aname="H", ni=20)
+    Z = elements[Symbol(aname)].number
+    ceg = CubicElementGrid(a, ne, nt)
+    ra = austrip.(r) .* u"bohr"
+    r0 = position_operator(ceg) - ra
+    rr = sqrt(r0⋅r0)
+
+    V = -1u"e_au"*nuclear_potential(ceg, aname, r)
+
+    phi = exp(-0.5u"bohr^-1"*rr)
+    ϕ = QuantumState(ceg, phi.vals)
+    normalize!(ϕ)
+
+    H = HamiltonOperator(V)
+    ψ = helmholtz_equation(ϕ, H; showprogress=true )
+
+    for i in 1:ni
+        helmholtz_equation!(ψ, H)
+    end
+    E = bracket(ψ, H, ψ) |> u"Ry"
+    V = bracket(ψ, V, ψ) |> u"Ry"
+
+    E_ref = Z^2 * u"Ry"
+
+    @info "Energy = $E"
+    @info "Reference energy = $E_ref"
+
+    return Dict(
+        "energy" => E,
+        "E_ref"  => E_ref,
+        "H"      => H,
+        "ψ"      => ψ
+    )
 end

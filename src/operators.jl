@@ -207,6 +207,14 @@ for OP in (:(+), :(-))
         function Base.$OP(a::VectorOperator{N},b::VectorOperator{N}) where N
             VectorOperator($OP(a.operators,b.operators))
         end
+        function Base.$OP(a::VectorOperator{N},b::AbstractVector) where N
+            @assert length(b) == N
+            VectorOperator($OP(a.operators,b))
+        end
+        function Base.$OP(a::AbstractVector,b::VectorOperator{N}) where N
+            @assert length(a) == N
+            VectorOperator($OP(a,b.operators))
+        end
     end
 end
 
