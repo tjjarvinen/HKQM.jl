@@ -8,16 +8,17 @@ disable_logging(Logging.Info)
 
 
 @testset "Elements" begin
-    ce = CubicElements(10, 4)
-    @test size(ce) == (4,4,4)
+    ca = CubicElementArray(5u"Å", 3)
+    @test size(ca) == (3,3,3)
+    @test get_center(ca[2,2,2]) ≈ zeros(3).*u"bohr"
 
-    ceg = CubicElementGrid(10, 4, 16)
+    ceg = CubicElementGrid(5u"Å", 4, 16)
     @test size(ceg) == (16,16,16,4,4,4)
 
 end
 
 @testset "Tensors" begin
-    ceg = CubicElementGrid(10, 4, 16)
+    ceg = CubicElementGrid(5u"Å", 4, 16)
     ct = CoulombTransformation(ceg, 16)
     clog = CoulombTransformationLog(ceg, 16)
     ca = CoulombTransformationLocal(ceg, 16)
@@ -35,7 +36,7 @@ end
 end
 
 @testset "Operators" begin
-    ceg = CubicElementGrid(10, 4, 16)
+    ceg = CubicElementGrid(5u"Å", 4, 16)
     r = position_operator(ceg)
     p = momentum_operator(ceg)
     x = r[1]
@@ -65,7 +66,7 @@ end
 
 
 @testset "Poisson equation" begin
-    ec = test_accuracy(10,4,24,48; showprogress=false)  # Poor accuracy
+    ec = test_accuracy(5u"Å",4,24,48; showprogress=false)  # Poor accuracy
     eref = gaussian_coulomb_integral()[1]
     e = ec["calculated"]
     @test abs((e-eref)/eref) < 1e-3  # Calculation had poor accuracy
@@ -75,14 +76,14 @@ end
 end
 
 @testset "Forward mode AD" begin
-    d = test_accuracy_ad(10, 4, 16, 96; α1=1.3, α2=0.8, d=0.5, showprogress=false)
+    d = test_accuracy_ad(5u"Å", 4, 16, 96; α1=1.3, α2=0.8, d=0.5, showprogress=false)
     # Grid resolution is small so not very accurate
     @test all(abs.(d[1] .- d[2])./d[2] .< 1e-2)
 
 
     # Helmholtz equation derivative
     function f(k)
-        ceg = CubicElementGrid(10,2,16)
+        ceg = CubicElementGrid(5u"Å",2,16)
         ct=optimal_coulomb_tranformation(ceg, 4; k=k)
         ρ = HKQM.density_tensor(ceg)
         V = poisson_equation(ρ, ct)

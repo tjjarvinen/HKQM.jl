@@ -27,7 +27,6 @@ export AbstractElementGrid,
        AbstractOperator,
        CubicElementGrid,
        CubicElement,
-       CubicElements,
        coulomb_correction,
        coulomb_tensor,
        CoulombTransformation,
@@ -42,8 +41,6 @@ export AbstractElementGrid,
        gaussian_coulomb_integral,
        gaussiandensity_self_energy,
        gausspoints,
-       getcenter,
-       getcenters,
        grid1d,
        normalize!,
        self_energy,
@@ -63,6 +60,7 @@ export AbstractElementGrid,
 export bracket,
        cross, ×,
        dot, ⋅,
+       get_center,
        helmholtz_equation,
        helmholtz_equation!,
        ketbra, ⋆,
@@ -82,7 +80,9 @@ export bracket,
 export AbstractQuantumState
 
 # Concrete Types
-export DerivativeOperator,
+export CubicElementArray,
+       DerivativeOperator,
+       ElementVector,
        GradientOperator,
        HamiltonOperator,
        HamiltonOperatorFreeParticle,
@@ -99,8 +99,10 @@ export DerivativeOperator,
        ScalarOperator,
        VectorOperator
 
+
 include("elements.jl")
 include("states.jl")
+#include("bubbles.jl")
 include("tensors.jl")
 include("operators.jl")
 include("integrations.jl")
