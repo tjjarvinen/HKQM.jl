@@ -94,6 +94,6 @@ end
 end
 
 @testset "Derivative and kinetic energy" begin
-    a = test_kinetic_energy(10, 4, 32; ν=1, ω=3)
+    a = test_kinetic_energy(5u"Å", 4, 32; ν=1, ω=3)
     @test abs(a[1]-a[2]) < 1e-10
 end

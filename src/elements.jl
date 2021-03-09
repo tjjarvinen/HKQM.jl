@@ -191,13 +191,9 @@ Base.show(io::IO, ce::CubicElement) = print(io, "Cubic element a = $(ce.a)")
 
 Return element center.
 """
-function get_center(ce::CubicElementArray)
-    return ce.center
-end
+get_center(ce::CubicElement) = ce.center
+get_center(ce::CubicElementArray) = ce.center
 
-function get_center(ce::CubicElement)
-    return ce.center
-end
 
 
 ## Element grids
