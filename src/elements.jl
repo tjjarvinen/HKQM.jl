@@ -83,7 +83,6 @@ struct CubicElementArray <: AbstractElementArray{CubicElement,3}
     end
 end
 
-#const CubicElements = CubicElementArray #TODO Remove
 
 """
     ElementVector <: AbstractElementArray{Element1D,1}
