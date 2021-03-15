@@ -82,6 +82,7 @@ export AbstractQuantumState
 # Concrete Types
 export CubicElementArray,
        DerivativeOperator,
+       ElementGridVector,
        ElementVector,
        GradientOperator,
        HamiltonOperator,

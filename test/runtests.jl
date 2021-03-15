@@ -15,6 +15,13 @@ disable_logging(Logging.Info)
     ceg = CubicElementGrid(5u"Å", 4, 16)
     @test size(ceg) == (16,16,16,4,4,4)
 
+    ev = ElementVector(0, 2, 5, 7)
+    @test length(ev) == 3
+
+    egv = ElementGridVector(ev, 6)
+    @test size(egv) == (6,3)
+    @test egv[begin, begin] >= 0
+    @test egv[end, end] <= 7
 end
 
 @testset "Tensors" begin

@@ -20,10 +20,15 @@ Stores information for 1D element.
 struct Element1D <: AbstractElement{1}
     low::typeof(1.0u"bohr")
     high::typeof(1.0u"bohr")
-    function Element1D(low, high)
+    function Element1D(low::Unitful.Length, high::Unitful.Length)
         @assert high > low
         new(low, high)
     end
+end
+
+function Element1D(low, high)
+    @assert dimension(low) == dimension(high) == NoDims
+    return Element1D(low*u"bohr", high*u"bohr")
 end
 
 """
@@ -63,7 +68,7 @@ end
 
 
 """
-    CubicElements <: AbstractElementArray{CubicElement,3}
+    CubicElementArray <: AbstractElementArray{CubicElement,3}
 
 Cubic element that is divided to smaller cubic elments.
 
@@ -292,8 +297,24 @@ the origin of grid is not specified. Which is equal to origin at 0,0,0.
 grid1d(ceg::CubicElementGrid) = [x+X for x in ceg.gpoints, X in ceg.ecenters ]
 
 
+## 1D grids
+
+struct ElementGridVector <: AbstractMatrix{Float64}
+    elements::ElementVector
+    r::Matrix{Float64}
+    w::Matrix{Float64}
+    function ElementGridVector(ev::ElementVector, ng)
+        tmp = gausspoints.(ev, ng)
+        r = hcat([ x[1] for x in tmp ]...)
+        w = hcat([ x[2] for x in tmp ]...)
+        new(ev, r, w)
+    end
+end
 
 
+Base.size(egv::ElementGridVector) = size(egv.r)
+
+Base.getindex(egv::ElementGridVector, i, j) = egv.r[i,j]
 
 ## Gauss points for integration
 
@@ -304,7 +325,7 @@ function gausspoints(n; elementsize=(-1.0, 1.0))
     shift = (esize[2]+esize[1])./2
     x = x .* (esize[2]-esize[1])./2 .+ shift
     w .*= (esize[2]-esize[1])/2
-    return SVector{n}(x), SVector{n}(w)
+    return x, w
 end
 
 
@@ -317,7 +338,7 @@ Returns a tuple with first index having Gauss points and
 second integration weights.
 """
 function gausspoints(el::Element1D, n::Int)
-    return gausspoints(n; elementsize=(el.low, el.high) )
+    return gausspoints(n; elementsize=austrip.((el.low, el.high)) )
 end
 
 """
