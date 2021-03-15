@@ -83,7 +83,7 @@ struct CubicElementArray <: AbstractElementArray{CubicElement,3}
     end
 end
 
-const CubicElements = CubicElementArray
+#const CubicElements = CubicElementArray #TODO Remove
 
 """
     ElementVector <: AbstractElementArray{Element1D,1}
@@ -138,11 +138,11 @@ Base.getindex(ev::ElementVector, i) = ev.v[i]
 
 
 """
-    elementsize(ce::CubicElements) -> Float64
+    elementsize(ce::CubicElementArray) -> Float64
 
 Cubes 1D side length
 """
-elementsize(ce::CubicElements) = ce.a/ce.npoints
+elementsize(ce::CubicElementArray) = ce.a/ce.npoints
 
 """
     elementsize(e::Element1D) -> Float64
@@ -160,7 +160,7 @@ getcenter(e::Element1D) = 0.5*(e.high + e.low)
 
 
 
-function get_1d_element(ce::CubicElements, i::Int)
+function get_1d_element(ce::CubicElementArray, i::Int)
     @assert 0 < i <= ce.npoints
     s = elementsize(ce)
     low = -0.5ce.a+(i-1)*s
@@ -176,7 +176,7 @@ function Base.getindex(ca::CubicElementArray, I::Int, J::Int, K::Int)
 end
 
 
-function Base.show(io::IO, ce::CubicElements)
+function Base.show(io::IO, ce::CubicElementArray)
     print(io, "Cubic elements=$(size(ce))")
 end
 
