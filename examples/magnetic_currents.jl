@@ -34,7 +34,7 @@ end
 
 ## Plotting tools
 
-# Change form from elment grid (6D) to regural grid (3D)
+# Change from elment grid (6D) to regural grid (3D)
 function get3d(ψ)
     s = size(ψ)
     a = s[1]*s[end]
@@ -46,20 +46,20 @@ function get3d(ψ)
 end
 
 
-function plot_potential(op::ScalarOperator; z=128, title="Potential Energy [Hartree]", fill=false, levels=15)
+function plot_potential(op::ScalarOperator; title="Potential Energy [Hartree]", fill=false, levels=15)
     X = vec(xgrid(op.elementgrid)) |> collect
     X =  X.* u"bohr"
     x = uconvert.(u"Å", X)
-    #Z = [ r[3] for r in ψ.elementgrid ] |> get3d;
+    z = length(x)/2
     ρ = get3d(op.vals)
     f = Figure()
     Axis(f[1,1], xlabel="x [Å]", ylabel="y [Å]", title=title )
-    co = contourf!(ustrip(x), ustrip(x), ρ[:,:,z]; levels=levels, colormap=Reverse(:plasma))
+    co = contourf!(ustrip(x), ustrip(x), ρ[:,:,z]; levels=levels, colormap=:plasma)
     Colorbar(f[1, 2], co)
     return f
 end
 
-function plot_current(ψ::QuantumState, j; z=0, n=32, mode_3d=false, ng=30, arrow_size=0.06, size=(2400,2400))
+function plot_current(ψ::QuantumState, j; z=0, n=32, mode_3d=false, ng=30, arrow_size=0.06, title="title")
     X = vec(xgrid(ψ.elementgrid)) |> collect
     x = ustrip.( uconvert.(u"Å", X.*u"bohr") )
     u = interpolate((x,x,x), get3d(j[1]), Gridded(Linear()))
@@ -79,23 +79,21 @@ function plot_current(ψ::QuantumState, j; z=0, n=32, mode_3d=false, ng=30, arro
     xmax = maximum(x)
     r = range(xmin; stop=xmax, length=n)
     if mode_3d
-        f = streamplot(f, r, r, r; resolution=size, colormap = :viridis, arrow_size = arrow_size, gridsize = (ng, ng))
-        #f = arrows(f, r, r, r;  colormap = :magma, arrow_size = arrow_size, gridsize = (ng, ng))
-        #Makie.xlabel!(f, "x [Å]")
-        #Makie.ylabel!(f, "y [Å]")
-        return f
+        ngrid = min(ng, 15)
+        fig = streamplot(f, r, r, r; colormap = :viridis, arrow_size = arrow_size, gridsize = (ngrid, ngrid))
+        return fig
     else
-        f = streamplot(f, r, r; resolution=size, colormap = :magma, arrow_size = arrow_size, gridsize = (ng, ng))
-        #Makie.xlabel!(f, "x [Å]")
-        #Makie.ylabel!(f, "y [Å]")
-        #Makie.zlabel!(f, "z [Å]")
-        return f
+        fig = Figure()
+        Axis(fig[1,1], xlabel="x [Å]", ylabel="y [Å]", title=title )
+        sp = streamplot!(f, r, r; colormap = :magma, arrow_size = arrow_size, gridsize = (ng, ng), title=title)
+        return fig
     end
 end
 
 ## No magnetic field calculation
 
-ceg = CubicElementGrid(6u"Å", 4, 64)
+# 2^3 elements with 64^3 Gauss points in element
+ceg = CubicElementGrid(6u"Å", 2, 64)
 
 # Well depth is 1 hartree. Well width is α, values 0.5-1.0 are ok.
 V = benzene_like_potential(ceg; α=0.7u"bohr^-2", depth=1u"hartree")
@@ -149,9 +147,17 @@ j_dia = map((x,y)-> x.-y, j,j_para);
 
 ## Plotting results
 
-f = plot_current(ψm, j; z=0)
-fp = plot_current(ψ, j_para; z=0)
-fd = plot_current(ψ, j_dia; z=0)
+
+fpot = plot_potential(H.V)
+
+
+# 2d plots from magnetic currents
+f = plot_current(ψm, j; title="Magnetic Current in Plane")
+fp = plot_current(ψ, j_para; title="Para Magnetic Current in Plane")
+fd = plot_current(ψ, j_dia; title="Dia Magnetic Current in Plane")
+
+# And finally 3d plot from paramagnetic current
+fp = plot_current(ψ, j_para; mode_3d=true, ng=11)
 
 
 
