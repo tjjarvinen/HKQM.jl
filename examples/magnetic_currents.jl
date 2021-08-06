@@ -46,12 +46,29 @@ function get3d(ψ)
 end
 
 
-function plot_potential(op::ScalarOperator; title="Potential Energy [Hartree]", fill=false, levels=15)
+function plot_potential(op::ScalarOperator; title="Potential Energy [Hartree]", levels=15)
     X = vec(xgrid(op.elementgrid)) |> collect
     X =  X.* u"bohr"
     x = uconvert.(u"Å", X)
-    z = length(x)/2
+    z = length(x)/2 |> Int
     ρ = get3d(op.vals)
+    f = Figure()
+    Axis(f[1,1], xlabel="x [Å]", ylabel="y [Å]", title=title )
+    co = contourf!(ustrip(x), ustrip(x), ρ[:,:,z]; levels=levels, colormap=:plasma)
+    Colorbar(f[1, 2], co)
+    return f
+end
+
+function plot_density(ψ::QuantumState; title="Electron Density", levels=15)
+    function get3d_density(ψ::QuantumState)
+        ρ = conj!(ψ).*ψ
+        return get3d(real.(ρ))
+    end
+    X = vec(xgrid(ψ.elementgrid)) |> collect
+    X =  X.* u"bohr"
+    x = uconvert.(u"Å", X)
+    z = length(x)/2 |> Int
+    ρ = get3d_density(ψ)
     f = Figure()
     Axis(f[1,1], xlabel="x [Å]", ylabel="y [Å]", title=title )
     co = contourf!(ustrip(x), ustrip(x), ρ[:,:,z]; levels=levels, colormap=:plasma)
@@ -150,28 +167,13 @@ j_dia = map((x,y)-> x.-y, j,j_para);
 
 fpot = plot_potential(H.V)
 
+fpsi = plot_density(ψ)
 
-# 2d plots from magnetic currents
+
+# 2d plots of magnetic currents
 f = plot_current(ψm, j; title="Magnetic Current in Plane")
-fp = plot_current(ψ, j_para; title="Para Magnetic Current in Plane")
-fd = plot_current(ψ, j_dia; title="Dia Magnetic Current in Plane")
+fp = plot_current(ψm, j_para; title="Para Magnetic Current in Plane")
+fd = plot_current(ψm, j_dia; title="Dia Magnetic Current in Plane")
 
-# And finally 3d plot from paramagnetic current
-fp = plot_current(ψ, j_para; mode_3d=true, ng=11)
-
-
-
-
-
-## Save and load
-
-#using JLD2
-#save("save_data.jld2", "psi", ψ, "psim", ψm, "H", H, "Hm", Hm);
-
-## Load
-#psi = jldopen("save_data.jld2")
-
-#ψ = psi["psi"]
-#ψm = psi["psim"]
-#H = psi["H"]
-#Hm = psi["Hm"]
+# 3d plot of paramagnetic current
+fp = plot_current(ψm, j_para; mode_3d=true, ng=11)
