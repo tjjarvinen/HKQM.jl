@@ -22,7 +22,7 @@ This Julia implementation includes some upgrades for accuracy and advanced funct
 
 The aim is to run this code on [LUMI](https://www.lumi-supercomputer.eu/) supercomputer, which is operational in early 2022.
 
-The plan is that the program is functional at LUMI lauch time, with DFT part done with pseudo-potential support.
+The plan is that the program is functional at LUMI lauch time, with DFT part done with pseudopotential support.
 
 Later on we will add support for all electron calculations with [Bubbles](http://dx.doi.org/10.1021/acs.jctc.8b00456) framework.
 
