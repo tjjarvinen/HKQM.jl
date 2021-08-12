@@ -34,7 +34,7 @@ Poisson equation. Helmholtz equation can then be solved using Greens function
 the same way as Poisson equation, by only adding an extra constant term.
 
 From the 4 one dimensinal integrals 3 can be calculated as a tensor contraction
-that parallizes well on GPUs. The final integral can be parallized over different GPUs. This should result in a program that can parallize over tens of GPUs, for large systems.
+that parallelizes well on GPUs. The final integral can be parallized over different GPUs. This should result in a program that can parallize over tens of GPUs, for large systems.
 
 THe main method also means that differential equation is solved as integral equation.
 Thus the basis set is chosen to give the best accuracy for general numerical 
