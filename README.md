@@ -14,7 +14,7 @@ It uses new method to solve scf-equations (Helmholtz equation Greens function) a
 The program is designed so that it will have massive parallelization on GPUs,
 while still being more simple than standard Gaussian orbital based methods.
 
-The code is based earlier Fortran code [DAGE](https://github.com/dagesundholm/DAGE) described in [chem.phys. 146, 084102 (2017)](http://dx.doi.org/10.1063/1.4976557).
+The code is based on earlier Fortran code [DAGE](https://github.com/dagesundholm/DAGE) described in [chem.phys. 146, 084102 (2017)](http://dx.doi.org/10.1063/1.4976557).
 
 This Julia implementation includes some upgrades for accuracy and advanced functionality like automatic differentation, while also being significantly faster and able to run on GPUs from multiple vendors.
 
