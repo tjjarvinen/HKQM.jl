@@ -202,9 +202,9 @@ struct CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformatio
         δm = zeros(s...)
         δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
         δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
-        for j in 1:s[2]
-            δm[1,j] = ceg.elements[j].low - grid[1,j]
-            δp[end,j] = ceg.elements[j].high - grid[end,j]
+        for j in axes(grid, 2)
+            δm[1,j] =  austrip(get_1d_element(ceg.elements, j).low) - grid[1,j]
+            δp[end,j] = austrip(get_1d_element(ceg.elements, j).high) - grid[end,j]
         end
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{eltype(wt), nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
@@ -286,8 +286,8 @@ struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransforma
         δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
         δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
         for j in 1:ss[2]
-            δm[1,j] = ceg.elements[j].low - grid[1,j]
-            δp[end,j] = ceg.elements[j].high - grid[end,j]
+            δm[1,j] =  austrip(get_1d_element(ceg.elements, j).low) - grid[1,j]
+            δp[end,j] = austrip(get_1d_element(ceg.elements, j).high) - grid[end,j]
         end
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{eltype(wt), nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
@@ -835,7 +835,7 @@ struct NuclearPotentialTensorGaussian{T} <: AbstractNuclearPotentialSingle{T}
 end
 
 function NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; σ=0.1, tmin=0, tmax=20)
-    min_d = elementsize(ceg.elements) / size(ceg)[1]
+    min_d = elementsize(ceg.elements) / size(ceg)[1] |> austrip
     β = 0.5*(σ*min_d)^-2
     return NuclearPotentialTensorGaussian(r, ceg, nt, β; tmin=tmin, tmax=tmax)
 end

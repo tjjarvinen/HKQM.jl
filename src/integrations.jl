@@ -20,12 +20,12 @@ end
 
 function integrate(ϕ::QuantumState, ψ::QuantumState)
     @assert size(ϕ) == size(ψ)
-    integrate(ϕ.ψ, ψ.elementgrid, ψ.ψ)
+    integrate(ϕ.psi, ψ.elementgrid, ψ.psi)
 end
 
 function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
-    integrate(conj(ϕ).ψ, ψ.elementgrid, ψ.ψ)
+    integrate(conj(ϕ).psi, ψ.elementgrid, ψ.psi)
 end
 
 
@@ -214,6 +214,6 @@ function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTe
                           tmax=nothing, showprogress=false)
     @assert dimension(ψ) == dimension(u"bohr^-2")
     ψ = uconvert(u"bohr^-2", ψ)
-    V = poisson_equation(ψ.ψ, transtensor, tmax=tmax, showprogress=showprogress)
+    V = poisson_equation(ψ.psi, transtensor, tmax=tmax, showprogress=showprogress)
     return QuantumState(ψ.elementgrid, V)
 end
