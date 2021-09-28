@@ -14,8 +14,8 @@ abstract type AbstractElementGrid{N} <: AbstractArray{SVector{3,Float64}, N} end
 Stores information for 1D element.
 
 # Fields
-- `low::Float64` : lowest value within element
-- `high::Float64` : highest value within element
+- `low::typeof(1.0u"bohr")` : lowest value within element
+- `high::typeof(1.0u"bohr")` : highest value within element
 """
 struct Element1D <: AbstractElement{1}
     low::typeof(1.0u"bohr")
@@ -31,6 +31,7 @@ function Element1D(low, high)
     return Element1D(low*u"bohr", high*u"bohr")
 end
 
+
 """
     CubicElement <: AbstractElement{3}
 
@@ -38,7 +39,7 @@ Cubic 3D element.
 
 # Fields
 - `center::SVector{3,Float64}`  : center location of element
-- `a::Float64` : side length of the cube
+- `a::typeof(1.0u"bohr")` : side length of the cube
 """
 struct CubicElement <: AbstractElement{3}
     center::SVector{3,typeof(1.0u"bohr")}
@@ -210,9 +211,9 @@ Elements and integration points are symmetric for x-, y- and z-axes.
 
 # Fields
 - `elements::CubicElements` : cubic elements
-- `ecenters::SVector{NE}{Float64}` : center locations for the subcube elements
-- `gpoints::SVector{NG}{Float64}`  : integration grid definition, in 1D
-- `w::SVector{NG}{Float64}`  :  integration weights
+- `ecenters::Vector{Float64}` : center locations for the subcube elements
+- `gpoints::Vector{Float64}`  : integration grid definition, in 1D
+- `w::Vector{Float64}`  :  integration weights
 - `origin::SVector{3}{Float64}`  : origin location of the supercube
 
 # Example
@@ -223,9 +224,9 @@ Cubic elements grid with 4^3 elements with 32^3 Gauss points
 """
 struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
     elements::CubicElementArray
-    ecenters::SVector{NE}{Float64}
-    gpoints::SVector{NG}{Float64}
-    w::SVector{NG}{Float64}
+    ecenters::Vector{Float64}
+    gpoints::Vector{Float64}
+    w::Vector{Float64}
     origin::SVector{3}{Float64}
     function CubicElementGrid(a::Unitful.Length, nelements::Int, ngpoints::Int;
                               origin=SVector(0.,0.,0.).*unit(a))
@@ -298,6 +299,7 @@ grid1d(ceg::CubicElementGrid) = [x+X for x in ceg.gpoints, X in ceg.ecenters ]
 
 
 ## 1D grids
+# Plan is to build noncubic grids based on these
 
 struct ElementGridVector <: AbstractMatrix{Float64}
     elements::ElementVector

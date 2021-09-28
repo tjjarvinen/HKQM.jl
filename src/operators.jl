@@ -104,7 +104,7 @@ end
 (so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ, unit(so))
 function (so::ScalarOperator)(qs::QuantumState)
     @assert size(so) == size(qs)
-    return QuantumState(so.elementgrid, so.vals.*qs.ψ, unit(so)*unit(qs))
+    return QuantumState(so.elementgrid, so.vals.*qs.psi, unit(so)*unit(qs))
 end
 
 for OP in (:(+), :(-))

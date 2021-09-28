@@ -66,6 +66,20 @@ end
     @test unit(sqrt(x^2)) == u"bohr"
 end
 
+@testset "Quantum States" begin
+    ceg = CubicElementGrid(5u"Å", 4, 16)
+    r = position_operator(ceg)
+    r² = r⋅r
+    gv = exp(-1u"bohr^-2"*r²)
+    ψ = QuantumState(ceg, gv.vals)
+    normalize!(ψ)
+    @test bracket(ψ,ψ) ≈ 1
+    ϕ = ψ + 2ψ
+    @test bracket(ϕ,ψ) ≈ 3
+    rr = bracket(ψ, r, ψ)
+    @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-12
+end
+
 @testset "Nuclear potential" begin
     tn = test_nuclear_potential(5u"Å", 4, 64, 64; mode="preset")
     @test abs( (tn["integral"] - tn["total reference"]) / tn["total reference"]) < 1e-6
