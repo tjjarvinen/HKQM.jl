@@ -131,3 +131,21 @@ end
 
 
 get_elementgrid(qs::QuantumState) = qs.elementgrid
+
+
+
+##
+
+abstract type AbstractSlaterDeterminant end
+
+
+struct SlaterDeterminant <: AbstractSlaterDeterminant
+    orbitals::Vector{QuantumState}
+    function SlaterDeterminant(orbitals::QuantumState...)
+        new(collect(orbitals))
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", s::SlaterDeterminant)
+    print(io, "SlaterDetermiant $(length(s.orbitals)) orbitals")
+end
