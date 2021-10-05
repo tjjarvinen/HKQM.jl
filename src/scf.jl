@@ -66,10 +66,10 @@ function coulomb_operator(sd::SlaterDeterminant; tn=96, showprogress=false)
     return coulomb_operator(sd, ct; showprogress=showprogress)
 end
 
-function coulomb_operator(sd::SlaterDeterminant, ct::AbstractCoulombTransformation; use_tail=true, showprogress=false)
+function coulomb_operator(sd::SlaterDeterminant, ct::AbstractCoulombTransformation; correction=true, showprogress=false)
     occupations = fill(2, length(sd))
     ρ = density_operator(sd, occupations)
-    if use_tail
+    if correction
         ϕ = poisson_equation(ρ.vals, ct, tmax=ct.tmax, showprogress=showprogress)
     else
         ϕ = poisson_equation(ρ.vals, ct, showprogress=showprogress)

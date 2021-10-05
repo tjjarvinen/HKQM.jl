@@ -58,7 +58,7 @@ export AbstractElementGrid,
 
 # Methods
 export bracket,
-       coulomb_operator
+       coulomb_operator,
        cross, ×,
        density_operator,
        dot, ⋅,
@@ -104,6 +104,7 @@ export CubicElementArray,
        VectorOperator
 
 
+include("abstract_types.jl")
 include("elements.jl")
 include("states.jl")
 #include("bubbles.jl")

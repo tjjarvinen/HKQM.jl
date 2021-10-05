@@ -1,5 +1,5 @@
 
-abstract type AbstractQuantumState{T} <: AbstractArray{T,6} end
+
 
 
 """
@@ -51,6 +51,8 @@ mutable struct QuantumState{TG,TA,TE} <: AbstractQuantumState{TE}
         new{typeof(ceg),typeof(ψ),eltype(ψ)}(ceg, ψ, unit)
     end
 end
+
+QuantumState(op::AbstractScalarOperator) = QuantumState(get_elementgrid(op), get_values(op), unit(op))
 
 
 function Base.show(io::IO, ::MIME"text/plain", ::AbstractQuantumState)

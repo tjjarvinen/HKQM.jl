@@ -1,10 +1,5 @@
 # General operator stuff
-abstract type AbstractOperator{N} end
 
-abstract type AbstractScalarOperator <: AbstractOperator{1} end
-abstract type AbstractVectorOperator <: AbstractOperator{3} end
-abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
-abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
 get_elementgrid(ao::AbstractOperator) = ao.elementgrid
 
@@ -100,6 +95,8 @@ struct ScalarOperator{T} <: AbstractScalarOperator
         new{typeof(ψ)}(ceg, ψ, unit)
     end
 end
+
+get_values(so::ScalarOperator) = so.vals
 
 (so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ, unit(so))
 function (so::ScalarOperator)(qs::QuantumState)
@@ -568,10 +565,10 @@ Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 function (lo::LaplaceOperator)(qs::QuantumState)
-    tmp = similar(qs.ψ, size(lo.g.dt))
+    tmp = similar(qs.psi, size(lo.g.dt))
     tmp .= lo.g.dt
     @tensor w[i,j]:=tmp[i,k]*tmp[k,j]
-    @tensor ϕ[i,j,k,I,J,K]:= w[i,ii]*qs.ψ[ii,j,k,I,J,K] + w[j,jj]*qs.ψ[i,jj,k,I,J,K] + w[k,kk]*qs.ψ[i,j,kk,I,J,K]
+    @tensor ϕ[i,j,k,I,J,K]:= w[i,ii]*qs.psi[ii,j,k,I,J,K] + w[j,jj]*qs.psi[i,jj,k,I,J,K] + w[k,kk]*qs.psi[i,j,kk,I,J,K]
     return QuantumState(qs.elementgrid, ϕ, unit(qs)*unit(lo.g)^2)
 end
 
