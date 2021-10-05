@@ -2,6 +2,7 @@ module ReferenceStates
 
 using Polynomials
 using Unitful, UnitfulAtomic
+using ..HKQM
 
 
 export HarmonicEigenstate,
@@ -45,8 +46,8 @@ end
 
 function harmonic_state(ceg, hx, hy=hx, hz=hx)
     r = position_operator(ceg)
-    ψ = map(r-> hx(r[1])*hy(r[2])*hz[3], ceg)
-    return ψ
+    ψ = map(r-> hx(r[1])*hy(r[2])*hz(r[3]), ceg)
+    return QuantumState(ceg, ψ)
 end
 
 function energy(he::HarmonicEigenstate)

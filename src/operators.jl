@@ -756,3 +756,15 @@ end
 
 get_elementgrid(po::ProjectionOperator) = get_elementgrid(po.state)
 Unitful.unit(po::ProjectionOperator) = unit(po.state)
+
+
+## Density operator
+
+density_operator(qs::QuantumState) = ScalarOperator(qs.elementgrid, ketbra(qs, qs))
+density_operator(sd::SlaterDeterminant) = sum( x -> 2*density_operator(x), sd.orbitals )
+
+
+function density_operator(sd::SlaterDeterminant, occupations::AbstractVector)
+    @assert length(sd.orbitals) == length(occupations)
+    sum( x -> x[2]*density_operator(x[1]), zip(sd.orbitals, occupations) )
+end

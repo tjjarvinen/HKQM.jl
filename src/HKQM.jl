@@ -58,7 +58,9 @@ export AbstractElementGrid,
 
 # Methods
 export bracket,
+       coulomb_operator
        cross, ×,
+       density_operator,
        dot, ⋅,
        get_center,
        helmholtz_equation,
@@ -98,6 +100,7 @@ export CubicElementArray,
        ProjectionOperator,
        QuantumState,
        ScalarOperator,
+       SlaterDeterminant,
        VectorOperator
 
 

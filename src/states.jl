@@ -149,3 +149,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", s::SlaterDeterminant)
     print(io, "SlaterDetermiant $(length(s.orbitals)) orbitals")
 end
+
+Base.length(sd::SlaterDeterminant) = length(sd.orbitals)
+
+get_elementgrid(sd::SlaterDeterminant) = get_elementgrid(sd.orbitals[1])
