@@ -297,15 +297,15 @@ end
 
 
 function (d::DerivativeOperator{<:Any,1})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_x(d.dt, qs.ψ), unit(qs)*unit(d) )
+    return QuantumState(d.elementgrid, operate_x(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
 function (d::DerivativeOperator{<:Any,2})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_y(d.dt, qs.ψ), unit(qs)*unit(d) )
+    return QuantumState(d.elementgrid, operate_y(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
 function (d::DerivativeOperator{<:Any,3})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_z(d.dt, qs.ψ), unit(qs)*unit(d) )
+    return QuantumState(d.elementgrid, operate_z(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
 

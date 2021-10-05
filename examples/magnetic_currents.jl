@@ -1,7 +1,7 @@
 using HKQM
 using Rotations
 using Interpolations
-using Makie # Load also backend
+using WGLMakie # Or some other Makie backend
 
 
 ## Helper functions to initialize the system
@@ -113,29 +113,33 @@ end
 ceg = CubicElementGrid(6u"Å", 2, 64)
 
 # Well depth is 1 hartree. Well width is α, values 0.5-1.0 are ok.
-V = benzene_like_potential(ceg; α=0.7u"bohr^-2", depth=1u"hartree")
+V = benzene_like_potential(ceg; α=0.7u"bohr^-2", depth=3u"hartree")
 
 H = HamiltonOperator(V)
 
 ψ = initial_state(V)
 
-@info "Doing a single Helmholtz equation. Progress bar shows how long it takes per iteration"
-helmholtz_equation!(ψ, H; showprogress=true, tmax=700)
+# One orbital -> two electrons 
+sd = SlaterDeterminant(ψ)
+
+@info "Solving Restricted Hartree-Fock for two electrons."
+@info "Doing a single Helmholtz equation. Progress bar shows how long it takes per iteration."
+helmholtz_equation!(sd, H; showprogress=true)
 
 @info "Doing 12 more Helmholtz iterations to get good convergence."
 @info "Energy is printed, so that progress can be followed."
 for i in 1:12
-    helmholtz_equation!(ψ, H; tmax=700)
+    helmholtz_equation!(sd, H)
 end
 
-@info "Final energy is $(bracket(ψ,H,ψ))"
+ J = coulomb_operator(sd)
+@info "Final total energy is $(bracket(H+0.5J,sd))"
 
 
 
 ## Magnetic field calculation
 
 @info "Adding magnetic field to system."
-@info "Spin dependent term is ignored!"
 
 B = [0., 0., 100.0].*u"T"
 A = vector_potential(ceg, B...)
@@ -144,14 +148,18 @@ A = vector_potential(ceg, B...)
 Hm = HamiltonOperatorMagneticField(V,A)
 
 @info "Doing a single Helmholtz equation in magnetic field. This will take longer due to complex numbers."
-ψm = helmholtz_equation(ψ, Hm; showprogress=true, tmax=700)
+sdm = helmholtz_equation(sd, Hm; showprogress=true)
 
 @info "Doing 5 more iterations. See energy for convergence"
 for i in 1:5
-    ψm = helmholtz_equation(ψm, Hm; tmax=700)
+    global sdm = helmholtz_equation(sdm, Hm)
 end
 
-@info "Final energy is $(real(bracket(ψm,Hm,ψm)))"
+Jm = coulomb_operator(sdm)
+@info "Final energy in magnetic field is $(real(bracket(Hm+0.5Jm, sdm)))"
+
+ψm = sdm.orbitals[1]
+
 
 # Magnetic current
 j = magnetic_current(ψm, Hm);
@@ -176,4 +184,4 @@ fp = plot_current(ψm, j_para; title="Para Magnetic Current in Plane")
 fd = plot_current(ψm, j_dia; title="Dia Magnetic Current in Plane")
 
 # 3d plot of paramagnetic current
-fp = plot_current(ψm, j_para; mode_3d=true, ng=11)
+fp = plot_current(ψm, j; mode_3d=true, ng=11)
