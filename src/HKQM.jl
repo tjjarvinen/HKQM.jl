@@ -2,6 +2,7 @@ module HKQM
 
 using Reexport
 
+using ArgCheck
 using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
@@ -62,6 +63,8 @@ export bracket,
        cross, ×,
        density_operator,
        dot, ⋅,
+       exchange_operator,
+       fock_matrix,
        get_center,
        helmholtz_equation,
        helmholtz_equation!,

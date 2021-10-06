@@ -758,7 +758,7 @@ Unitful.unit(po::ProjectionOperator) = unit(po.state)
 ## Density operator
 
 density_operator(qs::QuantumState) = ScalarOperator(qs.elementgrid, ketbra(qs, qs))
-density_operator(sd::SlaterDeterminant) = sum( x -> 2*density_operator(x), sd.orbitals )
+density_operator(sd::SlaterDeterminant, a=2) = sum( x -> a*density_operator(x), sd.orbitals )
 
 
 function density_operator(sd::SlaterDeterminant, occupations::AbstractVector)

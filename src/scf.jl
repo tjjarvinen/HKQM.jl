@@ -92,19 +92,102 @@ end
 
 ##
 
+""" 
+    coulomb_operator(Args, Kwargs) -> ScalarOperator
+
+Return Coulomb operator for give `SlaterDeterminant`
+
+# Args
+- `sd::SlaterDeterminant`    :  Orbitals on which the operator is calculated.
+
+# Optional Arguments
+- `ct::AbstractCoulombTransformation`   :  transformation tensor, if not given `optimal_coulomb_tranformation` is used
+
+# Kwargs
+- `showprogress=false`       : Show progress meter for Poisson equation
+- `correction=true`          : Add tail correction to Poisson equation, only if `ct` is given
+- `tn=96`                    : Number of t-integration points, if `ct` is not given
+"""
 function coulomb_operator(sd::SlaterDeterminant; tn=96, showprogress=false)
     ct = optimal_coulomb_tranformation(get_elementgrid(sd), tn);
     return coulomb_operator(sd, ct; showprogress=showprogress)
 end
 
 function coulomb_operator(sd::SlaterDeterminant, ct::AbstractCoulombTransformation; correction=true, showprogress=false)
-    occupations = fill(2, length(sd))
-    occupations[1] = 1
-    ρ = density_operator(sd, occupations)
+    #TODO check that this is correct
+    ρ = density_operator(sd, 1)
     if correction
         ϕ = poisson_equation(ρ.vals, ct, tmax=ct.tmax, showprogress=showprogress)
     else
         ϕ = poisson_equation(ρ.vals, ct, showprogress=showprogress)
     end
     return ScalarOperator(get_elementgrid(sd), ϕ; unit=u"hartree")
+end
+
+
+"""
+    exchange_operator(Args, Kwargs) -> ScalarOperator
+
+Calculate exchange operator for given `SlaterDeterminant` and orbital index.
+
+# Arguments
+- `sd::SlaterDeterminant`  :  Orbitals on which the operator is calculated
+- `i::Int`                 :  Orbital index on which exchange operator is calculated
+
+# Optional Arguments
+- `ct::AbstractCoulombTransformation`  :  transformation tensor, if not given `optimal_coulomb_tranformation` is used
+
+# Kwargs
+- `showprogress=false`     : Show progress meter for Poisson equation solving
+- `nt=96`                  : number of t-integration points, when `ct` is not given
+"""
+function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTransformation; showprogress=false)
+    @argcheck 0 < i <= length(sd)
+    ρ = ketbra( sum( sd.orbitals ), sd.orbitals[i] )
+    ϕ = poisson_equation(ρ, ct, tmax=ct.tmax, showprogress=showprogress)
+    return ScalarOperator(get_elementgrid(sd), ϕ; unit=u"hartree")
+end
+
+
+function exchange_operator(sd::SlaterDeterminant, i::Int; nt=96, showprogress=false)
+    ct = optimal_coulomb_tranformation(get_elementgrid(sd), nt)
+    return exchange_operator(sd, i, ct; showprogress=showprogress)
+end
+
+"""
+    fock_matrix(Args, Kwargs) -> Matrix
+
+Return Fock matrix for given orbital space
+
+# Arguments
+- `sd::SlaterDeterminant`        :   Orbitals on which Fock matrix is calculated
+- `H::AbstractHamiltonOperator`  :   One electron Hamilton
+
+# Optional Arguments
+- `ct::AbstractCoulombTransformation`   :  transformation tensor, if not given `optimal_coulomb_tranformation` is used
+
+# Kwargs
+- `nt=96`    : number of t-integration points, if `ct` is not given
+"""
+function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator, ct::AbstractCoulombTransformation)
+    p = Progress(length(sd)+1, 1, "Calculating Fock matrix ... ")
+    J = coulomb_operator(sd, ct)
+    next!(p)
+    out = zeros(length(sd), length(sd))
+    for j in axes(out,2)
+        K = exchange_operator(sd, j, ct)
+        f = H + (2J + K)
+        for i in axes(out,1)
+            tmp = bracket(sd.orbitals[i], f, sd.orbitals[j])
+            out[i,j] = real(tmp) |> austrip
+        end
+        next!(p)
+    end
+    return out
+end
+
+
+function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator; nt=96)
+    ct = optimal_coulomb_tranformation(get_elementgrid(sd), nt)
+    return fock_matrix(sd, H, ct)
 end
