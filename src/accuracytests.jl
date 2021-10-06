@@ -147,7 +147,7 @@ Test accuracy on Gaussian charge distribution self energy.
 # Keywords
 - `tmax=300`          : Maximum t-value for integration
 - `tmin=0`            : Minimum t-value for integration
-- `mode=:combination` : Integration type - options `:normal`, `:log`, `:loglocal`, `:local` and `:combination`
+- `mode=:combination` : Integration type - options `:normal`, `:log`, `:loglocal`, `:local`, `:combination` and `:optimal`
 - `δ=0.25`            : Localization parameter for local integration types
 - `correction=true`   : Correction to `tmax`-> ∞ integration - `true` calculate correction, `false` do not calculate
 - `tboundary=20`      : Parameter for `:combination` mode. Switch to `:loglocal` for t>`tboundary` else use `:log`
@@ -156,7 +156,7 @@ Test accuracy on Gaussian charge distribution self energy.
 - `d=0`               : Distance between two Gaussian centers
 """
 function test_accuracy(a, ne::Int, ng::Int, nt::Int;
-     tmax=300, tmin=0, mode=:combination, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0, showprogress=true)
+        tmax=300, tmin=0, mode=:optimal, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0u"bohr", showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
@@ -173,6 +173,9 @@ function test_accuracy(a, ne::Int, ng::Int, nt::Int;
     elseif mode == :combination
         @info "Combination mode"
         ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=tboundary)
+    elseif  mode == :optimal
+        @info "Optimal mode"
+        ct = optimal_coulomb_tranformation(ceg, nt)
     else
         error("Mode not known")
     end
@@ -180,32 +183,35 @@ function test_accuracy(a, ne::Int, ng::Int, nt::Int;
 end
 
 function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
-                            α1=1, α2=1, d=0, correction=true, showprogress=true)
+                            α1=1, α2=1, d=0u"bohr", correction=true, showprogress=true)
     tmin = ct.tmin
     tmax = ct.tmax
-    r1 = SVector(0.5d, 0., 0.)
-    r2 = SVector(-0.5d, 0., 0.)
-    ρ1 = density_tensor(ceg; a=α1, r=r1)
-    ρ2 = density_tensor(ceg; a=α2, r=r2)
-    V = poisson_equation(ρ1, ct; showprogress=showprogress)
+    r = position_operator(ceg)
+    r1 = r + [0.5, 0., 0.].*d
+    r2 = r - [0.5, 0., 0.].*d
+    q1 = QuantumState( exp( -0.5α1*u"bohr^-2"*(r1⋅r1) ) )
+    q2 = QuantumState( exp( -0.5α1*u"bohr^-2"*(r2⋅r2) ) )
+    sd = SlaterDeterminant(q1)
+    V = coulomb_operator(sd, ct; correction=correction, showprogress=showprogress)
+    V_corr = ScalarOperator(ceg, coulomb_correction(density_operator(q1).vals, ct.tmax); unit=u"hartree")
 
-    E_cor = integrate(ρ2, ceg, coulomb_correction(ρ1, tmax))
-    E_int = integrate(ρ2, ceg, V)
-    E_tail = gaussian_coulomb_integral(α1, α2, d;tmin=tmax)[1]
-    E_true = gaussian_coulomb_integral(α1, α2, d;tmin=tmin, tmax=tmax)[1]
+    E_cor = bracket(q2, V_corr, q2)
+    E_int = bracket(q2, V, q2)
+    E_tail = gaussian_coulomb_integral(α1, α2, austrip(d); tmin=tmax)[1] * u"hartree"
+    E_true = gaussian_coulomb_integral(α1, α2, austrip(d); tmin=tmin, tmax=tmax)[1] * u"hartree"
     if correction
         E = E_int + E_cor
     else
         E = E_int
     end
-    E_tot = gaussian_coulomb_integral(α1, α2, d)[1]
+    E_tot = gaussian_coulomb_integral(α1, α2, austrip(d))[1]*u"hartree"
     @info "Calculated energy = $E"
     @info "True inregration energy = $E_true"
     @info "Total Energy (reference) = $E_tot"
-    @info "Integration error = $(round((E_int-E_true); sigdigits=2)) ; error/E = $( round((E_int-E_true)/E_true; sigdigits=2))"
+    @info "Integration error = $(round(u"hartree", (E_int-E_true); sigdigits=2)) ; error/E = $( round((E_int-E_true)/E_true; sigdigits=2))"
     @info "Integration error relative to total energy = $( round((E_int-E_true)/E_tot; sigdigits=2))"
-    @info "Tail energy = $(round(E_tail; sigdigits=5)) ; E_tail/E_tot = $(round(E_tail/E_tot; sigdigits=2))"
-    @info "Energy correction = $(round(E_cor; sigdigits=5))  ; (E_cor-E_tail)/E_tot = $(round((E_cor-E_tail)/E_tot;sigdigits=2))"
+    @info "Tail energy = $(round(u"hartree", E_tail; sigdigits=5)) ; E_tail/E_tot = $(round(E_tail/E_tot; sigdigits=2))"
+    @info "Energy correction = $(round(u"hartree", E_cor; sigdigits=5))  ; (E_cor-E_tail)/E_tot = $(round((E_cor-E_tail)/E_tot;sigdigits=2))"
     @info "Error to total energy error/E_tot = $(round((E-E_tot)/E_tot; sigdigits=2))"
     out = Dict("calculated"=>E,
         "reference integral"=>E_true,
@@ -255,13 +261,12 @@ end
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
     ceg = CubicElementGrid(a, ne, ng)
 
-    dt = DerivativeTensor(ceg)
+    H = HamiltonOperatorFreeParticle(ceg)
 
-    dtt = Array(dt);
-    h = HarmonicEigenstate(ν; ω=ω)
-    ψ = h.(ceg)
-    T = kinetic_energy(ceg, dtt, ψ)
-    Tref = 3*0.5ω*(ν+0.5)
+    ψ = HarmonicEigenstate(ν; ω=ω)
+    ϕ = ReferenceStates.harmonic_state(ceg, ψ)
+    T = bracket(ϕ, H, ϕ)
+    Tref = 0.5*3*ReferenceStates.energy(ψ)
     @info "Calculated kinetic energy = $T"
     @info "Reference kinetic energy = $Tref"
     @info "Error = $(T-Tref)"

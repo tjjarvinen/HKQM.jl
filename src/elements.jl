@@ -1,13 +1,5 @@
 
 
-
-
-abstract type AbstractElement{Dims} end
-
-abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
-
-abstract type AbstractElementGrid{N} <: AbstractArray{SVector{3,Float64}, N} end
-
 """
     Element1D <: AbstractElement{1}
 

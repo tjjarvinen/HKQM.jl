@@ -1,11 +1,5 @@
 
-abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 
-abstract type AbstractCoulombTransformation <: AbtractTransformationTensor{5} end
-
-abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulombTransformation where {NT, NE, NG} end
-abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
-abstract type AbstractCoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG} end
 
 
 """

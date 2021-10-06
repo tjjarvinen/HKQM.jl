@@ -88,12 +88,9 @@ end
 
 @testset "Poisson equation" begin
     ec = test_accuracy(5u"Å",4,24,48; showprogress=false)  # Poor accuracy
-    eref = gaussian_coulomb_integral()[1]
+    eref = gaussian_coulomb_integral()[1]*u"hartree"
     e = ec["calculated"]
     @test abs((e-eref)/eref) < 1e-3  # Calculation had poor accuracy
-
-    nc = test_nuclear_potential(5u"Å", 2 ,64, 64; mode="preset")
-    @test abs(nc["integral"] - nc["total reference"])/nc["total reference"] < 1e-5
 end
 
 @testset "Forward mode AD" begin
@@ -116,5 +113,5 @@ end
 
 @testset "Derivative and kinetic energy" begin
     a = test_kinetic_energy(5u"Å", 4, 32; ν=1, ω=3)
-    @test abs(a[1]-a[2]) < 1e-10
+    @test abs(a[1]-a[2]) / a[2] < 1e-10
 end
