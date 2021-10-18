@@ -373,8 +373,8 @@ end
 Returns Coulomb transformation tensor with optimal pre tested parameters.
 
 # Args
-- `ceg::CubicElementGrid`  :  grid where transformation is done
-- `nt::Int`                :  number of t-points
+- `ceg`                    :  grid information, either `CubicElementGrid` or something with `get_element_grid` implemented
+- `nt::Int=96`             :  number of t-points
 
 # Keywords
 - `δ=0.25`          : parameter for local average correction
@@ -382,7 +382,7 @@ Returns Coulomb transformation tensor with optimal pre tested parameters.
 - `tboundary=20`    : point after which local average correction is applied
 - `k=0.`            : constant for Helmholz equation
 """
-function optimal_coulomb_tranformation(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=700, tboundary=20, k=0.)
+function optimal_coulomb_tranformation(ceg::CubicElementGrid, nt::Int=96; δ=0.25, tmax=700, tboundary=20, k=0.)
     @assert 0 < tboundary < tmax
     s, ws = gausspoints(nt; elementsize=(log(1e-12), log(tmax)))
     t = exp.(s)
@@ -392,6 +392,9 @@ function optimal_coulomb_tranformation(ceg::CubicElementGrid, nt::Int; δ=0.25, 
     return CoulombTransformationCombination(ct1,ct2)
 end
 
+function optimal_coulomb_tranformation(X, nt::Int=96; δ=0.25, tmax=700, tboundary=20, k=0.)
+    return optimal_coulomb_tranformation(get_elementgrid(X), nt; δ=δ, tmax=tmax, tboundary=tboundary, k=k)
+end
 
 
 (ct::AbstractCoulombTransformation)(r,t) = exp(-(t*r)^2)

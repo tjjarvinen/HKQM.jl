@@ -758,10 +758,46 @@ Unitful.unit(po::ProjectionOperator) = unit(po.state)
 ## Density operator
 
 density_operator(qs::QuantumState) = ScalarOperator(qs.elementgrid, ketbra(qs, qs))
-density_operator(sd::SlaterDeterminant, a=2) = sum( x -> a*density_operator(x), sd.orbitals )
+density_operator(sd::SlaterDeterminant) = 2 * sum( density_operator, sd.orbitals )
 
 
 function density_operator(sd::SlaterDeterminant, occupations::AbstractVector)
     @assert length(sd.orbitals) == length(occupations)
     sum( x -> x[2]*density_operator(x[1]), zip(sd.orbitals, occupations) )
+end
+
+function charge_density(qs; charge=-1u"e_au")
+    @argcheck dimension(charge) == dimension(u"C")
+    return density_operator(qs) * charge
+end
+
+
+function electric_potential(cdensity::ScalarOperator, ct::AbstractCoulombTransformation; correction=true, showprogress=false)
+    @argcheck dimension(cdensity) == dimension(u"C")
+    if unit(cdensity) != u"e_au"
+        tmp = auconvert(cdensity)
+        if correction
+            ϕ = poisson_equation(tmp.vals, ct, tmax=ct.tmax, showprogress=showprogress)
+        else
+            ϕ = poisson_equation(tmp.vals, ct, showprogress=showprogress)
+        end
+    else
+        if correction
+            ϕ = poisson_equation(cdensity.vals, ct, tmax=ct.tmax, showprogress=showprogress)
+        else
+            ϕ = poisson_equation(cdensity.vals, ct, showprogress=showprogress)
+        end
+    end
+    return ScalarOperator(get_elementgrid(cdensity), ϕ; unit=u"hartree/e_au") 
+end
+
+
+function electric_potential(qs, ct::AbstractCoulombTransformation; charge=-1u"e_au", correction=true, showprogress=false)
+    ρ = charge_density(qs; charge=charge)
+    return electric_potential(ρ, ct; showprogress=showprogress, correction=correction)
+end
+
+function electric_potential(qs; charge=-1u"e_au", showprogress=false)
+    ct = optimal_coulomb_tranformation(get_elementgrid(qs))
+    return electric_potential(qs, ct; charge=charge, showprogress=showprogress)
 end

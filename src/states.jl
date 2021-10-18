@@ -138,20 +138,37 @@ get_elementgrid(qs::QuantumState) = qs.elementgrid
 
 ##
 
-abstract type AbstractSlaterDeterminant end
+abstract type AbstractSlaterDeterminant <: AbstractVector{QuantumState} end
 
 
 struct SlaterDeterminant <: AbstractSlaterDeterminant
     orbitals::Vector{QuantumState}
-    function SlaterDeterminant(orbitals::QuantumState...)
-        new(collect(orbitals))
+    function SlaterDeterminant(orbitals::AbstractVector)
+        function _gram_schmit(orbitals::AbstractVector)
+            out = []
+            push!(out, orbitals[begin])
+            for i in 2:length(orbitals)
+                tmp = sum( x -> bracket(out[x], orbitals[i])*out[x], 1:i-1 )
+                push!(out, orbitals[i] - tmp)
+            end
+            return normalize!.(out)
+        end
+        new(_gram_schmit(orbitals))
     end
 end
+
+function SlaterDeterminant(orbitals::QuantumState...)
+    return SlaterDeterminant(collect(orbitals))
+end 
+
 
 function Base.show(io::IO, ::MIME"text/plain", s::SlaterDeterminant)
     print(io, "SlaterDetermiant $(length(s.orbitals)) orbitals")
 end
 
 Base.length(sd::SlaterDeterminant) = length(sd.orbitals)
+Base.size(sd::SlaterDeterminant) = size(sd.orbitals)
 
 get_elementgrid(sd::SlaterDeterminant) = get_elementgrid(sd.orbitals[1])
+
+Base.getindex(sd::SlaterDeterminant, i) = sd.orbitals[i]
