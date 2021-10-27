@@ -4,8 +4,6 @@ using Reexport
 
 using ArgCheck
 using FastGaussQuadrature
-using LinearAlgebra: dot, ⋅
-using LinearAlgebra: cross, ×
 using Polynomials
 using ProgressMeter
 using SpecialFunctions
@@ -15,14 +13,12 @@ using Tullio
 @reexport using PeriodicTable
 @reexport using Unitful
 @reexport using UnitfulAtomic
+@reexport import LinearAlgebra: dot, cross, normalize!
 
 # Submodule
 include("submodules/ReferenceStates.jl")
 using .ReferenceStates
 
-import LinearAlgebra.dot
-import LinearAlgebra.cross
-import LinearAlgebra.normalize!
 
 export AbstractElementGrid,
        AbstractOperator,

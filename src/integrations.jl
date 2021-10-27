@@ -54,15 +54,11 @@ end
 
 
 function bracket(op::AbstractOperator, sd::SlaterDeterminant)
-    # One electron operator, so operate on each orbital
-    S = map(ψ->bracket(ψ,ψ), sd.orbitals )
-    val = @distributed (+) for i in axes(S, 1)
-        tmp = 2*bracket(sd.orbitals[i], op, sd.orbitals[i])
-        p1 = i > 1 ? prod( S[1:i-1] ) : 1
-        p2 = i < length(S) ? prod( S[i+1:end] ) : 1
-        tmp .* (p1 * p2)
+    # One electron operator, so operate on each orbital and multiply by 2
+    val = @distributed (+) for i in axes(sd, 1)
+        bracket(sd[i], op, sd[i])
     end
-    return val
+    return 2 * val
 end
 
 """
