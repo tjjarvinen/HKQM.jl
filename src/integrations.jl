@@ -200,17 +200,10 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
     nt = size(transtensor)[end]
     @debug "nt=$nt"
     @debug "V type = $(typeof(V))"
-    ptime = showprogress ? 0.3 : Inf
-    if nworkers() > 1
-        tmp = similar(V) # Yes it is a hack
-        V = @showprogress ptime "Poisson equation... " @distributed (+) for t in 1:nt
-            poisson_equation!(tmp, ρ, transtensor, t)
-        end
-    else
-        tmp = similar(V)
-        @showprogress ptime "Poisson equation... " for t in 1:nt
-            V .+= poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
-        end
+    ptime = showprogress ? 1 : Inf
+    tmp = similar(V)
+    V = sum( axes(transtensor.wt, 1) ) do t
+        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])  
     end
     if tmax != nothing
         return V .+ coulomb_correction(ρ, tmax)
