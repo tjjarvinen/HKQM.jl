@@ -89,6 +89,12 @@ end
 
 ##
 
+"""
+    helmholtz_update(Args...; Kwargs...)
+    helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false)
+
+Calculate update on Slater Determinant with Helmholtz equation.
+"""
 function helmholtz_update( sd::SlaterDeterminant,
                            H::HamiltonOperator,
                            J::ScalarOperator,
