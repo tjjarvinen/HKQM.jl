@@ -757,8 +757,23 @@ Unitful.unit(po::ProjectionOperator) = unit(po.state)
 
 ## Density operator
 
-density_operator(qs::QuantumState) = ScalarOperator(qs.elementgrid, ketbra(qs, qs))
-density_operator(sd::SlaterDeterminant) = 2 * sum( density_operator, sd.orbitals )
+"""
+    density_operator(qs::QuantumState)
+    density_operator(sd::SlaterDeterminant, occupations::Int=2)
+    density_operator(sd::SlaterDeterminant, occupations::AbstractVector)
+
+Return probability density.
+
+For Slater determinants occupation numbers can be changed, for all or individual orbitals.
+"""
+density_operator(qs::QuantumState) = ScalarOperator(get_elementgrid(qs), ketbra(qs, qs))
+function density_operator(sd::SlaterDeterminant, occupations::Int=2)
+    if occupations == 1 
+        return sum( density_operator, sd.orbitals )
+    else
+        return n * sum( density_operator, sd.orbitals )
+    end
+end
 
 
 function density_operator(sd::SlaterDeterminant, occupations::AbstractVector)

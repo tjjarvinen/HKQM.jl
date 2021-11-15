@@ -143,7 +143,7 @@ abstract type AbstractSlaterDeterminant <: AbstractVector{QuantumState} end
 
 struct SlaterDeterminant <: AbstractSlaterDeterminant
     orbitals::Vector{QuantumState}
-    function SlaterDeterminant(orbitals::AbstractVector)
+    function SlaterDeterminant(orbitals::AbstractVector; orthogonalize=true)
         function _gram_schmit(orbitals::AbstractVector)
             out = []
             push!(out, orbitals[begin])
@@ -153,7 +153,11 @@ struct SlaterDeterminant <: AbstractSlaterDeterminant
             end
             return normalize!.(out)
         end
-        new(_gram_schmit(orbitals))
+        if orthogonalize    
+            new(_gram_schmit(orbitals))
+        else
+            new( normalize.(orbitals) )
+        end
     end
 end
 

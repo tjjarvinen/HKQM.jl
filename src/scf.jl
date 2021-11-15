@@ -112,26 +112,42 @@ function helmholtz_update(sd::SlaterDeterminant, H::HamiltonOperator, J::ScalarO
 end
 
 
-function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false)
-    # Preconditioning
-    F = fock_matrix(sd, H)
-    S = overlap_matrix(sd)
-    e, v = eigen(inv(S)*F)
-    tmp = SlaterDeterminant(v'*sd)
+function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
+    @argcheck size(F,1) == size(F,2) == length(sd)
+    # No preconditioning
 
     # Update orbitals
     ct = optimal_coulomb_tranformation(sd)
-    J = coulomb_operator(tmp, ct)
-    return pmap(i->helmholtz_update(tmp, H, J, i, ct),  axes(sd,1) ) |> SlaterDeterminant
+    J = coulomb_operator(sd, ct)
+    nsd = pmap(i->helmholtz_update(sd, H, J, i, ct),  axes(sd,1) ) |> SlaterDeterminant
+    if return_fock_matrix
+        f = fock_matrix(nsd, H)
+        ev, ve = eigen( f )
+        tmp = SlaterDeterminant( ve'*nsd )
+        F = Diagonal(ev)
+        return tmp, F
+    else
+        return nsd
+    end
 end
 
+function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false, return_fock_matrix=true)
+    #Preconditioning
+    f = fock_matrix(sd, H)
+    ev, ve = eigen( f )
+    nsd = SlaterDeterminant( ve'*sd )
+    F = Diagonal(ev)
+
+    return helmholtz_update(nsd, H, F; showprogress=showprogress, return_fock_matrix=return_fock_matrix)
+end
 
 ##
 
 """ 
     coulomb_operator(Args, Kwargs) -> ScalarOperator
 
-Return Coulomb operator for give `SlaterDeterminant`
+Return Coulomb operator for give `SlaterDeterminant`.
+Used density is orbital density (half of electron density).
 
 # Args
 - `sd::SlaterDeterminant`    :  Orbitals on which the operator is calculated.
@@ -149,8 +165,7 @@ function coulomb_operator(sd::SlaterDeterminant; showprogress=false)
 end
 
 function coulomb_operator(sd::SlaterDeterminant, ct::AbstractCoulombTransformation; correction=true, showprogress=false)
-    #TODO check that this is correct
-    ρ = density_operator(sd)
+    ρ = density_operator(sd, 1)
     return coulomb_operator(ρ, ct; correction=correction, showprogress=showprogress)
 end
 
@@ -161,8 +176,9 @@ function coulomb_operator(density::ScalarOperator, ct::AbstractCoulombTransforma
     else
         ϕ = poisson_equation(density.vals, ct, showprogress=showprogress)
     end
-    # Multiply by 0.5 to create literature vesion where F = h + 2J + K and not F = h + J + K
-    return 0.5 * ScalarOperator(get_elementgrid(density), ϕ; unit=u"hartree")
+    # Density is expected to be 0.5 electron density
+    # to create literature vesion where F = h + 2J + K and not F = h + J + K
+    return ScalarOperator(get_elementgrid(density), ϕ; unit=u"hartree")
 end
 
 
@@ -194,6 +210,7 @@ function exchange_operator(sd::SlaterDeterminant, i::Int; showprogress=false)
     return exchange_operator(sd, i, ct; showprogress=showprogress)
 end
 
+
 """
     fock_matrix(Args, Kwargs) -> Matrix
 
@@ -214,14 +231,18 @@ function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator, ct::Abs
     J = coulomb_operator(sd, ct)
     next!(p)
     out = zeros(length(sd), length(sd))
-    for j in axes(out,2)
+
+    #NOTE Fock matrix is calculated as non-symmetric here
+    tmp = pmap( axes(sd,1) ) do j
         K = exchange_operator(sd, j, ct)
         f = H + (2J + K)
-        for i in axes(out,1)
-            tmp = bracket(sd.orbitals[i], f, sd.orbitals[j])
-            out[i,j] = real(tmp) |> austrip    # for complex orbitals
+        map( axes(sd,1) ) do i
+            tmp = bracket(sd[i], f, sd[j])
+            (austrip∘real)(tmp)
         end
-        next!(p)
+    end
+    for (j,col) in zip(axes(out,2), tmp)
+        out[:,j] .= col
     end
     return out
 end
@@ -245,15 +266,27 @@ function overlap_matrix(sd::SlaterDeterminant)
 end
 
 
-#= function scf(initial::SlaterDeterminant, H::AbstractHamiltonOperator; nt=96, max_iter=10)
-    sd = initial
-    ct = optimal_coulomb_tranformation(get_element_grid(H), nt)
-    for _ in 1:max_iter
-        F = fock_matrix(sd, H)
-        e, v = eigen(F)
-        tmp = SlaterDeterminant( v'*sd )
-        J = coulomb_operator(sd, ct)
-        helmholtz_update(tmp, H, J, i)
-
+function scf(initial::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=10, rtol=1E-6)
+    function _energy(sd, H, F)
+        return sum( psi->bracket(psi,H,psi), sd ) + sum( diag(F) )*u"hartree" 
     end
-end =#
+    @info "Starting scf with $max_iter maximum iterations and $rtol tolerance."
+    t = @elapsed begin
+        sd, F = helmholtz_update(initial, H)
+        E₀ = _energy(sd, H, F)
+    end
+    @info "i = 1,  E = $E₀,  t = $(round(t; digits=1)*u"s")"
+    for i in 2:max_iter
+        t = @elapsed begin 
+            sd, F = helmholtz_update(sd, H, F)
+            E = _energy(sd, H, F)
+        end
+        @info "i = $i,  E = $E,  t = $(round(t; digits=1)*u"s")"
+        if  abs( (E - E₀)/E₀ ) < rtol
+            @info "Targeted tolerance archieved. Exiting scf. $(abs(E - E₀)/E₀)" 
+            break
+        end 
+        E₀ = E
+    end
+    return sd, F
+end 
