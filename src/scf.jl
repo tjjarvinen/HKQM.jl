@@ -58,34 +58,6 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
     return ϕ
 end
 
-##
-
-function helmholtz_equation!(sd::SlaterDeterminant, H::HamiltonOperator; tn=96, showprogress=false)
-    J = coulomb_operator(sd; showprogress=showprogress)
-    E = bracket(sd.orbitals[1], H, sd.orbitals[1]) + bracket(sd.orbitals[1], J, sd.orbitals[1]) |> real
-    @info "Orbital energy = $E"
-    k  = sqrt( -2(austrip(E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid, tn; k=k);
-    ϕ = H.T.m * (H.V + J) * 1u"ħ_au^-2" * sd.orbitals[1]
-    sd.orbitals[1] .= poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
-    normalize!(sd.orbitals[1])
-    return sd
-end
-
-function helmholtz_equation(sd::SlaterDeterminant, H::HamiltonOperatorMagneticField; tn=96, showprogress=false)
-    J = coulomb_operator(sd; showprogress=showprogress)
-    E = bracket(sd.orbitals[1], H, sd.orbitals[1]) + bracket(sd.orbitals[1], J, sd.orbitals[1]) |> real
-    @info "Orbital energy = $E"
-    k  = sqrt( -2(austrip(E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid, tn; k=k);
-    p = momentum_operator(H.T)
-    ϕ = H.T.m * (H.V + J)* 1u"ħ_au^-2" * sd.orbitals[1]
-    ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd.orbitals[1]
-    ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd.orbitals[1]
-    ϕ = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
-    normalize!(ϕ)
-    return SlaterDeterminant(ϕ)
-end
 
 ##
 
@@ -242,7 +214,6 @@ function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator, ct::Abs
     J = coulomb_operator(sd, ct)
     next!(p)
     out = zeros(length(sd), length(sd))
-    #TODO This could be parallized
     for j in axes(out,2)
         K = exchange_operator(sd, j, ct)
         f = H + (2J + K)
