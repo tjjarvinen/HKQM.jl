@@ -115,3 +115,23 @@ end
     a = test_kinetic_energy(5u"Å", 4, 32; ν=1, ω=3)
     @test abs(a[1]-a[2]) / a[2] < 1e-10
 end
+
+
+@testset "Hartree-Fock" begin
+    ceg = CubicElementGrid(5u"Å", 2, 32)
+
+    r = position_operator(ceg)
+
+    V = -10u"hartree"*exp(-1u"Å^-2"*r⋅r)
+
+    n0 = HKQM.ReferenceStates.HarmonicEigenstate(0)
+    n1 = HKQM.ReferenceStates.HarmonicEigenstate(1)
+    q0 = HKQM.ReferenceStates.harmonic_state(ceg, n0, n0, n0)
+    q1 = HKQM.ReferenceStates.harmonic_state(ceg, n0, n1, n0)
+
+    H = HamiltonOperator(V)
+    sd = SlaterDeterminant(q0,q1)
+    sd1, F = scf(sd, H; max_iter=2)
+    S = overlap_matrix(sd1)
+    @test bracet(H,sd) >  bracket(H, sd1)
+end
