@@ -133,5 +133,5 @@ end
     sd = SlaterDeterminant(q0,q1)
     sd1, F = scf(sd, H; max_iter=2)
     S = overlap_matrix(sd1)
-    @test bracet(H,sd) >  bracket(H, sd1)
+    @test bracket(H,sd) >  bracket(H, sd1)
 end
