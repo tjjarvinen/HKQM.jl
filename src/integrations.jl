@@ -1,8 +1,8 @@
 using Distributed
 
 """
-    integrate(ϕ, grid::CubicElementGrid, ψ)
-    integrate(grid::CubicElementGrid, ρ)
+    integrate(ϕ, grid::AbstractElementGridSymmetricBox, ψ)
+    integrate(grid::AbstractElementGridSymmetricBox, ρ)
     integrate(ϕ::QuantumState, ψ::QuantumState)
 
 Low lever integration routines. (users should not use these, as they can change)
@@ -13,8 +13,19 @@ function integrate(ϕ, grid::CubicElementGrid, ψ)
     return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
 end
 
+function integrate(ϕ, grid::AbstractElementGridSymmetricBox, ψ)
+    ω = getweight(grid)
+    c = ϕ.*ψ
+    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
+end
+
 function integrate(grid::CubicElementGrid, ρ)
     ω = ω_tensor(grid)
+    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
+end
+
+function integrate(grid::AbstractElementGridSymmetricBox, ρ)
+    ω = getweight(grid)
     return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
 end
 
@@ -23,7 +34,7 @@ function integrate(ϕ::QuantumState, ψ::QuantumState)
     integrate(ϕ.psi, ψ.elementgrid, ψ.psi)
 end
 
-function integrate(ϕ::QuantumState{Any, Any, Complex}, ψ::QuantumState)
+function integrate(ϕ::QuantumState{Any, Complex}, ψ::QuantumState)
     @assert ϕ.elementgrid == ψ.elementgrid
     integrate(conj(ϕ).psi, ψ.elementgrid, ψ.psi)
 end

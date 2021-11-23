@@ -3,7 +3,7 @@
 
 
 """
-    QuantumState{TG,TA,TE}
+    QuantumState{TA,TE}
 
 Type to hold and manipulate quantum states
 
@@ -42,13 +42,13 @@ julia> unit(1u"bohr"*ψ)
 a₀
 ```
 """
-mutable struct QuantumState{TG,TA,TE} <: AbstractQuantumState{TE}
-    elementgrid::TG
+mutable struct QuantumState{TA,TE} <: AbstractQuantumState{TE}
+    elementgrid::AbstractElementGrid
     psi::TA
     unit::Unitful.FreeUnits
     function QuantumState(ceg, ψ::AbstractArray{<:Any,6}, unit::Unitful.FreeUnits=NoUnits)
         @assert size(ceg) == size(ψ)
-        new{typeof(ceg),typeof(ψ),eltype(ψ)}(ceg, ψ, unit)
+        new{typeof(ψ),eltype(ψ)}(ceg, ψ, unit)
     end
 end
 
@@ -85,7 +85,7 @@ function normalize!(qs::QuantumState)
 end
 
 
-function Base.:(+)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function Base.:(+)(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     @assert dimension(qs1) == dimension(qs2)
     @assert size(qs1) == size(qs2)
     if unit(qs1) == unit(qs2)
@@ -95,15 +95,15 @@ function Base.:(+)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<
     end
 end
 
-function Base.:(-)(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function Base.:(-)(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     @assert dimension(qs1) == dimension(qs2)
     @assert size(qs1) == size(qs2)
     return QuantumState(qs1.elementgrid, qs1.psi.-qs2.psi, unit(qs1))
 end
 
 """
-    ⋆(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
-    ketbra(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any})
+    ⋆(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
+    ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
 
 Return probability density ψ†ψ = |ψ><ψ|
 
@@ -112,7 +112,7 @@ Return probability density ψ†ψ = |ψ><ψ|
 julia> ψ⋆ψ
 ```
 """
-function ketbra(qs1::QuantumState{T,<:Any,<:Any}, qs2::QuantumState{T,<:Any,<:Any}) where T
+function ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any}) where T
     @assert size(qs1) == size(qs2)
     conj(qs1).psi .* qs2.psi
 end
@@ -124,9 +124,9 @@ Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, ustrip(a).
 Base.:(/)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, qs.psi./ustrip(a), unit(qs)/unit(a))
 
 Base.conj(qs::QuantumState) = qs
-Base.conj(qs::QuantumState{Any, Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.psi), unit(qs))
+Base.conj(qs::QuantumState{Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.psi), unit(qs))
 Base.conj!(qs::QuantumState) = qs
-function Base.conj!(qs::QuantumState{Any, Any, Complex})
+function Base.conj!(qs::QuantumState{Any, Complex})
     conj!.(qs.psi)
     return qs
 end
