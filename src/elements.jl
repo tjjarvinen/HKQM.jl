@@ -308,7 +308,7 @@ end
 ElementGrid(a, b, n) = ElementGrid(Element1D(a,b), n)
 
 Base.size(eg::ElementGrid) = size(eg.basis.nodes)
-Base.getindex(eg::ElementGrid, i::Int) = eg.basis.nodes[i] * eg.scaling + eg.shift
+Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
 
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
@@ -332,10 +332,35 @@ function ElementGridVector(a, b, ne::Int, ng::Int)
 end
 
 Base.size(egv::ElementGridVector) = (length(egv.elements[1]), length(egv.elements))
-Base.getindex(egv::ElementGridVector, i::Int, j::Int) = egv.elements[j][i]
+Base.getindex(egv::ElementGridVector, i::Int, I::Int) = egv.elements[I][i]
 
 getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
 get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elements[1])
+
+##
+
+struct ElementGridSymmetricBox <: AbstractElementGrid{SVector{3,Float64}, 6}
+    egv::ElementGridVector
+end
+
+function Base.size(egsb::ElementGridSymmetricBox)
+    s = size(egsb.egv)
+    return (s[1], s[1], s[1], s[2], s[2], s[2])
+end
+
+function Base.getindex(egsb::ElementGridSymmetricBox, i::Int,j::Int,k::Int, I::Int,J::Int,K::Int )
+    return SVector( egsb.egv[i,I], egsb.egv[j,J], egsb.egv[k,K]  )
+end
+
+function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
+    s = size(egsb)
+    print(io, "ElementGridSymmetricBox $(s[end])^3 elements and $(s[1])^3 Gauss points per element")
+end
+
+
+xgrid(egsb) = [ egsb[i][1] for i in eachindex(egsb) ]
+ygrid(egsb) = [ egsb[i][2] for i in eachindex(egsb) ]
+zgrid(egsb) = [ egsb[i][3] for i in eachindex(egsb) ]
 
 ## Gauss points for integration
 
