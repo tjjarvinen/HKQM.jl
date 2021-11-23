@@ -196,7 +196,7 @@ get_center(ce::CubicElementArray) = ce.center
 ## Element grids
 
 """
-    CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
+    CubicElementGrid{NG, NE} <: AbstractElementGridSymmetricBox
 
 Cube that is divided to smaller cubes that have integration grid.
 Elements and integration points are symmetric for x-, y- and z-axes.
@@ -214,7 +214,7 @@ julia> CubicElementGrid(5u"pm", 4, 32; origin=[1., 0., 0.].*u"nm)
 Cubic elements grid with 4^3 elements with 32^3 Gauss points
 ```
 """
-struct CubicElementGrid{NG, NE} <: AbstractElementGrid{SVector{3}{Float64}, 6}
+struct CubicElementGrid{NG, NE} <: AbstractElementGridSymmetricBox
     elements::CubicElementArray
     ecenters::Vector{Float64}
     gpoints::Vector{Float64}
@@ -258,7 +258,7 @@ end
 """
     xgrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-x-axis coordinated of for elements and grids.
+X-coordinates in grid from.
 First index is for grids and second for elements.
 """
 xgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -266,7 +266,7 @@ xgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg
 """
     ygrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-y-axis coordinated of for elements and grids.
+Y-coordinates in grid from.
 First index is for grids and second for elements.
 """
 ygrid(ceg::CubicElementGrid) = [x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -274,7 +274,7 @@ ygrid(ceg::CubicElementGrid) = [x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg
 """
     zgrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-z-axis coordinated of for elements and grids.
+Z-coordinates in grid from.
 First index is for grids and second for elements.
 """
 zgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[3] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -339,7 +339,7 @@ get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elemen
 
 ##
 
-struct ElementGridSymmetricBox <: AbstractElementGrid{SVector{3,Float64}, 6}
+struct ElementGridSymmetricBox <: AbstractElementGridSymmetricBox
     egv::ElementGridVector
 end
 
@@ -358,9 +358,12 @@ function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
 end
 
 
-xgrid(egsb) = [ egsb[i][1] for i in eachindex(egsb) ]
-ygrid(egsb) = [ egsb[i][2] for i in eachindex(egsb) ]
-zgrid(egsb) = [ egsb[i][3] for i in eachindex(egsb) ]
+xgrid(egsb) = egsb.elements
+ygrid(egsb) = egsb.elements
+zgrid(egsb) = egsb.elements
+
+getweight(egsb) = getweight(egsb.egv)
+get_derivative_matrix(egsb) = get_derivative_matrix(egsb.egv)
 
 ## Gauss points for integration
 

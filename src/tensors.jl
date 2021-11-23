@@ -506,6 +506,8 @@ function ω_tensor(ceg::CubicElementGrid)
     ω = reshape( repeat(ceg.w, n), l, n )
 end
 
+
+
 ## Help functions to create charge density
 
 function density_tensor(grid::AbstractArray, r::AbstractVector, a)
@@ -518,23 +520,24 @@ density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 ## Derivative tensor
 
-abstract type AbstractDerivativeTensor <: AbtractTransformationTensor{2} end
+
 
 """
-    DerivativeTensor{NG} <: AbstractDerivativeTensor
+    DerivativeTensor <: AbstractDerivativeTensor
 
 Tensor that performs derivate over [`CubicElementGrid`](@ref).
 
 # Fields
-- `gauss_points::SVector{NG}{Float64}`  : point for integration
 - `values::Matrix{Float64}`             : tensor values
 
 # Construction
     DerivativeTensor(ceg::CubicElementGrid)
 """
-struct DerivativeTensor{NG} <: AbstractDerivativeTensor
-    gauss_points::SVector{NG}{Float64}
+struct DerivativeTensor <: AbstractDerivativeTensor
     values::Matrix{Float64}
+    function DerivativeTensor(eg::AbstractElementGridSymmetricBox)
+        new(get_derivative_matrix(eg))
+    end
     function DerivativeTensor(ceg::CubicElementGrid)
         function _lpoly(x)
             # Legendre polynomials (without prefactor)
@@ -574,7 +577,7 @@ struct DerivativeTensor{NG} <: AbstractDerivativeTensor
         for i in eachindex(pd)
             ϕ[:,i] = a[i]*pd[i].(x)
         end
-        new{ng}(x, ϕ)
+        new(x, ϕ)
     end
 end
 
@@ -590,46 +593,6 @@ function Base.show(io::IO, ::MIME"text/plain", dt::DerivativeTensor)
     print(io, "Derivative tensor size=$(size(dt))")
 end
 
-
-function kinetic_energy(ceg::CubicElementGrid, dt, ψ)
-    @warn "kinetic_energy is deprecated use operators instead"
-    tmp = similar(ψ)
-
-    @tensor tmp[i,j,k,I,J,K] = dt[i,l] * ψ[l,j,k,I,J,K]
-    ex = 0.5*integrate(tmp, ceg, tmp)
-
-    @tensor tmp[i,j,k,I,J,K] = dt[j,l] * ψ[i,l,k,I,J,K]
-    ey = 0.5*integrate(tmp, ceg, tmp)
-
-    @tensor tmp[i,j,k,I,J,K] = dt[k,l] * ψ[i,j,l,I,J,K]
-    ez = 0.5*integrate(tmp, ceg, tmp)
-
-    return ex+ey+ez
-end
-
-
-
-## Momentum tensor
-
-struct MomentumTensor{NG} <: AbstractArray{ComplexF64, 3}
-    dt::DerivativeTensor{NG}
-    function MomentumTensor(dt::DerivativeTensor{T}) where T
-        @warn "MomentumTensor is deprecated use operators instead"
-        new{T}(dt)
-    end
-end
-
-function MomentumTensor(ceg::CubicElementGrid)
-    return MomentumTensor(DerivativeTensor(ceg))
-end
-
-Base.size(mt::MomentumTensor) = (size(mt.dt)...,3)
-
-Base.getindex(mt::MomentumTensor,i::Int,j::Int,xyz::Int) = -ComplexF64(0,mt.dt[i,j])
-
-function Base.show(io::IO, ::MIME"text/plain", mt::MomentumTensor)
-    print(io, "Momentum tensor size=$(size(mt))")
-end
 
 
 ## Nuclear potential tensors
