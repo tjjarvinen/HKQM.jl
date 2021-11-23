@@ -2,6 +2,7 @@ module HKQM
 
 using Reexport
 
+using Distributed
 using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
@@ -85,6 +86,7 @@ export AbstractQuantumState
 # Concrete Types
 export CubicElementArray,
        DerivativeOperator,
+       ElementGridSymmetricBox,
        ElementGridVector,
        ElementVector,
        GradientOperator,

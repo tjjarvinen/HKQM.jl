@@ -312,7 +312,7 @@ Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, 
 
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
-get_derivative_matrix(eg::ElementGrid) = eg.basis.D
+get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
 
 
 struct ElementGridVector <: AbstractElementGrid{Float64, 2}
@@ -343,13 +343,18 @@ struct ElementGridSymmetricBox <: AbstractElementGridSymmetricBox
     egv::ElementGridVector
 end
 
+function ElementGridSymmetricBox(a, ne::Int, ng::Int)
+    egv = ElementGridVector(-0.5a, 0.5a, ne, ng)
+    return ElementGridSymmetricBox(egv)
+end
+
 function Base.size(egsb::ElementGridSymmetricBox)
     s = size(egsb.egv)
     return (s[1], s[1], s[1], s[2], s[2], s[2])
 end
 
 function Base.getindex(egsb::ElementGridSymmetricBox, i::Int,j::Int,k::Int, I::Int,J::Int,K::Int )
-    return SVector( egsb.egv[i,I], egsb.egv[j,J], egsb.egv[k,K]  )
+    return SVector( egsb.egv[i,I], egsb.egv[j,J], egsb.egv[k,K] )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
@@ -358,9 +363,9 @@ function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
 end
 
 
-xgrid(egsb) = egsb.elements
-ygrid(egsb) = egsb.elements
-zgrid(egsb) = egsb.elements
+xgrid(egsb) = egsb.egv
+ygrid(egsb) = egsb.egv
+zgrid(egsb) = egsb.egv
 
 getweight(egsb) = getweight(egsb.egv)
 get_derivative_matrix(egsb) = get_derivative_matrix(egsb.egv)

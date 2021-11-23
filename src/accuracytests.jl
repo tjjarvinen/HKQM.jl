@@ -259,7 +259,8 @@ end
 
 ##  Kinetic energy tests
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
-    ceg = CubicElementGrid(a, ne, ng)
+    #ceg = CubicElementGrid(a, ne, ng)
+    ceg = ElementGridSymmetricBox(a, ne, ng)
 
     H = HamiltonOperatorFreeParticle(ceg)
 

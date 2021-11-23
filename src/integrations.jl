@@ -1,4 +1,3 @@
-using Distributed
 
 """
     integrate(ϕ, grid::AbstractElementGridSymmetricBox, ψ)
@@ -60,7 +59,7 @@ end
 
 function bracket(ϕ::QuantumState, op::AbstractOperator, ψ::QuantumState)
     @assert size(ϕ) == size(ψ) == size(op)
-    return pmap( O->bracket(ϕ, O, ψ),  op)
+    return map( O->bracket(ϕ, O, ψ),  op)
 end
 
 
@@ -111,7 +110,7 @@ end
 
 function _magnetic_current(p, ψ)
     ϕ = conj(ψ)
-    return pmap( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
+    return map( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
 end
 
 ## Coulomb integral / Poisson equation

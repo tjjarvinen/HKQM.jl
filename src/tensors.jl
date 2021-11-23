@@ -562,7 +562,7 @@ struct DerivativeTensor <: AbstractDerivativeTensor
             end
             return a.^-1
         end
-        # Derivative is done by analytically deriving Gauss-Legendre basis
+        # Derivative is done by analytically by deriving Gauss-Legendre basis
         # functions and then calculating values over the derivatives.
         # f(x) = ∑aᵢpᵢ(x) → f'(x) = ∑aᵢpᵢ'(x)
         x = BigFloat.(ceg.gpoints)
@@ -577,7 +577,7 @@ struct DerivativeTensor <: AbstractDerivativeTensor
         for i in eachindex(pd)
             ϕ[:,i] = a[i]*pd[i].(x)
         end
-        new(x, ϕ)
+        new(ϕ)
     end
 end
 
