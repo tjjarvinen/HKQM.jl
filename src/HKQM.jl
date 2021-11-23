@@ -5,6 +5,7 @@ using Reexport
 using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
+using PolynomialBases
 using Polynomials
 using ProgressMeter
 using SpecialFunctions

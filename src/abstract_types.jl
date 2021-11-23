@@ -3,7 +3,7 @@
 ## Elements and Grids
 abstract type AbstractElement{Dims} end
 abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
-abstract type AbstractElementGrid{N} <: AbstractArray{SVector{3,Float64}, N} end
+abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
 
 ## Tensor types
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end

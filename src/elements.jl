@@ -214,7 +214,7 @@ julia> CubicElementGrid(5u"pm", 4, 32; origin=[1., 0., 0.].*u"nm)
 Cubic elements grid with 4^3 elements with 32^3 Gauss points
 ```
 """
-struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
+struct CubicElementGrid{NG, NE} <: AbstractElementGrid{SVector{3}{Float64}, 6}
     elements::CubicElementArray
     ecenters::Vector{Float64}
     gpoints::Vector{Float64}
@@ -293,22 +293,49 @@ grid1d(ceg::CubicElementGrid) = [x+X for x in ceg.gpoints, X in ceg.ecenters ]
 ## 1D grids
 # Plan is to build noncubic grids based on these
 
-struct ElementGridVector <: AbstractMatrix{Float64}
-    elements::ElementVector
-    r::Matrix{Float64}
-    w::Matrix{Float64}
-    function ElementGridVector(ev::ElementVector, ng)
-        tmp = gausspoints.(ev, ng)
-        r = hcat([ x[1] for x in tmp ]...)
-        w = hcat([ x[2] for x in tmp ]...)
-        new(ev, r, w)
+struct ElementGrid <: AbstractElementGrid{Float64, 1}
+    basis::GaussLegendre{Float64}
+    element::Element1D
+    scaling::Float64
+    shift::Float64
+    function ElementGrid(element::Element1D, n::Int)
+        scaling = ( element.high - element.low ) / 2 |> austrip
+        shift = ( element.high + element.low ) / 2 |> austrip
+        new(GaussLegendre(n-1), element, scaling, shift)
     end
 end
 
+ElementGrid(a, b, n) = ElementGrid(Element1D(a,b), n)
 
-Base.size(egv::ElementGridVector) = size(egv.r)
+Base.size(eg::ElementGrid) = size(eg.basis.nodes)
+Base.getindex(eg::ElementGrid, i::Int) = eg.basis.nodes[i] * eg.scaling + eg.shift
 
-Base.getindex(egv::ElementGridVector, i, j) = egv.r[i,j]
+
+getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
+get_derivative_matrix(eg::ElementGrid) = eg.basis.D
+
+
+struct ElementGridVector <: AbstractElementGrid{Float64, 2}
+    elements::Vector{ElementGrid}
+    function ElementGridVector(ev::ElementVector, ng)
+        elements = [ ElementGrid(x, ng) for x in ev ]
+        new(elements)
+    end
+end
+
+function ElementGridVector(a, b, ne::Int, ng::Int)
+    @assert a < b
+    d = (b - a) / ne
+    bounds = [ a + i*d for i in 1:ne ]
+    ev = ElementVector(a, bounds...)
+    return ElementGridVector(ev, ng)
+end
+
+Base.size(egv::ElementGridVector) = (length(egv.elements[1]), length(egv.elements))
+Base.getindex(egv::ElementGridVector, i::Int, j::Int) = egv.elements[j][i]
+
+getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
+get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elements[1])
 
 ## Gauss points for integration
 
