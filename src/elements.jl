@@ -334,6 +334,8 @@ end
 Base.size(egv::ElementGridVector) = (length(egv.elements[1]), length(egv.elements))
 Base.getindex(egv::ElementGridVector, i::Int, I::Int) = egv.elements[I][i]
 
+getelement(egv::ElementGridVector, i::Int) = egv.elements[i].element
+
 getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
 get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elements[1])
 
@@ -363,12 +365,14 @@ function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
 end
 
 
-xgrid(egsb) = egsb.egv
-ygrid(egsb) = egsb.egv
-zgrid(egsb) = egsb.egv
+xgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
+ygrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
+zgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
 
-getweight(egsb) = getweight(egsb.egv)
-get_derivative_matrix(egsb) = get_derivative_matrix(egsb.egv)
+getweight(egsb::ElementGridSymmetricBox) = getweight(egsb.egv)
+get_derivative_matrix(egsb::ElementGridSymmetricBox) = get_derivative_matrix(egsb.egv)
+get_1d_grid(egsb::ElementGridSymmetricBox) = egsb.egv
+
 
 ## Gauss points for integration
 

@@ -60,6 +60,43 @@ struct CoulombTransformation{T, NT, NE, NG} <: AbstractCoulombTransformationSing
 end
 
 
+struct CoulombTransformationNew{T} <: AbstractCoulombTransformation
+    elementgrid::AbstractElementGrid{<:Any, 2}
+    t::Vector{Float64}
+    wt::Vector{T}
+    w::Matrix{Float64}
+    tmin::Float64
+    tmax::Float64
+    k::T
+    function CoulombTransformationNew(eg::AbstractElementGridSymmetricBox, nt::Int; tmin=0., tmax=25., k=0.)
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        elementgrid = get_1d_grid(eg)
+        w = getweight(elementgrid)
+        s = size(w)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{typeof(k*t[1])}(elementgrid, t, wt, w, tmin, tmax, k)
+    end
+
+end
+
+
+function Base.size(ct::CoulombTransformationNew)
+    s = size(ct.elementgrid)
+    st = length(ct.t)
+    return (s[1], s[1], s[2], s[2], st)
+end
+
+function Base.getindex(ct::CoulombTransformationNew, i::Int, j::Int, I::Int, J::Int, tt::Int)
+    r = ct.elementgrid[i,I] - ct.elementgrid[j,J]
+    return exp(-(ct.t[tt]*r)^2) * ct.w[j,J]
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::CoulombTransformationNew)
+    s = size(ct)
+    print(io, "CoulombTransformationNew $(s[2]) elements and $(s[1])^3 Gauss points per element")
+end
+
+
 """
     CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
 
@@ -125,6 +162,44 @@ struct CoulombTransformationLog{T, NT, NE, NG} <: AbstractCoulombTransformationS
     end
 end
 
+
+struct CoulombTransformationLogNew{T} <: AbstractCoulombTransformation
+    elementgrid::AbstractElementGrid{<:Any, 2}
+    t::Vector{Float64}
+    wt::Vector{T}
+    w::Matrix{Float64}
+    tmin::Float64
+    tmax::Float64
+    k::T
+    function CoulombTransformationLogNew(eg::AbstractElementGridSymmetricBox, nt::Int;
+                                         tmin=0., tmax=25., k=0.)
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-15), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        elementgrid = get_1d_grid(eg)
+        w = getweight(elementgrid)
+        s = size(w)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{typeof(k*t[1])}(elementgrid, t, wt, w, tmin, tmax, k)
+    end
+end
+
+
+function Base.size(ct::CoulombTransformationLogNew)
+    s = size(ct.elementgrid)
+    st = length(ct.t)
+    return (s[1], s[1], s[2], s[2], st)
+end
+
+function Base.getindex(ct::CoulombTransformationLogNew, i::Int, j::Int, I::Int, J::Int, tt::Int)
+    r = ct.elementgrid[i,I] - ct.elementgrid[j,J]
+    return exp(-(ct.t[tt]*r)^2) * ct.w[j,J]
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::CoulombTransformationLogNew)
+    s = size(ct)
+    print(io, "CoulombTransformationLogNew $(s[2]) elements and $(s[1])^3 Gauss points per element")
+end
 
 """
     CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG}
@@ -203,6 +278,59 @@ struct CoulombTransformationLocal{T, NT, NE, NG} <: AbstractCoulombTransformatio
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{eltype(wt), nt, s[2], s[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
+end
+
+
+struct CoulombTransformationLocalNew{T} <: AbstractCoulombTransformation
+    elementgrid::AbstractElementGrid{<:Any, 2}
+    t::Vector{Float64}
+    wt::Vector{T}
+    w::Matrix{Float64}
+    tmin::Float64
+    tmax::Float64
+    k::T
+    δ::Float64
+    δp::Matrix{Float64}
+    δm::Matrix{Float64}
+    function CoulombTransformationLocalNew(eg::AbstractElementGridSymmetricBox, nt::Int;
+                                   tmin=0., tmax=25., δ=0.25, k=0.)
+        @assert 0 < δ <= 1
+        @assert 0 <= tmin < tmax
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = get_1d_grid(eg)
+        s = size(grid)
+        δp = zeros(s...)
+        δm = zeros(s...)
+        δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
+        δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
+        for j in axes(grid, 2)
+            δm[1,j] =  austrip( getelement(grid, j).low ) - grid[1,j]
+            δp[end,j] = austrip( getelement(grid, j).high ) - grid[end,j]
+        end
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        w = getweight(grid)
+        new{eltype(wt)}(grid, t, wt, w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
+    end
+end
+
+
+function Base.size(ct::CoulombTransformationLocalNew)
+    s = size(ct.elementgrid)
+    st = length(ct.t)
+    return (s[1], s[1], s[2], s[2], st)
+end
+
+function Base.getindex(ct::CoulombTransformationLocalNew, α::Int, β::Int, I::Int, J::Int, p::Int)
+    r = abs(ct.elementgrid[α,I] - ct.elementgrid[β,J])
+    δ = min(abs(ct.δp[α,I]-ct.δm[β,J]), abs(ct.δm[α,I]-ct.δp[β,J]))
+    rmax = (r+δ)*ct.t[p]
+    rmin = (r-δ)*ct.t[p]
+    return ct.w[β,I]*0.5*√π*erf(rmin, rmax)/(rmax-rmin)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::CoulombTransformationLocalNew)
+    s = size(ct)
+    print(io, "CoulombTransformationLocalNew $(s[2]) elements and $(s[1])^3 Gauss points per element")
 end
 
 
@@ -286,6 +414,62 @@ struct CoulombTransformationLogLocal{T, NT, NE, NG} <: AbstractCoulombTransforma
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{eltype(wt), nt, ss[2], ss[1]}(grid, t, wt, ceg.w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
     end
+end
+
+
+struct CoulombTransformationLogLocalNew{T} <: AbstractCoulombTransformation
+    elementgrid::AbstractElementGrid{<:Any, 2}
+    t::Vector{Float64}
+    wt::Vector{T}
+    w::Matrix{Float64}
+    tmin::Float64
+    tmax::Float64
+    k::T
+    δ::Float64
+    δp::Matrix{Float64}
+    δm::Matrix{Float64}
+    function CoulombTransformationLogLocalNew(eg::AbstractElementGridSymmetricBox, nt::Int;
+                                   tmin=0., tmax=25., δ=0.25, k=0.)
+        @assert 0 < δ <= 1
+        @assert 0 <= tmin < tmax
+        s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
+        t = exp.(s)
+        wt = ws .* t
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        grid = get_1d_grid(eg)
+        ss = size(grid)
+        δp = zeros(ss...)
+        δm = zeros(ss...)
+        δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
+        δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
+        for j in 1:ss[2]
+            δm[1,j] =  austrip( getelement(grid, j).low ) - grid[1,j]
+            δp[end,j] = austrip( getelement(grid, j).high ) - grid[end,j]
+        end
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        w = getweight(grid)
+        new{eltype(wt)}(grid, t, wt, w, tmin, tmax, k, δ, δ.*δp, δ.*δm)
+    end
+end
+
+
+function Base.size(ct::CoulombTransformationLogLocalNew)
+    s = size(ct.elementgrid)
+    st = length(ct.t)
+    return (s[1], s[1], s[2], s[2], st)
+end
+
+function Base.getindex(ct::CoulombTransformationLogLocalNew, α::Int, β::Int, I::Int, J::Int, p::Int)
+    r = abs(ct.elementgrid[α,I] - ct.elementgrid[β,J])
+    δ = min(abs(ct.δp[α,I]-ct.δm[β,J]), abs(ct.δm[α,I]-ct.δp[β,J]))
+    rmax = (r+δ)*ct.t[p]
+    rmin = (r-δ)*ct.t[p]
+    return ct.w[β,I]*0.5*√π*erf(rmin, rmax)/(rmax-rmin)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::CoulombTransformationLogLocalNew)
+    s = size(ct)
+    print(io, "CoulombTransformationLogLocalNew $(s[2]) elements and $(s[1])^3 Gauss points per element")
 end
 
 
