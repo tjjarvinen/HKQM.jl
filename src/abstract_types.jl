@@ -8,10 +8,23 @@ abstract type AbstractElementGridSymmetricBox <: AbstractElementGrid{SVector{3,F
 
 ## Tensor types
 abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
+
+## These are for Poisson/Helmholz equations
+
+# These are old form and deprecated
 abstract type AbstractCoulombTransformation <: AbtractTransformationTensor{5} end
 abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulombTransformation where {NT, NE, NG} end
 abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
 abstract type AbstractCoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG} end
+
+"""
+    AbstractHelmholtzTensor <: AbtractTransformationTensor{5}
+
+These types create tensors that are needed to solve Poisson/Helmholz equation.
+"""
+abstract type AbstractHelmholtzTensor <: AbstractCoulombTransformation end
+abstract type AbstractHelmholtzTensorSingle <: AbstractHelmholtzTensor end
+
 
 abstract type AbstractDerivativeTensor <: AbtractTransformationTensor{2} end
 

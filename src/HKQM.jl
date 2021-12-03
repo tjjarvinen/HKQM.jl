@@ -81,7 +81,9 @@ export bracket,
        ω_tensor
 
 # Abstract Types
-export AbstractQuantumState
+export  AbstractQuantumState,
+        AbstractHelmholtzTensor,
+        AbstractHelmholtzTensorSingle
 
 # Concrete Types
 export CubicElementArray,
@@ -93,6 +95,10 @@ export CubicElementArray,
        HamiltonOperator,
        HamiltonOperatorFreeParticle,
        HamiltonOperatorMagneticField,
+       HelmholtzTensorCombination,
+       HelmholtzTensorLinear,
+       HelmholtzTensorLocalLinear,
+       HelmholtzTensorLocalLog,
        LaplaceOperator,
        NuclearPotentialTensor,
        NuclearPotentialTensorCombination,

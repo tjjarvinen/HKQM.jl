@@ -164,6 +164,17 @@ function get_1d_element(ce::CubicElementArray, i::Int)
     return Element1D(low, low+s)
 end
 
+
+function ElementVector(ce::CubicElementArray, i=1::Int)
+    @assert i in 1:3
+    start = -0.5*ce.a + ce.center[i]
+    n = size(ce, i)
+    shift = ce.a/ce.npoints
+    b = [start + j*shift for j in 1:n]
+    return ElementVector(start, b... )
+end
+
+
 function Base.getindex(ca::CubicElementArray, I::Int, J::Int, K::Int)
     low = ca.center .-  0.5 .* ca.a
     step = ca.a / ca.npoints
@@ -254,6 +265,8 @@ function Base.getindex(c::CubicElementGrid, i::Int,j::Int,k::Int, I::Int,J::Int,
 end
 
 
+ElementVector(ceg::CubicElementGrid, i=1::Int) = ElementVector(ceg.elements, i)
+
 
 """
     xgrid(ceg::CubicElementGrid) -> Matrix{Float64}
@@ -288,6 +301,11 @@ Differs from [`xgrid`](@ref), [`ygrid`](@ref) and [`zgrid`](@ref) in that
 the origin of grid is not specified. Which is equal to origin at 0,0,0.
 """
 grid1d(ceg::CubicElementGrid) = [x+X for x in ceg.gpoints, X in ceg.ecenters ]
+
+
+function get_1d_grid(ceg::CubicElementGrid, i=1::Int)
+    return ElementGridVector(ElementVector(ceg, i), size(ceg, i))
+end
 
 
 ## 1D grids
@@ -371,7 +389,7 @@ zgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
 
 getweight(egsb::ElementGridSymmetricBox) = getweight(egsb.egv)
 get_derivative_matrix(egsb::ElementGridSymmetricBox) = get_derivative_matrix(egsb.egv)
-get_1d_grid(egsb::ElementGridSymmetricBox) = egsb.egv
+get_1d_grid(egsb::ElementGridSymmetricBox, i=1::Int) = egsb.egv
 
 
 ## Gauss points for integration
