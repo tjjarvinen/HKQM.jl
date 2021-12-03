@@ -182,7 +182,7 @@ function test_accuracy(a, ne::Int, ng::Int, nt::Int;
     return test_accuracy(ceg, ct; correction=correction, α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
-function test_accuracy(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
+function test_accuracy(ceg::AbstractElementGridSymmetricBox, ct::AbstractHelmholtzTensor;
                             α1=1, α2=1, d=0u"bohr", correction=true, showprogress=true)
     tmin = ct.tmin
     tmax = ct.tmax
@@ -226,11 +226,11 @@ end
 function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0.5, δ=0.25, showprogress=true)
     ceg = CubicElementGrid(a, ne, ng)
     ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
-    return test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation; α1=α1, α2=α2, d=d, showprogress=showprogress)
+    return test_accuracy_ad(ceg, ct; α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
 
-function test_accuracy_ad(ceg::CubicElementGrid, ct::AbstractCoulombTransformation;
+function test_accuracy_ad(ceg::AbstractElementGridSymmetricBox, ct::AbstractHelmholtzTensor;
                          α1=1., α2=1., d=0.5, showprogress=true)
     function f(x)
         tmin = ct.tmin

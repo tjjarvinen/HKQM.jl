@@ -13,10 +13,8 @@ abstract type AbtractTransformationTensor{T} <: AbstractArray{Float64, T} end
 
 # These are old form and deprecated
 abstract type AbstractCoulombTransformation <: AbtractTransformationTensor{5} end
-abstract type AbstractCoulombTransformationSingle{NT, NE, NG}  <: AbstractCoulombTransformation where {NT, NE, NG} end
-abstract type AbstractCoulombTransformationCombination <: AbstractCoulombTransformation end
-abstract type AbstractCoulombTransformationLocal{NT, NE, NG} <: AbstractCoulombTransformationSingle{NT, NE, NG} end
 
+# These are new
 """
     AbstractHelmholtzTensor <: AbtractTransformationTensor{5}
 
