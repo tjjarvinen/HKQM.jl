@@ -611,14 +611,15 @@ Returns Coulomb transformation tensor with optimal pre tested parameters.
 - `tboundary=20`    : point after which local average correction is applied
 - `k=0.`            : constant for Helmholz equation
 """
-function optimal_coulomb_tranformation(ceg::CubicElementGrid, nt::Int; δ=0.25, tmax=700, tboundary=20, k=0.)
+function optimal_coulomb_tranformation(ceg, nt::Int; δ=0.25, tmax=700, tboundary=20, k=0.)
     @assert 0 < tboundary < tmax
     s, ws = gausspoints(nt; elementsize=(log(1e-12), log(tmax)))
     t = exp.(s)
     l = length(t[t .< tboundary])
-    ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, k=k)
-    ct2 = CoulombTransformationLogLocal(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ, k=k)
-    return CoulombTransformationCombination(ct1,ct2)
+    #ct1 = CoulombTransformationLog(ceg, l; tmax=tboundary, k=k)
+    ct1 = HelmholtzTensorLog(ceg, l; tmax=tboundary, k=k)
+    ct2 = HelmholtzTensorLocalLog(ceg, nt-l; tmin=tboundary, tmax=tmax, δ=δ, k=k)
+    return HelmholtzTensorCombination(ct1,ct2)
 end
 
 

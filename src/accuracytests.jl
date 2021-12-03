@@ -160,16 +160,16 @@ function test_accuracy(a, ne::Int, ng::Int, nt::Int;
     ceg = CubicElementGrid(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
-        ct = CoulombTransformation(ceg, nt; tmax=tmax, tmin=tmin)
+        ct = HelmholtzTensorLinear(ceg, nt; tmax=tmax, tmin=tmin)
     elseif mode == :log
         @info "Logritmic mode"
-        ct = CoulombTransformationLog(ceg, nt; tmax=tmax, tmin=tmin)
+        ct = HelmholtzTensorLog(ceg, nt; tmax=tmax, tmin=tmin)
     elseif mode == :local
         @info "Local mode"
-        ct = CoulombTransformationLocal(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
+        ct = HelmholtzTensorLocalLinear(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
     elseif mode == :loglocal
         @info "Log local mode"
-        ct = CoulombTransformationLogLocal(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
+        ct = HelmholtzTensorLocalLog(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
     elseif mode == :combination
         @info "Combination mode"
         ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=tboundary)
@@ -259,7 +259,6 @@ end
 
 ##  Kinetic energy tests
 function test_kinetic_energy(a, ne, ng; ν=0, ω=1)
-    #ceg = CubicElementGrid(a, ne, ng)
     ceg = ElementGridSymmetricBox(a, ne, ng)
 
     H = HamiltonOperatorFreeParticle(ceg)

@@ -25,21 +25,26 @@ disable_logging(Logging.Info)
 end
 
 @testset "Tensors" begin
-    ceg = CubicElementGrid(5u"Å", 4, 16)
-    ct = CoulombTransformation(ceg, 16)
-    clog = CoulombTransformationLog(ceg, 16)
-    ca = CoulombTransformationLocal(ceg, 16)
-    cll  = CoulombTransformationLogLocal(ceg, 16)
-    @test size(ct) == (16,16,4,4,16)
-    @test size(ct) == size(clog)
-    @test size(ct) == size(ca)
-    @test size(ct) == size(cll)
+    gridtypes = [:ElementGridSymmetricBox, :CubicElementGrid]
+    for gt in gridtypes
+        @testset "$(gt)" begin
+            ceg = @eval $(gt)(5u"Å", 4, 16)
+            ct = HelmholtzTensorLinear(ceg, 16)
+            clog = HelmholtzTensorLog(ceg, 16)
+            ca = HelmholtzTensorLocalLinear(ceg, 16)
+            cll  = HelmholtzTensorLocalLog(ceg, 16)
+            @test size(ct) == (16,16,4,4,16)
+            @test size(ct) == size(clog)
+            @test size(ct) == size(ca)
+            @test size(ct) == size(cll)
 
-    # Symmetry
-    @test ct.w[1]*ct[1,3,2,4,1] ≈ ct.w[3]*ct[3,1,4,2,1]
-    @test ct.w[1]*clog[1,3,2,4,2] ≈ ct.w[3]*clog[3,1,4,2,2]
-    @test ct.w[1]*ca[1,3,2,4,3] ≈ ct.w[3]*ca[3,1,4,2,3]
-    @test ct.w[1]*cll[1,3,2,4,4] ≈ ct.w[3]*cll[3,1,4,2,4]
+            # Symmetry
+            @test ct.w[1]*ct[1,3,2,4,1] ≈ ct.w[3]*ct[3,1,4,2,1]
+            @test ct.w[1]*clog[1,3,2,4,2] ≈ ct.w[3]*clog[3,1,4,2,2]
+            @test ct.w[1]*ca[1,3,2,4,3] ≈ ct.w[3]*ca[3,1,4,2,3]
+            @test ct.w[1]*cll[1,3,2,4,4] ≈ ct.w[3]*cll[3,1,4,2,4]
+        end
+    end
 end
 
 @testset "Operators" begin
