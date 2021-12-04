@@ -25,49 +25,59 @@ disable_logging(Logging.Info)
 end
 
 @testset "Tensors" begin
-    ceg = CubicElementGrid(5u"Å", 4, 16)
-    ct = CoulombTransformation(ceg, 16)
-    clog = CoulombTransformationLog(ceg, 16)
-    ca = CoulombTransformationLocal(ceg, 16)
-    cll  = CoulombTransformationLogLocal(ceg, 16)
-    @test size(ct) == (16,16,4,4,16)
-    @test size(ct) == size(clog)
-    @test size(ct) == size(ca)
-    @test size(ct) == size(cll)
+    gridtypes = [:ElementGridSymmetricBox, :CubicElementGrid]
+    for gt in gridtypes
+        @testset "$(gt)" begin
+            ceg = @eval $(gt)(5u"Å", 4, 16)
+            ct = HelmholtzTensorLinear(ceg, 16)
+            clog = HelmholtzTensorLog(ceg, 16)
+            ca = HelmholtzTensorLocalLinear(ceg, 16)
+            cll  = HelmholtzTensorLocalLog(ceg, 16)
+            @test size(ct) == (16,16,4,4,16)
+            @test size(ct) == size(clog)
+            @test size(ct) == size(ca)
+            @test size(ct) == size(cll)
 
-    # Symmetry
-    @test ct.w[1]*ct[1,3,2,4,1] ≈ ct.w[3]*ct[3,1,4,2,1]
-    @test ct.w[1]*clog[1,3,2,4,2] ≈ ct.w[3]*clog[3,1,4,2,2]
-    @test ct.w[1]*ca[1,3,2,4,3] ≈ ct.w[3]*ca[3,1,4,2,3]
-    @test ct.w[1]*cll[1,3,2,4,4] ≈ ct.w[3]*cll[3,1,4,2,4]
+            # Symmetry
+            @test ct.w[1]*ct[1,3,2,4,1] ≈ ct.w[3]*ct[3,1,4,2,1]
+            @test ct.w[1]*clog[1,3,2,4,2] ≈ ct.w[3]*clog[3,1,4,2,2]
+            @test ct.w[1]*ca[1,3,2,4,3] ≈ ct.w[3]*ca[3,1,4,2,3]
+            @test ct.w[1]*cll[1,3,2,4,4] ≈ ct.w[3]*cll[3,1,4,2,4]
+        end
+    end
 end
 
 @testset "Operators" begin
-    ceg = CubicElementGrid(5u"Å", 4, 16)
-    r = position_operator(ceg)
-    p = momentum_operator(ceg)
-    x = r[1]
-    @test unit(x) == u"bohr"
-    @test x == r.operators[1]
-    @test x != r.operators[2]
-    @test x != r.operators[3]
-    @test size(x) == size(r)
-    @test_throws AssertionError r + p
-    @test sin(1u"bohr^-1"*x).vals == sin.(x.vals)
-    @test cos(1u"bohr^-1"*x).vals == cos.(x.vals)
-    @test exp(1u"bohr^-1"*x).vals == exp.(x.vals)
-    @test (x + x).vals == 2.0 .* x.vals
-    @test (2x).vals ==  (x + x).vals
-    @test (x^2).vals == x.vals.^2
-    @test sqrt(x^2).vals ≈ abs.(x.vals)
-    @test (x^2).vals == (x*x).vals
-    @test unit(x^2) == u"bohr^2"
-    @test unit(x+x) == u"bohr"
-    @test unit(sqrt(x^2)) == u"bohr"
+    gridtypes = [:ElementGridSymmetricBox, :CubicElementGrid]
+    for gt in gridtypes
+        @testset "$(gt)" begin
+            ceg = @eval $(gt)(5u"Å", 4, 16)
+            r = position_operator(ceg)
+            p = momentum_operator(ceg)
+            x = r[1]
+            @test unit(x) == u"bohr"
+            @test x == r.operators[1]
+            @test x != r.operators[2]
+            @test x != r.operators[3]
+            @test size(x) == size(r)
+            @test_throws AssertionError r + p
+            @test sin(1u"bohr^-1"*x).vals == sin.(x.vals)
+            @test cos(1u"bohr^-1"*x).vals == cos.(x.vals)
+            @test exp(1u"bohr^-1"*x).vals == exp.(x.vals)
+            @test (x + x).vals == 2.0 .* x.vals
+            @test (2x).vals ==  (x + x).vals
+            @test (x^2).vals == x.vals.^2
+            @test sqrt(x^2).vals ≈ abs.(x.vals)
+            @test (x^2).vals == (x*x).vals
+            @test unit(x^2) == u"bohr^2"
+            @test unit(x+x) == u"bohr"
+            @test unit(sqrt(x^2)) == u"bohr"
+        end
+    end
 end
 
 @testset "Quantum States" begin
-    ceg = CubicElementGrid(5u"Å", 4, 16)
+    ceg = ElementGridSymmetricBox(5u"Å", 4, 16)
     r = position_operator(ceg)
     r² = r⋅r
     gv = exp(-1u"bohr^-2"*r²)
@@ -112,6 +122,14 @@ end
 end
 
 @testset "Derivative and kinetic energy" begin
-    a = test_kinetic_energy(5u"Å", 4, 32; ν=1, ω=3)
-    @test abs(a[1]-a[2]) / a[2] < 1e-10
+    gridtypes = [:CubicElementGrid, :ElementGridSymmetricBox]
+    for gt in gridtypes
+        ceg = @eval $(gt)(5u"Å", 4, 24)
+        H = HamiltonOperatorFreeParticle(ceg)
+        ψ = HKQM.ReferenceStates.HarmonicEigenstate(1; ω=3)
+        ϕ = HKQM.ReferenceStates.harmonic_state(ceg, ψ)
+        T = bracket(ϕ, H, ϕ)
+        Tref = 0.5*3*HKQM.ReferenceStates.energy(ψ)
+        @test abs( (T-Tref) / Tref ) < 1e-10
+    end
 end

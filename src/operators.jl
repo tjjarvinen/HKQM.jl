@@ -7,7 +7,7 @@ Base.size(ao::AbstractOperator) = size(get_elementgrid(ao))
 
 function Base.show(io::IO, ao::AbstractOperator)
     s = size(ao)
-    print(io, "Operator $(s[end])^3 elements, $(s[1])^3 gauspoints per element")
+    print(io, "Operator $(s[end])^3 elements, $(s[1])^3 Gauss points per element")
 end
 
 Base.length(::AbstractOperator{N}) where N = N
@@ -51,7 +51,7 @@ function cross(v1::AbstractOperator{3}, v2::AbstractOperator{3})
 end
 
 Base.:(*)(op::AbstractOperator{1}, qs::QuantumState) = op(qs)
-Base.:(*)(op::AbstractOperator, qs::QuantumState) = pmap(f->f(qs), op)
+Base.:(*)(op::AbstractOperator, qs::QuantumState) = map(f->f(qs), op)
 
 ## Scalar Operator
 
@@ -88,10 +88,12 @@ Quantum state
 ```
 """
 struct ScalarOperator{T} <: AbstractScalarOperator
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
     vals::T
     unit::Unitful.FreeUnits
-    function ScalarOperator(ceg::CubicElementGrid, ψ::AbstractArray{<:Any,6}; unit::Unitful.FreeUnits=NoUnits)
+    function ScalarOperator(ceg::AbstractElementGrid{SVector{3,Float64},6},
+                            ψ::AbstractArray{<:Any,6}
+                            ;unit::Unitful.FreeUnits=NoUnits)
         new{typeof(ψ)}(ceg, ψ, unit)
     end
 end
@@ -158,7 +160,7 @@ function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator)
     @assert dimension(a) == dimension(so) "Dimension missmatch"
     a == unit(so) && return so
     conv = ustrip(uconvert(a, 1*unit(so)))
-    return ScalarOperator(so.elementgrid, so.vals.*conv; unit=a)
+    return ScalarOperator(so.elementgrid, so.vals .* conv; unit=a)
 end
 
 
@@ -179,7 +181,7 @@ scalar operators.
     VectorOperator(op::AbstractOperator{1}...)
 """
 struct VectorOperator{N} <: AbstractOperator{N}
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
     operators::Vector{AbstractOperator{1}}
     function VectorOperator(op::AbstractOperator{1}...)
         si = size.(op)
@@ -249,11 +251,11 @@ Base.:(-)(a::VectorOperator) = VectorOperator( [-x for x in a]  )
 ## Position operator
 
 """
-    position_operator(ceg::CubicElementGrid)
+    position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
 
 Returns position operator as a [`VectorOperator`](@ref).
 """
-function position_operator(ceg::CubicElementGrid)
+function position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
     x(v) = v[1]
     y(v) = v[2]
     z(v) = v[3]
@@ -280,31 +282,31 @@ Calculates derivative when operating. `N` is coordinate that is derived.
     DerivativeOperator(ceg::CubicElementGrid, coordinatate::Int=1)
     DerivativeOperator(ceg::CubicElementGrid, dt::DerivativeTensor, coordinatate::Int=1)
 """
-struct DerivativeOperator{NG,N} <: AbstractOperator{1}
-    elementgrid::CubicElementGrid
-    dt::DerivativeTensor{NG}
-    function DerivativeOperator(ceg::CubicElementGrid, coordinatate::Int=1)
+struct DerivativeOperator{N} <: AbstractOperator{1}
+    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    dt::DerivativeTensor
+    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, coordinatate::Int=1)
         @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
         dt = DerivativeTensor(ceg)
-        new{size(ceg)[1], coordinatate}(ceg, dt)
+        new{coordinatate}(ceg, dt)
     end
-    function DerivativeOperator(ceg::CubicElementGrid, dt::DerivativeTensor, coordinatate::Int=1)
+    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, dt::DerivativeTensor, coordinatate::Int=1)
         @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
         @assert size(ceg)[1] == size(dt)[1]
-        new{size(ceg)[1], coordinatate}(ceg, dt)
+        new{coordinatate}(ceg, dt)
     end
 end
 
 
-function (d::DerivativeOperator{<:Any,1})(qs::QuantumState)
+function (d::DerivativeOperator{1})(qs::QuantumState)
     return QuantumState(d.elementgrid, operate_x(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
-function (d::DerivativeOperator{<:Any,2})(qs::QuantumState)
+function (d::DerivativeOperator{2})(qs::QuantumState)
     return QuantumState(d.elementgrid, operate_y(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
-function (d::DerivativeOperator{<:Any,3})(qs::QuantumState)
+function (d::DerivativeOperator{3})(qs::QuantumState)
     return QuantumState(d.elementgrid, operate_z(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
@@ -325,18 +327,18 @@ Calculates gradient when operating.
 # Creation
     GradientOperator(ceg::CubicElementGrid)
 """
-struct GradientOperator{NG} <: AbstractOperator{3}
-    elementgrid::CubicElementGrid
-    dt::DerivativeTensor{NG}
-    function GradientOperator(ceg::CubicElementGrid)
+struct GradientOperator <: AbstractOperator{3}
+    elementgrid::AbstractElementGridSymmetricBox
+    dt::DerivativeTensor
+    function GradientOperator(ceg::AbstractElementGridSymmetricBox)
         dt = DerivativeTensor(ceg)
-        new{size(ceg)[1]}(ceg, dt)
+        new(ceg, dt)
     end
 end
 
 
 function (go::GradientOperator)(ψ::QuantumState)
-    return pmap(f->f(ψ), go)
+    return map(f->f(ψ), go)
 end
 
 function (go::GradientOperator)(a::AbstractVector{<:AbstractQuantumState})
@@ -409,12 +411,12 @@ directly. This type is created when there is no simple way to implement operator
 times constant operation.
 
 # Fields
-- `elementgrid::CubicElementGrid`  : grid information
+- `elementgrid::AbstractElementGrid`  : grid information
 - `op::TO`                         : operator
 - `a::T`                           : constant
 """
 struct ConstantTimesOperator{TO,T,N} <: AbstractOperator{N}
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     op::TO
     a::T
     function ConstantTimesOperator(op::AbstractOperator{N}, a=1) where N
@@ -462,12 +464,12 @@ Sum of two operator that cannot directly summed. It is recommended not to create
 this directly.
 
 # Fields
-- `elementgrid::CubicElementGrid`   :  grid inforamation
+- `elementgrid::AbstractElementGrid`   :  grid inforamation
 - `op1::TO1`                        :  operator 1
 - `op2::TO2`                        :  operator 2
 """
 struct OperatorSum{TO1, TO2, N} <: AbstractCompositeOperator{N}
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     op1::TO1
     op2::TO2
     function OperatorSum(op1::AbstractOperator{N}, op2::AbstractOperator{N}) where N
@@ -507,12 +509,12 @@ are operated after each other. Operator 2 is operated first and then operator 1.
 It is recommended not to create this directly.
 
 # Fields
-- `elementgrid::CubicElementGrid`   :  grid information
+- `elementgrid::AbstractElementGrid`   :  grid information
 - `op1::TO1`                        :  operator 1
 - `op2::TO2`                        :  operator 2
 """
 struct OperatorProduct{TO1, TO2} <: AbstractCompositeOperator{1}
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     op1::TO1
     op2::TO2
     function OperatorProduct(op1::AbstractOperator{1}, op2::AbstractOperator{1})
@@ -541,19 +543,19 @@ get_elementgrid(op::OperatorProduct) = get_elementgrid(op.op1)
 ∇² operator
 
 # Fields
-- `elementgrid::CubicElementGrid`   :  grid information
+- `elementgrid::AbstractElementGrid`   :  grid information
 - `g::GradientOperator`             :  gradient operator
 
 # Creation
     LaplaceOperator(g::GradientOperator)
 """
 struct LaplaceOperator <: AbstractOperator{1}
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     g::GradientOperator
     function LaplaceOperator(g::GradientOperator)
         new(g.elementgrid, g)
     end
-    function LaplaceOperator(ceg::CubicElementGrid)
+    function LaplaceOperator(ceg::AbstractElementGrid)
         new(ceg, GradientOperator(ceg))
     end
 end
@@ -576,7 +578,7 @@ end
 ## Special operators
 
 """
-    momentum_operator(ceg::CubicElementGrid)
+    momentum_operator(ceg::AbstractElementGrid)
     momentum_operator(qs::QuantumState)
     momentum_operator(H::HamiltonOperator)
     momentum_operator(H::HamiltonOperatorFreeParticle)
@@ -585,7 +587,7 @@ end
 Return momentum operator. For Hamiltonian operator input this returns
 canonical momentum.
 """
-function momentum_operator(ceg::CubicElementGrid)
+function momentum_operator(ceg::AbstractElementGrid)
     c = -im * 1u"ħ_au"
     g = GradientOperator(ceg)
     return c*g
@@ -593,9 +595,9 @@ end
 
 momentum_operator(qs::QuantumState) = momentum_operator(qs.elementgrid)
 
-function kinetic_energy_operator(ceg::CubicElementGrid, m=1u"me_au")
+function kinetic_energy_operator(ceg::AbstractElementGrid, m=1u"me_au")
     @assert dimension(m) == dimension(u"kg")
-    return HamiltonOperatorFreeParticle(ceg::CubicElementGrid; m=m)
+    return HamiltonOperatorFreeParticle(ceg; m=m)
 end
 
 ## Hamilton operator
@@ -606,18 +608,18 @@ end
 Free particle Hamiltonian
 
 # Fields
-- `elementgrid::CubicElementGrid`   :  grid information
+- `elementgrid::AbstractElementGrid`   :  grid information
 - `∇²::LaplaceOperator`             :  Laplace operator
 - `m::T`                            :  mass of the particle
 
 # Construction
-    HamiltonOperatorFreeParticle(ceg::CubicElementGrid;m=1u"me_au")
+    HamiltonOperatorFreeParticle(ceg::AbstractElementGrid;m=1u"me_au")
 """
 struct HamiltonOperatorFreeParticle{T} <: AbstractHamiltonOperator
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     ∇²::LaplaceOperator
     m::T
-    function HamiltonOperatorFreeParticle(ceg::CubicElementGrid;m=1u"me_au")
+    function HamiltonOperatorFreeParticle(ceg::AbstractElementGrid;m=1u"me_au")
         @assert dimension(m) == dimension(u"kg")
         new{typeof(m)}(ceg, LaplaceOperator(ceg), m)
     end
@@ -635,7 +637,7 @@ end
 Hamiltonian without magnetic field.
 
 # Fields
-- `elementgrid::CubicElementGrid`         :  grid information
+- `elementgrid::AbstractElementGrid`         :  grid information
 - `T::HamiltonOperatorFreeParticle{TF}`   :  kinetic energy operator
 - `V::TV`                                 :  potential energy operator
 
@@ -643,7 +645,7 @@ Hamiltonian without magnetic field.
     HamiltonOperator(V::AbstractOperator{1}; m=1u"me_au")
 """
 struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     T::HamiltonOperatorFreeParticle{TF}
     V::TV
     function HamiltonOperator(V::AbstractOperator{1}; m=1u"me_au")
@@ -665,7 +667,7 @@ Unitful.unit(H::HamiltonOperator) = unit(H.T)
 Hamiltonian with magnetic field.
 
 # Fields
-- `elementgrid::CubicElementGrid`         :  grid information
+- `elementgrid::AbstractElementGrid`         :  grid information
 - `T::HamiltonOperatorFreeParticle{TF}`   :  kinetic energy operator
 - `V::TV`                                 :  potential enegy operator
 - `A::TA`                                 :  vector potential
@@ -683,7 +685,7 @@ Hamiltonian with magnetic field.
 - `q=-1u"e_au"`               :  charge for the particle
 """
 struct HamiltonOperatorMagneticField{TF,TV,TA,Tq} <: AbstractHamiltonOperator
-    elementgrid::CubicElementGrid
+    elementgrid::AbstractElementGrid
     T::HamiltonOperatorFreeParticle{TF}
     V::TV
     A::TA

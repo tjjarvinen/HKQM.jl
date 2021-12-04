@@ -164,6 +164,17 @@ function get_1d_element(ce::CubicElementArray, i::Int)
     return Element1D(low, low+s)
 end
 
+
+function ElementVector(ce::CubicElementArray, i=1::Int)
+    @assert i in 1:3
+    start = -0.5*ce.a + ce.center[i]
+    n = size(ce, i)
+    shift = ce.a/ce.npoints
+    b = [start + j*shift for j in 1:n]
+    return ElementVector(start, b... )
+end
+
+
 function Base.getindex(ca::CubicElementArray, I::Int, J::Int, K::Int)
     low = ca.center .-  0.5 .* ca.a
     step = ca.a / ca.npoints
@@ -196,7 +207,7 @@ get_center(ce::CubicElementArray) = ce.center
 ## Element grids
 
 """
-    CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
+    CubicElementGrid{NG, NE} <: AbstractElementGridSymmetricBox
 
 Cube that is divided to smaller cubes that have integration grid.
 Elements and integration points are symmetric for x-, y- and z-axes.
@@ -214,7 +225,7 @@ julia> CubicElementGrid(5u"pm", 4, 32; origin=[1., 0., 0.].*u"nm)
 Cubic elements grid with 4^3 elements with 32^3 Gauss points
 ```
 """
-struct CubicElementGrid{NG, NE} <: AbstractElementGrid{6}
+struct CubicElementGrid{NG, NE} <: AbstractElementGridSymmetricBox
     elements::CubicElementArray
     ecenters::Vector{Float64}
     gpoints::Vector{Float64}
@@ -254,11 +265,13 @@ function Base.getindex(c::CubicElementGrid, i::Int,j::Int,k::Int, I::Int,J::Int,
 end
 
 
+ElementVector(ceg::CubicElementGrid, i=1::Int) = ElementVector(ceg.elements, i)
+
 
 """
     xgrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-x-axis coordinated of for elements and grids.
+X-coordinates in grid from.
 First index is for grids and second for elements.
 """
 xgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -266,7 +279,7 @@ xgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[1] for x in ceg.gpoints, X in ceg
 """
     ygrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-y-axis coordinated of for elements and grids.
+Y-coordinates in grid from.
 First index is for grids and second for elements.
 """
 ygrid(ceg::CubicElementGrid) = [x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -274,7 +287,7 @@ ygrid(ceg::CubicElementGrid) = [x+X+ceg.origin[2] for x in ceg.gpoints, X in ceg
 """
     zgrid(ceg::CubicElementGrid) -> Matrix{Float64}
 
-z-axis coordinated of for elements and grids.
+Z-coordinates in grid from.
 First index is for grids and second for elements.
 """
 zgrid(ceg::CubicElementGrid) = [x+X+ceg.origin[3] for x in ceg.gpoints, X in ceg.ecenters ]
@@ -290,25 +303,94 @@ the origin of grid is not specified. Which is equal to origin at 0,0,0.
 grid1d(ceg::CubicElementGrid) = [x+X for x in ceg.gpoints, X in ceg.ecenters ]
 
 
-## 1D grids
-# Plan is to build noncubic grids based on these
-
-struct ElementGridVector <: AbstractMatrix{Float64}
-    elements::ElementVector
-    r::Matrix{Float64}
-    w::Matrix{Float64}
-    function ElementGridVector(ev::ElementVector, ng)
-        tmp = gausspoints.(ev, ng)
-        r = hcat([ x[1] for x in tmp ]...)
-        w = hcat([ x[2] for x in tmp ]...)
-        new(ev, r, w)
-    end
+function get_1d_grid(ceg::CubicElementGrid, i=1::Int)
+    return ElementGridVector(ElementVector(ceg, i), size(ceg, i))
 end
 
 
-Base.size(egv::ElementGridVector) = size(egv.r)
+## 1D grids
+# Plan is to build noncubic grids based on these
 
-Base.getindex(egv::ElementGridVector, i, j) = egv.r[i,j]
+struct ElementGrid <: AbstractElementGrid{Float64, 1}
+    basis::GaussLegendre{Float64}
+    element::Element1D
+    scaling::Float64
+    shift::Float64
+    function ElementGrid(element::Element1D, n::Int)
+        scaling = ( element.high - element.low ) / 2 |> austrip
+        shift = ( element.high + element.low ) / 2 |> austrip
+        new(GaussLegendre(n-1), element, scaling, shift)
+    end
+end
+
+ElementGrid(a, b, n) = ElementGrid(Element1D(a,b), n)
+
+Base.size(eg::ElementGrid) = size(eg.basis.nodes)
+Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
+
+
+getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
+get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
+
+
+struct ElementGridVector <: AbstractElementGrid{Float64, 2}
+    elements::Vector{ElementGrid}
+    function ElementGridVector(ev::ElementVector, ng)
+        elements = [ ElementGrid(x, ng) for x in ev ]
+        new(elements)
+    end
+end
+
+function ElementGridVector(a, b, ne::Int, ng::Int)
+    @assert a < b
+    d = (b - a) / ne
+    bounds = [ a + i*d for i in 1:ne ]
+    ev = ElementVector(a, bounds...)
+    return ElementGridVector(ev, ng)
+end
+
+Base.size(egv::ElementGridVector) = (length(egv.elements[1]), length(egv.elements))
+Base.getindex(egv::ElementGridVector, i::Int, I::Int) = egv.elements[I][i]
+
+getelement(egv::ElementGridVector, i::Int) = egv.elements[i].element
+
+getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
+get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elements[1])
+
+##
+
+struct ElementGridSymmetricBox <: AbstractElementGridSymmetricBox
+    egv::ElementGridVector
+end
+
+function ElementGridSymmetricBox(a, ne::Int, ng::Int)
+    egv = ElementGridVector(-0.5a, 0.5a, ne, ng)
+    return ElementGridSymmetricBox(egv)
+end
+
+function Base.size(egsb::ElementGridSymmetricBox)
+    s = size(egsb.egv)
+    return (s[1], s[1], s[1], s[2], s[2], s[2])
+end
+
+function Base.getindex(egsb::ElementGridSymmetricBox, i::Int,j::Int,k::Int, I::Int,J::Int,K::Int )
+    return SVector( egsb.egv[i,I], egsb.egv[j,J], egsb.egv[k,K] )
+end
+
+function Base.show(io::IO, ::MIME"text/plain", egsb::ElementGridSymmetricBox)
+    s = size(egsb)
+    print(io, "ElementGridSymmetricBox $(s[end])^3 elements and $(s[1])^3 Gauss points per element")
+end
+
+
+xgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
+ygrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
+zgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
+
+getweight(egsb::ElementGridSymmetricBox) = getweight(egsb.egv)
+get_derivative_matrix(egsb::ElementGridSymmetricBox) = get_derivative_matrix(egsb.egv)
+get_1d_grid(egsb::ElementGridSymmetricBox, i=1::Int) = egsb.egv
+
 
 ## Gauss points for integration
 
