@@ -153,10 +153,12 @@ struct SlaterDeterminant <: AbstractSlaterDeterminant
             end
             return normalize!.(out)
         end
+        # We are changing orbitals so we need to take deepcopy
+        tmp = deepcopy.(orbitals)
         if orthogonalize    
-            new(_gram_schmit(orbitals))
+            new( _gram_schmit(tmp) )
         else
-            new( normalize.(orbitals) )
+            new( normalize.(tmp) )
         end
     end
 end
