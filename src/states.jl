@@ -170,6 +170,10 @@ function Base.show(io::IO, ::MIME"text/plain", s::SlaterDeterminant)
     print(io, "SlaterDetermiant $(length(s.orbitals)) orbitals")
 end
 
+function Base.show(io::IO, s::SlaterDeterminant)
+    print(io, "SlaterDetermiant $(length(s.orbitals)) orbitals")
+end
+
 Base.length(sd::SlaterDeterminant) = length(sd.orbitals)
 Base.size(sd::SlaterDeterminant) = size(sd.orbitals)
 
