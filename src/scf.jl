@@ -289,4 +289,21 @@ function scf(initial::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=1
         E₀ = E
     end
     return sd, F
-end 
+end
+
+
+"""
+    hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator)
+    hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix)
+
+Calculate Hartree-Fock energy. Fock matrix `F` is expected to be diagonal.
+"""
+function hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix)
+    # NOTE expects Diagonal Fock matrix
+    return sum( psi->bracket(psi,H,psi), sd ) + sum( diag(F) )*u"hartree" 
+end
+
+function hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator)
+    F = fock_matrix(sd, H)
+    return hf_energy(sd, H, F)
+end
