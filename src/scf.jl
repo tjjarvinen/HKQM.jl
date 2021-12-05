@@ -92,7 +92,7 @@ function helmholtz_update( sd::SlaterDeterminant,
                             ct::AbstractCoulombTransformation;
                             nt=96,
                             showprogress=false
-    )
+                            )
     Vₑₑ = 2J - exchange_operator(sd, i, ct) 
     E = bracket(sd[i], H, sd[i]) + bracket(sd[1], Vₑₑ, sd[1]) |> real
     k  = sqrt( -2( austrip(E) ) )
@@ -267,21 +267,18 @@ end
 
 
 function scf(initial::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=10, rtol=1E-6)
-    function _energy(sd, H, F)
-        return sum( psi->bracket(psi,H,psi), sd ) + sum( diag(F) )*u"hartree" 
-    end
     @info "Starting scf with $max_iter maximum iterations and $rtol tolerance."
     t = @elapsed begin
         sd, F = helmholtz_update(initial, H)
-        E₀ = _energy(sd, H, F)
+        E₀ = hf_energy(sd, H, F)
     end
     @info "i = 1,  E = $E₀,  t = $(round(t; digits=1)*u"s")"
     for i in 2:max_iter
         t = @elapsed begin 
             sd, F = helmholtz_update(sd, H, F)
-            E = _energy(sd, H, F)
+            E = hf_energy(sd, H, F)
         end
-        @info "i = $i,  E = $E,  t = $(round(t; digits=1)*u"s")"
+        @info "i = $i,  E = $E, t = $(round(t; digits=1)*u"s")"
         if  abs( (E - E₀)/E₀ ) < rtol
             @info "Targeted tolerance archieved. Exiting scf. $(abs(E - E₀)/E₀)" 
             break
