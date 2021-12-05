@@ -3,7 +3,11 @@ module HKQM
 using Reexport
 
 using ArgCheck
+using Distributed
 using FastGaussQuadrature
+using LinearAlgebra: dot, ⋅
+using LinearAlgebra: cross, ×
+using PolynomialBases
 using Polynomials
 using ProgressMeter
 using SpecialFunctions
@@ -25,13 +29,6 @@ export AbstractElementGrid,
        CubicElementGrid,
        CubicElement,
        coulomb_correction,
-       coulomb_tensor,
-       CoulombTransformation,
-       CoulombTransformationCombination,
-       CoulombTransformationLocal,
-       CoulombTransformationLog,
-       CoulombTransformationLogLocal,
-       coulombtransformation,
        DerivativeTensor,
        Element1D,
        elementsize,
@@ -84,17 +81,25 @@ export bracket,
        ω_tensor
 
 # Abstract Types
-export AbstractQuantumState
+export  AbstractQuantumState,
+        AbstractHelmholtzTensor,
+        AbstractHelmholtzTensorSingle
 
 # Concrete Types
 export CubicElementArray,
        DerivativeOperator,
+       ElementGridSymmetricBox,
        ElementGridVector,
        ElementVector,
        GradientOperator,
        HamiltonOperator,
        HamiltonOperatorFreeParticle,
        HamiltonOperatorMagneticField,
+       HelmholtzTensorCombination,
+       HelmholtzTensorLinear,
+       HelmholtzTensorLocalLinear,
+       HelmholtzTensorLocalLog,
+       HelmholtzTensorLog,
        LaplaceOperator,
        NuclearPotentialTensor,
        NuclearPotentialTensorCombination,
