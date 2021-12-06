@@ -189,10 +189,9 @@ function test_accuracy(ceg::AbstractElementGridSymmetricBox, ct::AbstractHelmhol
     r = position_operator(ceg)
     r1 = r + [0.5, 0., 0.].*d
     r2 = r - [0.5, 0., 0.].*d
-    q1 = QuantumState( exp( -0.5α1*u"bohr^-2"*(r1⋅r1) ) )
-    q2 = QuantumState( exp( -0.5α1*u"bohr^-2"*(r2⋅r2) ) )
-    sd = SlaterDeterminant(q1)
-    V = coulomb_operator(sd, ct; correction=correction, showprogress=showprogress)
+    q1 = QuantumState( exp( -0.5α1*u"bohr^-2"*(r1⋅r1) ) ) # unnormalized
+    q2 = QuantumState( exp( -0.5α2*u"bohr^-2"*(r2⋅r2) ) )
+    V = -1u"e_au" * electric_potential(q1, ct; showprogress=showprogress, correction=correction) 
     V_corr = ScalarOperator(ceg, coulomb_correction(density_operator(q1).vals, ct.tmax); unit=u"hartree")
 
     E_cor = bracket(q2, V_corr, q2)

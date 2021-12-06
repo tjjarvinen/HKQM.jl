@@ -2,6 +2,7 @@ module HKQM
 
 using Reexport
 
+using ArgCheck
 using Distributed
 using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
@@ -16,14 +17,12 @@ using Tullio
 @reexport using PeriodicTable
 @reexport using Unitful
 @reexport using UnitfulAtomic
+@reexport import LinearAlgebra: dot, cross, normalize!
 
 # Submodule
 include("submodules/ReferenceStates.jl")
 using .ReferenceStates
 
-import LinearAlgebra.dot
-import LinearAlgebra.cross
-import LinearAlgebra.normalize!
 
 export AbstractElementGrid,
        AbstractOperator,
@@ -53,22 +52,30 @@ export AbstractElementGrid,
 
 # Methods
 export bracket,
+       charge_density,
        coulomb_operator,
        cross, ×,
        density_operator,
        dot, ⋅,
+       exchange_operator,
+       electric_potential,
+       fock_matrix,
        get_center,
        helmholtz_equation,
        helmholtz_equation!,
+       helmholtz_update,
+       hf_energy,
        ketbra, ⋆,
        magnetic_current,
        momentum_operator,
        #nuclear_potential,
        optimal_coulomb_tranformation,
+       overlap_matrix,
        para_magnetic_current,
        poisson_equation,
        poisson_equation!,
        position_operator,
+       scf,
        test_nuclear_potential,
        vector_potential,
        ω_tensor

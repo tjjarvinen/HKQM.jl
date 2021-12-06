@@ -64,15 +64,11 @@ end
 
 
 function bracket(op::AbstractOperator, sd::SlaterDeterminant)
-    # One electron operator, so operate on each orbital
-    S = map(ψ->bracket(ψ,ψ), sd.orbitals )
-    val = @distributed (+) for i in axes(S, 1)
-        tmp = 2*bracket(sd.orbitals[i], op, sd.orbitals[i])
-        p1 = i > 1 ? prod( S[1:i-1] ) : 1
-        p2 = i < length(S) ? prod( S[i+1:end] ) : 1
-        tmp .* (p1 * p2)
+    # One electron operator, so operate on each orbital and multiply by 2
+    val = @distributed (+) for i in axes(sd, 1)
+        bracket(sd[i], op, sd[i])
     end
-    return val
+    return 2 * val
 end
 
 """
@@ -178,17 +174,10 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
     nt = size(transtensor)[end]
     @debug "nt=$nt"
     @debug "V type = $(typeof(V))"
-    ptime = showprogress ? 0.3 : Inf
-    if nworkers() > 1
-        tmp = similar(V) # Yes it is a hack
-        V = @showprogress ptime "Poisson equation... " @distributed (+) for t in 1:nt
-            poisson_equation!(tmp, ρ, transtensor, t)
-        end
-    else
-        tmp = similar(V)
-        @showprogress ptime "Poisson equation... " for t in 1:nt
-            V .+= poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
-        end
+    ptime = showprogress ? 1 : Inf
+    tmp = similar(V)
+    V = sum( axes(transtensor.wt, 1) ) do t
+        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])  
     end
     if tmax != nothing
         return V .+ coulomb_correction(ρ, tmax)
