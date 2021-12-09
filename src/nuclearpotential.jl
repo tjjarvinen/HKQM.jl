@@ -129,7 +129,8 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
         t = exp.(s)
         wt = ws .* t
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
-        grid = Array(grid1d(ceg)) .- rt
+        tmp = get_1d_grid(ceg)
+        grid = tmp .- rt
         ss = size(grid)
 
         # get range around points [x+δm, x+δp]
@@ -139,8 +140,8 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
         δm[2:end,:] = grid[1:end-1,:] .- grid[2:end,:]
         δp[1:end-1,:] = grid[2:end,:] .- grid[1:end-1,:]
         for j in 1:ss[2]
-            δm[1,j] = ceg.elements[j].low - grid[1,j]
-            δp[end,j] = ceg.elements[j].high - grid[end,j]
+            δm[1,j] =  austrip( getelement(tmp, j).low ) - grid[1,j]
+            δp[end,j] = austrip( getelement(tmp, j).high ) - grid[end,j]
         end
         new{eltype(δm)}(grid, t, wt, tmin, tmax, rt, δ, δ.*δp, δ.*δm)
     end
