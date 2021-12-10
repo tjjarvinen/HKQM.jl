@@ -18,6 +18,11 @@ disable_logging(Logging.Info)
     ev = ElementVector(0, 2, 5, 7)
     @test length(ev) == 3
 
+    eg = ElementGrid(0, 3, 32)
+    u = sin.(eg)
+    x = range(0,3; length=200)
+    @test sin.(x) ≈ eg(x, u)
+
     egv = ElementGridVector(ev, 6)
     @test size(egv) == (6,3)
     @test egv[begin, begin] >= 0
