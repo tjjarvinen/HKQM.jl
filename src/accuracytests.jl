@@ -82,6 +82,11 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
         npt1 = NuclearPotentialTensorLogLocal(origin[1], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
         npt2 = NuclearPotentialTensorLogLocal(origin[2], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
         npt3 = NuclearPotentialTensorLogLocal(origin[3], ceg, nt; tmin=tmin, tmax=tmax, δ=δ)
+    elseif mode == "integral"
+        @info "integral"
+        npt1 = NuclearPotentialTensorIntegral(origin[1], ceg, nt; tmin=tmin, tmax=tmax)
+        npt2 = NuclearPotentialTensorIntegral(origin[2], ceg, nt; tmin=tmin, tmax=tmax)
+        npt3 = NuclearPotentialTensorIntegral(origin[3], ceg, nt; tmin=tmin, tmax=tmax)
     elseif mode == "preset"
         @info "Preset mode"
         v1 = optimal_nuclear_tensor(ceg, origin[1])

@@ -90,6 +90,7 @@ export CubicElementArray,
        DerivativeOperator,
        ElementGridSymmetricBox,
        ElementGridVector,
+       ElementGrid,
        ElementVector,
        GradientOperator,
        HamiltonOperator,
@@ -119,6 +120,7 @@ include("elements.jl")
 include("states.jl")
 #include("bubbles.jl")
 include("tensors.jl")
+include("nuclearpotential.jl")
 include("operators.jl")
 include("integrations.jl")
 include("accuracytests.jl")

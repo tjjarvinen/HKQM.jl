@@ -327,10 +327,17 @@ ElementGrid(a, b, n) = ElementGrid(Element1D(a,b), n)
 
 Base.size(eg::ElementGrid) = size(eg.basis.nodes)
 Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
+Base.show(io::IO, ::ElementGrid) = print(io, "ElementGrid")
 
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
 get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
+
+
+function (eg::ElementGrid)(r, u)
+    x = ( r .- eg.shift ) ./ eg.scaling
+    return  interpolate(x, u, eg.basis)
+end
 
 
 struct ElementGridVector <: AbstractElementGrid{Float64, 2}
