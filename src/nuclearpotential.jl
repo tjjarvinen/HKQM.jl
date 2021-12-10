@@ -31,11 +31,11 @@ struct NuclearPotentialTensor{T} <: AbstractNuclearPotentialSingle{T}
     tmin::Float64
     tmax::Float64
     r::T
-    function NuclearPotentialTensor(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+    function NuclearPotentialTensor(r, ceg::AbstractElementGridSymmetricBox, nt::Int; tmin=0, tmax=30)
         @assert dimension(r) == NoDims || dimension(r) == dimension(u"m")
         rt = austrip(r)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
-        grid = Array(grid1d(ceg)) .- rt
+        grid = get_1d_grid(ceg) .- rt 
         new{eltype(grid)}(grid, t, wt, tmin, tmax, rt)
     end
 end
@@ -70,13 +70,13 @@ struct NuclearPotentialTensorLog{T} <: AbstractNuclearPotentialSingle{T}
     tmin::Float64
     tmax::Float64
     r::T
-    function NuclearPotentialTensorLog(r, ceg::CubicElementGrid, nt::Int; tmin=0, tmax=30)
+    function NuclearPotentialTensorLog(r, ceg::AbstractElementGridSymmetricBox, nt::Int; tmin=0, tmax=30)
         @assert dimension(r) == NoDims || dimension(r) == dimension(u"m")
         rt = austrip(r)
         s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
         t = exp.(s)
         wt = ws .* t
-        grid = Array(grid1d(ceg)) .- rt
+        grid = get_1d_grid(ceg) .- rt
         new{eltype(grid)}(grid, t, wt, tmin, tmax, rt)
     end
 end
@@ -119,7 +119,7 @@ struct NuclearPotentialTensorLogLocal{T} <: AbstractNuclearPotentialSingle{T}
     δ::Float64
     δp::Matrix{T}
     δm::Matrix{T}
-    function NuclearPotentialTensorLogLocal(r, ceg::CubicElementGrid, nt::Int;
+    function NuclearPotentialTensorLogLocal(r, ceg::AbstractElementGridSymmetricBox, nt::Int;
                                            tmin=0, tmax=30, δ=0.25)
         @assert 0 < δ <= 1
         @assert 0 <= tmin < tmax
@@ -166,7 +166,7 @@ Easy way is to use [`PotentialTensor`](@ref) to get 3D tensor.
 - `β::Float64`               : Width of Gaussian exp(-βr²)
 
 # Creation
-    NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; β=100, tmin=0, tmax=20)
+    NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt, β=100; tmin=0, tmax=20)
 
 - `r`                       : Nuclear coordinate (1D)
 - `ceg::CubicElementGrid`   : Grid for the potential
@@ -180,19 +180,21 @@ struct NuclearPotentialTensorGaussian{T} <: AbstractNuclearPotentialSingle{T}
     tmax::Float64
     r::T
     β::Float64
-    function NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt, β; tmin=0, tmax=20)
+    function NuclearPotentialTensorGaussian(r, ceg::AbstractElementGridSymmetricBox, nt, β; tmin=0, tmax=20)
         @assert dimension(r) == NoDims || dimension(r) == dimension(u"m")
         rt = austrip(r)
         s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
         t = exp.(s)
         wt = ws .* t
-        grid = Array(grid1d(ceg)) .- rt
+        grid = get_1d_grid(ceg) .- rt
         new{eltype(grid)}(grid, t, wt, tmin, tmax, rt, β)
     end
 end
 
-function NuclearPotentialTensorGaussian(r, ceg::CubicElementGrid, nt; σ=0.1, tmin=0, tmax=20)
-    min_d = elementsize(ceg.elements) / size(ceg)[1] |> austrip
+function NuclearPotentialTensorGaussian(r, ceg::AbstractElementGridSymmetricBox, nt; σ=0.1, tmin=0, tmax=20)
+    egv = get_1d_grid(ceg)
+    min_d = elementsize(egv.elements[1].element) / size(ceg)[1] |> austrip
+    #min_d = elementsize(ceg.elements) / size(ceg)[1] |> austrip
     β = 0.5*(σ*min_d)^-2
     return NuclearPotentialTensorGaussian(r, ceg, nt, β; tmin=tmin, tmax=tmax)
 end
@@ -418,7 +420,7 @@ struct NuclearPotentialTensorIntegral{T} <: AbstractNuclearPotentialSingle{T}
     tmin::Float64
     tmax::Float64
     r::T
-    function NuclearPotentialTensorIntegral( ceg::AbstractElementGridSymmetricBox, r, nt; tmin=0., tmax=20. )
+    function NuclearPotentialTensorIntegral(r, ceg::AbstractElementGridSymmetricBox, nt; tmin=0., tmax=20. )
         @assert dimension(r) == NoDims || dimension(r) == dimension(u"m")
         rt = austrip(r)
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
@@ -442,11 +444,8 @@ function Base.getindex(npti::NuclearPotentialTensorIntegral, i::Int, I::Int, t::
 
     u = [ k==i ? 1. : 0. for k in axes(npti,1) ] # Interpolation weights
     t² = npti.t[t]^2
-
-    integral, err = quadgk( r -> exp(-t²*(r-npti.r)^2 ) * _f(r, u), l, h; rtol=-1e8)
+    integral, err = quadgk( r -> exp(-t²*(r-npti.r)^2 ) * _f(r, u), l, h; rtol=1e8)
     return integral
-    #r = npti.elementgrid[i, I] - npti.r
-    #return exp( -( npti.t[t] * r )^2 )
 end
 
 
@@ -457,7 +456,7 @@ struct NuclearPotentialTensorLogIntegral{T} <: AbstractNuclearPotentialSingle{T}
     tmin::Float64
     tmax::Float64
     r::T
-    function NuclearPotentialTensorLogIntegral( ceg::AbstractElementGridSymmetricBox, r, nt; tmin=0., tmax=20. )
+    function NuclearPotentialTensorLogIntegral(r, ceg::AbstractElementGridSymmetricBox, nt; tmin=0., tmax=20. )
         @assert dimension(r) == NoDims || dimension(r) == dimension(u"m")
         rt = austrip(r)
         s, ws = gausspoints(nt; elementsize=(log(tmin+1e-12), log(tmax)))
@@ -484,6 +483,24 @@ function Base.getindex(npti::NuclearPotentialTensorLogIntegral, i::Int, I::Int, 
     u = [ k==i ? 1. : 0. for k in axes(npti,1) ] # Interpolation weights
     t² = npti.t[t]^2
 
-    integral, err = quadgk( r -> exp(-t²*(r-npti.r)^2 ) * _f(r, u), l, h; rtol=-1e8)
+    integral, err = quadgk( r -> exp(-t²*(r-npti.r)^2 ) * _f(r, u), l, h; rtol=1e8)
     return integral
+end
+
+
+struct NuclearPotentialTensorStash{T} <: AbstractNuclearPotentialSingle{T}
+    elementgrid::ElementGridVector
+    t::Vector{Float64}
+    wt::Vector{Float64}
+    tmin::Float64
+    tmax::Float64
+    r::T
+    vals::Array{T,3}
+    function NuclearPotentialTensorStash(np::AbstractNuclearPotentialSingle)
+        vals = zeros(eltype(np), size(np))
+        Threads.@threads for i in eachindex(np)
+            vals[i] = np[i]
+        end
+        new{eltype(np)}(np.elementgrid, np.t, np.wt, np.tmin, np.tmax, np.r, vals)
+    end
 end
