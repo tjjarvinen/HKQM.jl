@@ -486,21 +486,3 @@ function Base.getindex(npti::NuclearPotentialTensorLogIntegral, i::Int, I::Int, 
     integral, err = quadgk( r -> exp(-t²*(r-npti.r)^2 ) * _f(r, u), l, h; rtol=1e8)
     return integral
 end
-
-
-struct NuclearPotentialTensorStash{T} <: AbstractNuclearPotentialSingle{T}
-    elementgrid::ElementGridVector
-    t::Vector{Float64}
-    wt::Vector{Float64}
-    tmin::Float64
-    tmax::Float64
-    r::T
-    vals::Array{T,3}
-    function NuclearPotentialTensorStash(np::AbstractNuclearPotentialSingle)
-        vals = zeros(eltype(np), size(np))
-        Threads.@threads for i in eachindex(np)
-            vals[i] = np[i]
-        end
-        new{eltype(np)}(np.elementgrid, np.t, np.wt, np.tmin, np.tmax, np.r, vals)
-    end
-end
