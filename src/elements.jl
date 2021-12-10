@@ -332,9 +332,10 @@ Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
 get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
 
+
 function (eg::ElementGrid)(r, u)
     x = ( r .- eg.shift ) ./ eg.scaling
-    return  eg.scaling .* interpolate(x, u, eg.basis) .+ eg.shift
+    return  interpolate(x, u, eg.basis)
 end
 
 
