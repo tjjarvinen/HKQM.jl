@@ -112,7 +112,7 @@ function helmholtz_update(sd::SlaterDeterminant, H::HamiltonOperator, J::ScalarO
 end
 
 
-function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
+function helmholtz_update_old(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
     @argcheck size(F,1) == size(F,2) == length(sd)
     # No preconditioning
 
@@ -130,6 +130,31 @@ function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F:
         return nsd
     end
 end
+
+
+function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
+    @argcheck size(F,1) == size(F,2) == length(sd)
+    # No preconditioning
+
+    # Update orbitals
+    ct = optimal_coulomb_tranformation(sd)
+    wsd = sd
+    for i in axes(sd,1)
+        J = coulomb_operator(wsd, ct)
+        tmp = helmholtz_update(wsd, H, J, i, ct)
+        sd_tmp = SlaterDeterminant( [ j==i ? tmp : wsd[j] for j in axes(wsd,1) ] )
+        f = fock_matrix(sd_tmp, H)
+        ev, ve = eigen( f )
+        wsd = SlaterDeterminant( ve'*sd_tmp )
+        F = Diagonal(ev)
+    end
+    if return_fock_matrix
+        return wsd, F
+    else
+        return wsd
+    end
+end
+
 
 function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false, return_fock_matrix=true)
     #Preconditioning
