@@ -107,7 +107,7 @@ function helmholtz_update( sd::SlaterDeterminant,
                            showprogress=false
                            )
     Vₑₑ = 2J - exchange_operator(sd, i, ct) 
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[1], Vₑₑ, sd[1]) |> real
+    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     ϕ = H.T.m * (H.V + Vₑₑ) * 1u"ħ_au^-2" * sd[i]
@@ -125,13 +125,13 @@ function helmholtz_update( sd::SlaterDeterminant,
                             showprogress=false
                             )
     Vₑₑ = 2J - exchange_operator(sd, i, ct) 
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[1], Vₑₑ, sd[1]) |> real
+    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     p = momentum_operator(H.T)
-    ϕ = H.T.m * (H.V + J)* 1u"ħ_au^-2" * sd[1]
-    ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd[1]
-    ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd[1]
+    ϕ = H.T.m * (H.V +  Vₑₑ)* 1u"ħ_au^-2" * sd[i]
+    ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd[i]
+    ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd[i]
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
 return normalize!(tmp)
 end
