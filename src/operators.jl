@@ -421,9 +421,9 @@ struct ConstantTimesOperator{TO,T,N} <: AbstractOperator{N}
     a::T
     function ConstantTimesOperator(op::AbstractOperator{N}, a=1) where N
         if ustrip(imag(a)) ≈ 0
-            new{typeof(op),typeof(real(a)), N}(op.elementgrid, op, real(a))
+            new{typeof(op),typeof(real(a)), N}(get_elementgrid(op), op, real(a))
         else
-            new{typeof(op),typeof(a), N}(op.elementgrid, op, a)
+            new{typeof(op),typeof(a), N}(get_elementgrid(op), op, a)
         end
     end
 end
@@ -476,7 +476,7 @@ struct OperatorSum{TO1, TO2, N} <: AbstractCompositeOperator{N}
         @assert size(op1) == size(op2)
         @assert dimension(op1) == dimension(op2) "Operators have different unit dimensions"
         if unit(op1) == unit(op2)
-            new{typeof(op1),typeof(op2),N}(op1.elementgrid, op1, op2)
+            new{typeof(op1),typeof(op2),N}(get_elementgrid(op1), op1, op2)
         else
             new{typeof(op1),typeof(op2),N}(get_elementgrid(op1), op1, uconvert(unit(op1), op2))
         end
@@ -553,7 +553,7 @@ struct LaplaceOperator <: AbstractOperator{1}
     elementgrid::AbstractElementGrid
     g::GradientOperator
     function LaplaceOperator(g::GradientOperator)
-        new(g.elementgrid, g)
+        new(get_elementgrid(g), g)
     end
     function LaplaceOperator(ceg::AbstractElementGrid)
         new(ceg, GradientOperator(ceg))
@@ -571,7 +571,7 @@ function (lo::LaplaceOperator)(qs::QuantumState)
     tmp .= lo.g.dt
     @tensor w[i,j]:=tmp[i,k]*tmp[k,j]
     @tensor ϕ[i,j,k,I,J,K]:= w[i,ii]*qs.psi[ii,j,k,I,J,K] + w[j,jj]*qs.psi[i,jj,k,I,J,K] + w[k,kk]*qs.psi[i,j,kk,I,J,K]
-    return QuantumState(qs.elementgrid, ϕ, unit(qs)*unit(lo.g)^2)
+    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
 end
 
 
@@ -651,8 +651,8 @@ struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
     function HamiltonOperator(V::AbstractOperator{1}; m=1u"me_au")
         @assert dimension(V) == dimension(u"J")
         @assert dimension(m) == dimension(u"kg")
-        T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
-        new{typeof(T.m),typeof(V)}(V.elementgrid, T, V)
+        T = HamiltonOperatorFreeParticle(get_elementgrid(V); m=m)
+        new{typeof(T.m),typeof(V)}(get_elementgrid(V), T, V)
     end
 end
 
@@ -701,7 +701,7 @@ struct HamiltonOperatorMagneticField{TF,TV,TA,Tq} <: AbstractHamiltonOperator
         @assert dimension(m) == dimension(u"kg")
         @assert dimension(q) == dimension(u"e_au")
         T = HamiltonOperatorFreeParticle(V.elementgrid; m=m)
-        new{typeof(T.m),typeof(V),typeof(A),typeof(q)}(V.elementgrid, T, V, A, q)
+        new{typeof(T.m),typeof(V),typeof(A),typeof(q)}(get_elementgrid(V), T, V, A, q)
     end
 end
 
