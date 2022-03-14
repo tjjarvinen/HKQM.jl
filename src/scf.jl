@@ -124,7 +124,7 @@ function helmholtz_update( sd::SlaterDeterminant,
                             nt=96,
                             showprogress=false
                             )
-    Vₑₑ = 2J - exchange_operator(sd, i, ct) 
+    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong
     E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
@@ -227,13 +227,17 @@ end
 
 
 function coulomb_operator(density::ScalarOperator, ct::AbstractCoulombTransformation; correction=true, showprogress=false)
+    # Given total charge density
+    # Calculate electric potential and multiply it with charge
+    # To get potential energy
     if correction
         ϕ = poisson_equation(density.vals, ct, tmax=ct.tmax, showprogress=showprogress)
     else
         ϕ = poisson_equation(density.vals, ct, showprogress=showprogress)
     end
-    # Density is expected to be 0.5 electron density
+    # Density is expected to be 0.5 * electron density
     # to create literature vesion where F = h + 2J + K and not F = h + J + K
+    # Electron charge is expected to be -1
     return ScalarOperator(get_elementgrid(density), ϕ; unit=u"hartree")
 end
 
@@ -254,6 +258,7 @@ Calculate exchange operator for given `SlaterDeterminant` and orbital index.
 - `showprogress=false`     : Show progress meter for Poisson equation solving
 """
 function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTransformation; showprogress=false)
+    # 
     @argcheck 0 < i <= length(sd)
     ρ = ketbra( sum( sd.orbitals ), sd.orbitals[i] )
     ϕ = poisson_equation(ρ, ct, tmax=ct.tmax, showprogress=showprogress)
