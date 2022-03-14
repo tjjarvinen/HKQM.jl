@@ -106,11 +106,11 @@ function helmholtz_update( sd::SlaterDeterminant,
                            nt=96,
                            showprogress=false
                            )
-    Vₑₑ = 2J - exchange_operator(sd, i, ct) 
+    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
     E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
-    ϕ = H.T.m * (H.V + Vₑₑ) * 1u"ħ_au^-2" * sd[i]
+    ϕ = H.T.m * (H.V + Vₑₑ) * 1u"ħ_au^-2" * sd[i]   #TODO here is the second time
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
     return normalize!(tmp)
 end
@@ -124,7 +124,7 @@ function helmholtz_update( sd::SlaterDeterminant,
                             nt=96,
                             showprogress=false
                             )
-    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong
+    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
     E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
@@ -258,7 +258,7 @@ Calculate exchange operator for given `SlaterDeterminant` and orbital index.
 - `showprogress=false`     : Show progress meter for Poisson equation solving
 """
 function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTransformation; showprogress=false)
-    # 
+    # TODO this need to be fixed
     @argcheck 0 < i <= length(sd)
     ρ = ketbra( sum( sd.orbitals ), sd.orbitals[i] )
     ϕ = poisson_equation(ρ, ct, tmax=ct.tmax, showprogress=showprogress)
