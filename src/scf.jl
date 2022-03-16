@@ -253,16 +253,16 @@ Calculate exchange operator for given `SlaterDeterminant` and orbital index.
 
 # Optional Arguments
 - `ct::AbstractCoulombTransformation`  :  transformation tensor, if not given `optimal_coulomb_tranformation` is used
-
-# Kwargs
-- `showprogress=false`     : Show progress meter for Poisson equation solving
 """
 function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTransformation; showprogress=false)
-    # TODO this need to be fixed
+    # TODO this should be ok
     @argcheck 0 < i <= length(sd)
-    ρ = ketbra( sum( sd.orbitals ), sd.orbitals[i] )
-    ϕ = poisson_equation(ρ, ct, tmax=ct.tmax, showprogress=showprogress)
-    return ScalarOperator(get_elementgrid(sd), ϕ; unit=u"hartree")
+    ψ = sum(sd) do ϕ
+        ρ = ketbra( ϕ, sd[i] )
+        tmp = poisson_equation(ρ, ct, tmax=ct.tmax)
+        ScalarOperator(get_elementgrid(sd), tmp; unit=u"hartree") * ϕ
+    end
+    return ψ
 end
 
 
@@ -275,7 +275,7 @@ end
 """
     fock_matrix(Args, Kwargs) -> Matrix
 
-Return Fock matrix for given orbital space
+Return Fock matrix for given orbital space. The matrix is not necessary Hermiations, to allow checks for calculations.
 
 # Arguments
 - `sd::SlaterDeterminant`        :   Orbitals on which Fock matrix is calculated
@@ -288,24 +288,15 @@ Return Fock matrix for given orbital space
 - `nt=96`    : number of t-integration points, if `ct` is not given
 """
 function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator, ct::AbstractCoulombTransformation; showprogress=false)
-    p = Progress(length(sd)+1, (showprogress ? 1 : Inf), "Calculating Fock matrix ... ")
     J = coulomb_operator(sd, ct)
-    next!(p)
-    out = zeros(length(sd), length(sd))
-
-    #NOTE Fock matrix is calculated as non-symmetric here
-    tmp = pmap( axes(sd,1) ) do j
-        K = exchange_operator(sd, j, ct)
-        f = H + (2J + K)
+    F = pmap( axes(sd,1) ) do j
+        K = exchange_operator(sd, j)  # Might be ok the send in ct, but might be a waste of bandwith
         map( axes(sd,1) ) do i
-            tmp = bracket(sd[i], f, sd[j])
-            (austrip∘real)(tmp)
+            # F = h + 2J - K
+            bracket(sd[i], H, sd[j]) + 2*bracket(sd[i], J, sd[j]) - bracket(sd[i], K) 
         end
     end
-    for (j,col) in zip(axes(out,2), tmp)
-        out[:,j] .= col
-    end
-    return out
+    return hcat(F...)
 end
 
 
@@ -316,14 +307,11 @@ end
 
 
 function overlap_matrix(sd::SlaterDeterminant)
-    s = zeros(length(sd), length(sd))
-    # TODO consider parallel excecution here
-    for i in axes(sd,1)
-        for j in i:length(sd)
-            s[i,j] = bracket(sd[i], sd[j])
-        end
+    #TODO Make this calculation to use symmetricity of the result
+    S = pmap( Iterators.product(axes(sd,1), axes(sd,1)) ) do (i,j)
+            bracket(sd[i], sd[j])
     end
-    return Symmetric(s)
+    return S
 end
 
 
