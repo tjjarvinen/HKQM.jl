@@ -174,9 +174,19 @@ function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; sh
     # Because exchange integral needs it.
     # Thus is better to calculate Coulomb operator differently on each node.
     # and save a little bit on transfer time.
-    tmp = pmap( axes(sd,1) ) do i
+    @debug "Number of progs in helmholtz_update $(nprocs())"
+    if nprocs() == 1
+        @debug "Doing non parallel helmholtz_update"
         J = coulomb_operator(sd)
-        helmholtz_update(sd, H, J, i)
+        tmp = map( axes(sd,1) ) do i
+            helmholtz_update(sd, H, J, i)
+        end
+    else
+        @debug "Doing parallel helmholtz_update"
+        tmp = pmap( axes(sd,1) ) do i
+            J = coulomb_operator(sd)
+            helmholtz_update(sd, H, J, i)
+        end
     end
     return SlaterDeterminant(tmp)
 end
@@ -331,7 +341,7 @@ end
 
 function scf(sd::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=10, tol=1E-6)
     tmp = deepcopy(sd)
-    return scf!(sd::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=max_iter, tol=tol)    
+    return scf!(tmp::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=max_iter, tol=tol)    
 end
 
 
