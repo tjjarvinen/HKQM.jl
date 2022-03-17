@@ -106,11 +106,12 @@ function helmholtz_update( sd::SlaterDeterminant,
                            nt=96,
                            showprogress=false
                            )
-    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
+    Kψ = exchange_operator(sd, i, ct)
+    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], 2J, sd[i]) - bracket(sd[1], Kψ) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
-    ϕ = H.T.m * (H.V + Vₑₑ) * 1u"ħ_au^-2" * sd[i]   #TODO here is the second time
+    ϕ = (H.V + 2J) * sd[i] - Kψ  
+    ϕ *= H.T.m * 1u"ħ_au^-2"
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
     return normalize!(tmp)
 end
@@ -124,14 +125,15 @@ function helmholtz_update( sd::SlaterDeterminant,
                             nt=96,
                             showprogress=false
                             )
-    Vₑₑ = 2J - exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], Vₑₑ, sd[i]) |> real
+    Kψ = exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
+    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], 2J, sd[i]) - bracket(sd[1], Kψ) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     p = momentum_operator(H.T)
-    ϕ = H.T.m * (H.V +  Vₑₑ)* 1u"ħ_au^-2" * sd[i]
-    ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd[i]
-    ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd[i]
+    ϕ = (H.V + 2J) * sd[i] - Kψ  
+    ϕ *= H.T.m * 1u"ħ_au^-2"
+    ϕ += (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd[i]
+    ϕ += (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd[i]
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
 return normalize!(tmp)
 end
@@ -140,26 +142,6 @@ end
 function helmholtz_update(sd::SlaterDeterminant, H::HamiltonOperator, J::ScalarOperator, i::Int; nt=96, showprogress=false)
     ct = optimal_coulomb_tranformation(get_elementgrid(sd), nt);
     return helmholtz_update(sd, H, J, i, ct; nt=nt, showprogress=false)
-end
-
-
-function helmholtz_update_old(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
-    @argcheck size(F,1) == size(F,2) == length(sd)
-    # No preconditioning
-
-    # Update orbitals
-    ct = optimal_coulomb_tranformation(sd)
-    J = coulomb_operator(sd, ct)
-    nsd = pmap(i->helmholtz_update(sd, H, J, i, ct),  axes(sd,1) ) |> SlaterDeterminant
-    if return_fock_matrix
-        f = fock_matrix(nsd, H)
-        ev, ve = eigen( f )
-        tmp = SlaterDeterminant( ve'*nsd )
-        F = Diagonal(ev)
-        return tmp, F
-    else
-        return nsd
-    end
 end
 
 
@@ -187,14 +169,16 @@ function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F:
 end
 
 
-function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false, return_fock_matrix=true)
-    #Preconditioning
-    f = fock_matrix(sd, H)
-    ev, ve = eigen( f )
-    nsd = SlaterDeterminant( ve'*sd )
-    F = Diagonal(ev)
-
-    return helmholtz_update(nsd, H, F; showprogress=showprogress, return_fock_matrix=return_fock_matrix)
+function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false)
+    # To do calculation the whole Slater determinant needs to be moved to everywhere.
+    # Because exchange integral needs it.
+    # Thus is better to calculate Coulomb operator differently on each node.
+    # and save a little bit on transfer time.
+    tmp = pmap( axes(sd,1) ) do i
+        J = coulomb_operator(sd)
+        helmholtz_update(sd, H, J, i)
+    end
+    return SlaterDeterminant(tmp)
 end
 
 ##
@@ -257,6 +241,7 @@ Calculate exchange operator for given `SlaterDeterminant` and orbital index.
 function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTransformation; showprogress=false)
     # TODO this should be ok
     @argcheck 0 < i <= length(sd)
+    # ΣⱼKⱼψᵢ
     ψ = sum(sd) do ϕ
         ρ = ketbra( ϕ, sd[i] )
         tmp = poisson_equation(ρ, ct, tmax=ct.tmax)
@@ -290,10 +275,10 @@ Return Fock matrix for given orbital space. The matrix is not necessary Hermiati
 function fock_matrix(sd::SlaterDeterminant, H::AbstractHamiltonOperator, ct::AbstractCoulombTransformation; showprogress=false)
     J = coulomb_operator(sd, ct)
     F = pmap( axes(sd,1) ) do j
-        K = exchange_operator(sd, j)  # Might be ok the send in ct, but might be a waste of bandwith
-        map( axes(sd,1) ) do i
+        Kψ = exchange_operator(sd, j)  # Might be ok the send in ct, but might be a waste of bandwith
+        map( axes(sd,1) ) do i  #TODO Fock matrix is symmetric, thus here is a little extra
             # F = h + 2J - K
-            bracket(sd[i], H, sd[j]) + 2*bracket(sd[i], J, sd[j]) - bracket(sd[i], K) 
+            bracket(sd[i], H, sd[j]) + 2*bracket(sd[i], J, sd[j]) - bracket(sd[i], Kψ) 
         end
     end
     return hcat(F...)
@@ -315,26 +300,38 @@ function overlap_matrix(sd::SlaterDeterminant)
 end
 
 
-function scf(initial::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=10, rtol=1E-6)
-    @info "Starting scf with $max_iter maximum iterations and $rtol tolerance."
-    t = @elapsed begin
-        sd, F = helmholtz_update(initial, H)
-        E₀ = hf_energy(sd, H, F)
+function scf!(sd::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter::Int=10, tol=1E-6)
+    @argcheck tol > 0
+    @argcheck max_iter > 0
+    function _check_overlap(sd0, sd1)
+        tmp = (abs ∘ bracket).(sd0, sd1) |> minimum
+        return round(1 - tmp; sigdigits=2)
     end
-    @info "i = 1,  E = $E₀,  t = $(round(t; digits=1)*u"s")"
+    @info "Starting scf with $max_iter maximum iterations and $tol tolerance."
+    t = @elapsed begin
+        sdn = helmholtz_update(sd, H)
+        dS = _check_overlap(sd, sdn)
+        sd = sdn
+    end
+    @info "i = 1,  ΔS = $dS,  t = $(round(t; digits=1)*u"s")"
     for i in 2:max_iter
         t = @elapsed begin 
-            sd, F = helmholtz_update(sd, H, F)
-            E = hf_energy(sd, H, F)
+            sdn = helmholtz_update(sd, H)
+            dS = _check_overlap(sd, sdn)
+            sd = sdn
         end
-        @info "i = $i,  E = $E, t = $(round(t; digits=1)*u"s")"
-        if  abs( (E - E₀)/E₀ ) < rtol
-            @info "Targeted tolerance archieved. Exiting scf. $(abs(E - E₀)/E₀)" 
+        @info "i = $i,  ΔS = $dS, t = $(round(t; digits=1)*u"s")"
+        if  dS < tol
+            @info "Targeted tolerance archieved. Exiting scf. $dS < $tol" 
             break
         end 
-        E₀ = E
     end
-    return sd, F
+    return sd
+end
+
+function scf(sd::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=10, tol=1E-6)
+    tmp = deepcopy(sd)
+    return scf!(sd::SlaterDeterminant, H::AbstractHamiltonOperator; max_iter=max_iter, tol=tol)    
 end
 
 
@@ -346,7 +343,7 @@ Calculate Hartree-Fock energy. Fock matrix `F` is expected to be diagonal.
 """
 function hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix)
     # NOTE expects Diagonal Fock matrix
-    return sum( psi->bracket(psi,H,psi), sd ) + sum( diag(F) )*u"hartree" 
+    return sum( psi->bracket(psi,H,psi), sd ) + sum( diag(F) )
 end
 
 function hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator)

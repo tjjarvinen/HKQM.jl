@@ -76,6 +76,7 @@ export bracket,
        poisson_equation!,
        position_operator,
        scf,
+       scf!,
        test_nuclear_potential,
        vector_potential,
        ω_tensor
