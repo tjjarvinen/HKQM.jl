@@ -303,7 +303,8 @@ end
 
 function overlap_matrix(sd::SlaterDeterminant)
     #TODO Make this calculation to use symmetricity of the result
-    S = pmap( Iterators.product(axes(sd,1), axes(sd,1)) ) do (i,j)
+    # Also some kind of parallelization might work here
+    S = map( Iterators.product(axes(sd,1), axes(sd,1)) ) do (i,j)
             bracket(sd[i], sd[j])
     end
     return S
