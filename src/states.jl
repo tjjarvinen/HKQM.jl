@@ -59,6 +59,10 @@ function Base.show(io::IO, ::MIME"text/plain", ::AbstractQuantumState)
     print(io, "Quantum state")
 end
 
+function Base.show(io::IO, ::AbstractQuantumState)
+    print(io, "Quantum state")
+end
+
 Base.size(qs::QuantumState) = size(qs.psi)
 
 
