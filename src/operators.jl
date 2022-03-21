@@ -723,7 +723,7 @@ end
 
 Gives vector potential for constant magnetic field.
 """
-function vector_potential(ceg, Bx, By, Bz)<
+function vector_potential(ceg, Bx, By, Bz)
     @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")
     r = position_operator(ceg)
     # A = r×B/2
@@ -773,7 +773,7 @@ function density_operator(sd::SlaterDeterminant, occupations::Int=2)
     if occupations == 1 
         return sum( density_operator, sd.orbitals )
     else
-        return n * sum( density_operator, sd.orbitals )
+        return occupations * sum( density_operator, sd.orbitals )
     end
 end
 

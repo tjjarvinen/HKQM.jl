@@ -1,3 +1,4 @@
+
 function particle_in_box(ceg, nx::Int, ny::Int, nz::Int)
     @argcheck nx > 0
     @argcheck ny > 0
