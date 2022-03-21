@@ -131,7 +131,7 @@ end
     for gt in gridtypes
         ceg = @eval $(gt)(5u"Å", 4, 24)
         H = HamiltonOperatorFreeParticle(ceg)
-        ψ = HKQM.ReferenceStates.HarmonicEigenstate(1; ω=3)
+        ψ = HKQM.ReferenceStates.HarmonicEigenstate(1, 3)
         ϕ = HKQM.ReferenceStates.harmonic_state(ceg, ψ)
         T = bracket(ϕ, H, ϕ)
         Tref = 0.5*3*HKQM.ReferenceStates.energy(ψ)
