@@ -96,7 +96,7 @@ function helmholtz_update( sd::SlaterDeterminant,
                             showprogress=false
                             )
     ψ = sd[i]
-    Kψ = exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
+    Kψ = exchange_operator(sd, i, ct)
     E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
