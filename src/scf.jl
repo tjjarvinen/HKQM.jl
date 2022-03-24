@@ -61,37 +61,6 @@ end
 
 ##
 
-function helmholtz_equation!(sd::SlaterDeterminant, H::HamiltonOperator; tn=96, showprogress=false)
-    J = coulomb_operator(sd; showprogress=showprogress)
-    E = bracket(sd.orbitals[1], H, sd.orbitals[1]) + bracket(sd.orbitals[1], J, sd.orbitals[1]) |> real
-    @info "Orbital energy = $E"
-    k  = sqrt( -2(austrip(E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid, tn; k=k);
-    ϕ = H.T.m * (H.V + J) * 1u"ħ_au^-2" * sd.orbitals[1]
-    sd.orbitals[1] .= poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
-    normalize!(sd.orbitals[1])
-    return sd
-end
-
-
-function helmholtz_equation(sd::SlaterDeterminant, H::HamiltonOperatorMagneticField; tn=96, showprogress=false)
-    J = coulomb_operator(sd; showprogress=showprogress)
-    E = bracket(sd.orbitals[1], H, sd.orbitals[1]) + bracket(sd.orbitals[1], J, sd.orbitals[1]) |> real
-    @info "Orbital energy = $E"
-    k  = sqrt( -2(austrip(E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid, tn; k=k);
-    p = momentum_operator(H.T)
-    ϕ = H.T.m * (H.V + J)* 1u"ħ_au^-2" * sd.orbitals[1]
-    ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd.orbitals[1]
-    ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd.orbitals[1]
-    ϕ = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
-    normalize!(ϕ)
-    return SlaterDeterminant(ϕ)
-end
-
-
-##
-
 """
     helmholtz_update(Args...; Kwargs...)
     helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false)
@@ -106,11 +75,12 @@ function helmholtz_update( sd::SlaterDeterminant,
                            nt=96,
                            showprogress=false
                            )
+    ψ = sd[i]
     Kψ = exchange_operator(sd, i, ct)
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], 2J, sd[i]) - bracket(sd[1], Kψ) |> real
+    E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
-    ϕ = (H.V + 2J) * sd[i] - Kψ  
+    ϕ = (H.V + 2J) * ψ - Kψ  
     ϕ *= H.T.m * 1u"ħ_au^-2"
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
     return normalize!(tmp)
@@ -125,48 +95,26 @@ function helmholtz_update( sd::SlaterDeterminant,
                             nt=96,
                             showprogress=false
                             )
-    Kψ = exchange_operator(sd, i, ct)  #TODO This is wrong ψᵢ is now put in two times
-    E = bracket(sd[i], H, sd[i]) + bracket(sd[i], 2J, sd[i]) - bracket(sd[1], Kψ) |> real
+    ψ = sd[i]
+    Kψ = exchange_operator(sd, i, ct)
+    E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     p = momentum_operator(H.T)
-    ϕ = (H.V + 2J) * sd[i] - Kψ  
+    ϕ = (H.V + 2J) * ψ - Kψ  
     ϕ *= H.T.m * 1u"ħ_au^-2"
-    ϕ += (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * sd[i]
-    ϕ += (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * sd[i]
+    ϕ += (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * ψ
+    ϕ += (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * ψ
     tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
 return normalize!(tmp)
 end
 
 
-function helmholtz_update(sd::SlaterDeterminant, H::HamiltonOperator, J::ScalarOperator, i::Int; nt=96, showprogress=false)
+function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, J::ScalarOperator, i::Int; nt=96, showprogress=false)
     ct = optimal_coulomb_tranformation(get_elementgrid(sd), nt);
     return helmholtz_update(sd, H, J, i, ct; nt=nt, showprogress=false)
 end
 
-
-function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, F::AbstractMatrix; showprogress=false, return_fock_matrix=true)
-    @argcheck size(F,1) == size(F,2) == length(sd)
-    # No preconditioning
-
-    # Update orbitals
-    ct = optimal_coulomb_tranformation(sd)
-    wsd = sd
-    for i in axes(sd,1)
-        J = coulomb_operator(wsd, ct)
-        tmp = helmholtz_update(wsd, H, J, i, ct)
-        sd_tmp = SlaterDeterminant( [ j==i ? tmp : wsd[j] for j in axes(wsd,1) ] )
-        f = fock_matrix(sd_tmp, H)
-        ev, ve = eigen( f )
-        wsd = SlaterDeterminant( ve'*sd_tmp )
-        F = Diagonal(ev)
-    end
-    if return_fock_matrix
-        return wsd, F
-    else
-        return wsd
-    end
-end
 
 
 function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; showprogress=false)
