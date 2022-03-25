@@ -16,7 +16,7 @@ while still being more simple than standard Gaussian orbital based methods.
 
 The code is based on earlier Fortran code [DAGE](https://github.com/dagesundholm/DAGE) described in [chem.phys. 146, 084102 (2017)](http://dx.doi.org/10.1063/1.4976557).
 
-This Julia implementation includes some upgrades for accuracy and advanced functionality like automatic differentation, while also being significantly faster and able to run on GPUs from multiple vendors.
+This Julia next generation implementation includes upgrades for accuracy, advanced functionality like automatic differentation and general operator manipulations, while also being significantly faster and able to run on GPUs from multiple vendors.
 
 ## Development Plan
 
@@ -46,39 +46,17 @@ elements in order to reduse the maximum order of Gauss-Legedre polynomials.
 ## Highlighted Features (when complete)
 - Solve Poisson equation (3D) - ready
 - Solve Helmholtz equation (3D) - ready
-- Solve Schrödinger equation with Helmholtz kernel Greens function - (1 particle ready)
-- Parallelization on CPUs and GPUs - (CPU part working, GPU untested)
-- Solve electronic structure with DFT - (todo)
-- Calculate magnetic field efects on electronic structure - (1 particle ready)
-- Full automatic differentation support - (forward mode working, reverse needs special pullbacks)
+- Solve Schrödinger equation with Helmholtz kernel Greens function - (1 particle) ready
+- General Hartree-Fock calculation (including electronic structure) - ready 
+- Parallelization on CPUs and GPUs - (CPU part working, GPU untested, tuning is needed for both)
+- Solve electronic structure with DFT - (needs KS Hamiltonian implementation and XC functionals that work with GPU)
+- Calculate magnetic field efects on electronic structure - (HF) ready
+- Full automatic differentation support - (forward mode working, reverse needs special pullbacks for tensor contractions)
 
-## Installation
-Hit julia console "]" to enter pkg> and then type
-```julia
-using Pkg
-pkg"add https://github.com/tjjarvinen/HKQM.jl"
-```
+## Note
 
-## Code Examples
+Not yet ready for general use. But should be at the beginning of summer 2022.
 
-There are some examples in "examples" directory.
-
-## Testing Accuracy
-
-Simple test for accuracy can be performed by typing
-
-```julia
-using HKQM
-
-a=5u"Å"   # system box size a^3
-ne=4      # number of elements per dimension
-ng=64     # number of Gauss points for r integration
-nt=64     # number of Gauss points for t integration
-tmax=700  # maximum t-value in integration
-
-# Gaussian-Gaussian charge density repulsion
-test_accuracy(a, ne, ng, nt; tmax=tmax)
-```
 
 [CI-img]: https://github.com/tjjarvinen/HKQM.jl/workflows/CI/badge.svg
 [CI-url]: https://github.com/tjjarvinen/HKQM.jl/actions?query=workflow%3ACI
