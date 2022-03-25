@@ -16,7 +16,7 @@ while still being more simple than standard Gaussian orbital based methods.
 
 The code is based on earlier Fortran code [DAGE](https://github.com/dagesundholm/DAGE) described in [chem.phys. 146, 084102 (2017)](http://dx.doi.org/10.1063/1.4976557).
 
-This Julia next generation implementation includes upgrades for accuracy, advanced functionality like automatic differentation and general operator manipulations, while also being significantly faster and able to run on GPUs from multiple vendors.
+This Julia besed next generation implementation includes upgrades for accuracy, advanced functionality like automatic differentation and general operator manipulations, while also being significantly faster and able to run on GPUs from multiple vendors.
 
 ## Development Plan
 
