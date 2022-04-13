@@ -1,6 +1,8 @@
 using Documenter
 using HKQM
 
+DocMeta.setdocmeta!(HKQM, :DocTestSetup, :(using HKQM); recursive=true)
+
 makedocs(
     sitename = "HKQM",
     format = Documenter.HTML(),
