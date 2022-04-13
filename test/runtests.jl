@@ -2,9 +2,14 @@ using Test
 using HKQM
 using Logging
 using ForwardDiff
+using Documenter
 
 
 disable_logging(Logging.Info)
+
+
+
+doctest(HKQM)
 
 
 @testset "Elements" begin
