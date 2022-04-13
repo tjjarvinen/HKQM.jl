@@ -221,7 +221,7 @@ Elements and integration points are symmetric for x-, y- and z-axes.
 
 # Example
 ```jldoctest
-julia> CubicElementGrid(5u"pm", 4, 32; origin=[1., 0., 0.].*u"nm)
+julia> CubicElementGrid(5u"pm", 4, 32)
 Cubic elements grid with 4^3 elements with 32^3 Gauss points
 ```
 """
