@@ -2,7 +2,8 @@
 
 ```@meta
 DocTestSetup = quote
-    using MyModule
+    using HKQM
 end
+```
 
 Documentation for HKQM.jl
