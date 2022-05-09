@@ -55,6 +55,8 @@ r + r
 2 * r
 r + [1u"bohr", 2u"Å", 1u"pm"]
 r + 1u"bohr"
+r / 2
+x * y
 
 nothing # hide
 ```
