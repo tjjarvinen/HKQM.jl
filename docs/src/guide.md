@@ -23,7 +23,7 @@ r = position_operator(ceg)
 p = momentum_operator(ceg)
 ```
 
-Operators have unit defined acordinly [Unitful.jl](https://github.com/PainterQubits/Unitful.jl)
+Operators have units defined with [Unitful.jl](https://github.com/PainterQubits/Unitful.jl) package
 
 ```@example guide
 unit(r)
@@ -44,6 +44,8 @@ Individual components can be accessed with indexing
 x = r[1]
 y = r[2]
 z = r[3]
+
+nothing # hide
 ```
 
 Operators support basic algebra operations
@@ -52,7 +54,9 @@ Operators support basic algebra operations
 r + r
 2 * r
 r + [1u"bohr", 2u"Å", 1u"pm"]
-r + 1u"bohr"    # add 1 bohr to all dimensions
+r + 1u"bohr"
+
+nothing # hide
 ```
 
 Units are checked for the operations and operations that
@@ -63,6 +67,8 @@ r + p
 
 Vector operations are supported
 ```@example guide
-r² = r ⋅ r   # = dot(r,r)
-l  = r × p   # = cross(r,p)
+r² = r ⋅ r
+l  = r × p
+
+nothing # hide
 ```
