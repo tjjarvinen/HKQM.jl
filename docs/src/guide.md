@@ -35,8 +35,12 @@ unit(p)
 
 These operator are vector operator and have lenght defined
 
-```@example guide
-lenght(r)
+```jldocktest guide
+length(r)
+
+# output
+
+3
 ```
 
 Individual components can be accessed with indexing
