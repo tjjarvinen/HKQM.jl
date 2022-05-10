@@ -182,7 +182,7 @@ Hamilton operator is a special operator that is needed for Helmholtz Greens func
 To create it you need to create potential energy operator first
 
 ```@example guide
-V = -2u"eV" * exp( exp(-0.5u"bohr^-2" * r²) )
+V = -20u"eV" * exp( exp(-0.25u"bohr^-2" * r²) )
 
 H = HamiltonOperator(V)
 ```
@@ -194,3 +194,28 @@ H_2me = HamiltonOperator(V; m=2u"me_au")
 
 nothing # hide
 ```
+
+## Solving Eigen States of a Hamiltonian
+
+You need to generate initial state for Hamiltonian that gives negative energy!
+
+```@example guide
+ψ = QuantumState( exp(-1u"bohr^-2" * r²) )
+normalize!(ψ)
+
+bracket(ψ, H, ψ)
+```
+
+After that Helmholtz Greens function can be used to generate better estimate for the lowest eigen state
+
+```@example guide
+ϕ = helmholtz_equation(ψ, H)
+```
+
+Update to estimate can be done in place too
+
+```@example guide
+helmholtz_equation!(ϕ, H)
+```
+
+Once estimate is self consistent a true solution has been found.
