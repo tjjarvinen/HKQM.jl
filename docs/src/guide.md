@@ -35,7 +35,7 @@ unit(p)
 
 These operator are vector operator and have lenght defined
 
-```jldocktest guide
+```jldoctest guide
 length(r)
 
 # output
