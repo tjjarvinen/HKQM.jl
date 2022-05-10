@@ -35,12 +35,8 @@ unit(p)
 
 These operator are vector operator and have lenght defined
 
-```jldoctest guide
+```@example guide
 length(r)
-
-# output
-
-3
 ```
 
 Individual components can be accessed with indexing
