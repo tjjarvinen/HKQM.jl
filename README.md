@@ -1,5 +1,10 @@
 # HKQM (Helmholtz Kernel Quantum Mechanics)
-[![][CI-img]][CI-url] [![][codecov-img]][codecov-url]
+
+| **Documentation**                                                               | **Build Status**                                                                                |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
+| [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] [![][codecov-img]][codecov-url] |
+
+
 
 
 This package is under development and not ready for use yet!
@@ -63,3 +68,7 @@ Not yet ready for general use. But should be at the beginning of summer 2022.
 
 [codecov-img]: https://codecov.io/gh/tjjarvinen/HKQM.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/tjjarvinen/HKQM.jl
+
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://tjjarvinen.github.io/HKQM.jl/dev/
