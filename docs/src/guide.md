@@ -1,6 +1,5 @@
 # Package Guide
 
-
 ## Define Grid for Calculations
 
 Start by defining grid used in calculations
@@ -10,6 +9,7 @@ using HKQM
 
 ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
 ```
+
 This creates a cubic box with with side lenght of 5 Å that are
 divided to 4 elements and 24 Gauss-Lagrange points for each
 element. Resulting in total of `(4*24)^3=884736` points.
@@ -40,6 +40,7 @@ length(r)
 ```
 
 Individual components can be accessed with indexing
+
 ```@example guide
 x = r[1]
 y = r[2]
@@ -63,11 +64,13 @@ nothing # hide
 
 Units are checked for the operations and operations that
 do not make sense are prohibited
+
 ```@example guide
 r + p
 ```
 
 Vector operations are supported
+
 ```@example guide
 r² = r ⋅ r
 l  = r × p
@@ -76,6 +79,7 @@ nothing # hide
 ```
 
 Common functions can be used also
+
 ```@example guide
 sin(1u"bohr^-1" * x)
 exp(-1u"bohr^-2" * r²)
@@ -149,13 +153,11 @@ unit( x * ψ )
 Other [Unitful](https://github.com/PainterQubits/Unitful.jl) functions like
 `dimension` and `uconvert` are defined also.
 
-
 Expectational values of operators can be calculated with `bracket` funtion
 
 ```@example guide
 bracket(ψ, x, ψ) 
 ```
-
 
 ## Slater Determinant
 
@@ -174,7 +176,6 @@ length(st)
 ```@example guide
 st[1]
 ```
-
 
 ## Hamilton Operator
 
