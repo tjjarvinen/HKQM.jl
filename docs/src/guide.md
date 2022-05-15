@@ -65,7 +65,7 @@ nothing # hide
 Units are checked for the operations and operations that
 do not make sense are prohibited
 
-```@example guide
+```julia
 r + p
 ```
 
@@ -89,7 +89,7 @@ nothing # hide
 
 Functions require that the input is unitless
 
-```@example guide
+```julia
 exp(-r²)
 ```
 
