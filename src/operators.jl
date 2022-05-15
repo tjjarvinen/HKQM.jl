@@ -68,17 +68,17 @@ operator is simply an array.
 
 # Examples
 ```jldoctest
-julia> ceg = CubicElementGrid(5u"Å",2,32)
+julia> ceg = CubicElementGrid(5u"Å", 2, 32)
 Cubic elements grid with 2^3 elements with 32^3 Gauss points
 
 julia> op = ScalarOperator(ceg, ones(size(ceg)))
-Operator 2^3 elements, 32^3 gauspoints per element
+Operator 2^3 elements, 32^3 Gauss points per element
 
 julia> sin_op = sin(op)
-Operator 2^3 elements, 32^3 gauspoints per element
+Operator 2^3 elements, 32^3 Gauss points per element
 
 julia> sin_op + 3op
-Operator 2^3 elements, 32^3 gauspoints per element
+Operator 2^3 elements, 32^3 Gauss points per element
 
 julia> ψ = QuantumState(ceg, ones(size(ceg)))
 Quantum state

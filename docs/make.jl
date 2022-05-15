@@ -1,3 +1,4 @@
+push!(LOAD_PATH, "../src/")
 using Documenter
 using HKQM
 
@@ -5,8 +6,9 @@ DocMeta.setdocmeta!(HKQM, :DocTestSetup, :(using HKQM); recursive=true)
 
 makedocs(
     sitename = "HKQM",
+    strict = true,
     format = Documenter.HTML(),
-    modules = [HKQM],
+    #modules = [HKQM],
     pages = [
         "Home" => "index.md",
         "Guide" => "guide.md"
