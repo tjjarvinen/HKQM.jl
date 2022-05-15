@@ -31,7 +31,7 @@ eltype(ceg)
 The values are x-, y- and z-coordinates of the grid point in bohr.
 
 ```@example guide
-ceg(1,1,1,3,3,3)
+ceg[1,1,1,3,3,3]
 ```
 
 ## Operator algebra
