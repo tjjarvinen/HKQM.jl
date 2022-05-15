@@ -220,3 +220,46 @@ helmholtz_equation!(ϕ, H)
 ```
 
 Once estimate is self consistent a true solution has been found.
+
+## Solving Hartree-Fock equation
+
+Hartree-Fock equation can be solver with `scf` command.
+
+```@example guide
+V = -60u"eV" * exp( exp(-0.1u"bohr^-2" * r²) )
+H = HamiltonOperator(V)
+
+ψ₁ = QuantumState( exp(-1u"bohr^-2" * r²) )
+ψ₂ = 1u"bohr^-1"*r[1]*QuantumState( exp(-1u"bohr^-2" * r²) )
+sd = SlaterDeterminant(ψ₁, ψ₂)
+```
+
+To check that all eigen values are negative calculate Fock matrix and look for diagonal values.
+
+```julia
+fock_matrix(sd, H)
+```
+
+After that you can solve Hartree-Fock equations
+
+```julia
+sd1 = scf(sd, H; tol=1E-6, max_iter=10)
+```
+
+`tol` is maximum chance in orbital overlap untill convergence is
+archieved. `max_iter` is maximum iterations calculated.
+
+Hartree-Fock energy is calculated by calling `hf_energy`
+
+```julia
+hf_energy(sd1, H)
+```
+
+Orbital energies can be found from diagonal of Fock matrix
+
+```julia
+fock_matrix(sd1, H)
+```
+
+Check also that offdiagonal elements are insignificant to make sure
+the system real solution has been found.
