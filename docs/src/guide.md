@@ -14,6 +14,26 @@ This creates a cubic box with with side lenght of 5 Å that are
 divided to 4 elements and 24 Gauss-Lagrange points for each
 element. Resulting in total of `(4*24)^3=884736` points.
 
+The grid is also an Array that can be used as one
+
+```@example guide
+typeof(ceg) <: AbstractArray
+```
+
+```@example guide
+size(ceg)
+```
+
+```@example guide
+eltype(ceg)
+```
+
+The values are x-, y- and z-coordinates of the grid point in bohr.
+
+```@example guide
+ceg(1,1,1,3,3,3)
+```
+
 ## Operator algebra
 
 Generate basic operators for the grid
