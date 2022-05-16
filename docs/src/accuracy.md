@@ -14,6 +14,10 @@ test_accuracy
 
 It can be called with
 
+```@setup accuracy
+using HKQM
+```
+
 ```@example accuracy
 test_accuracy(5u"Å", 4, 24)
 ```
@@ -49,7 +53,7 @@ points are used for `t`-integrarion `nt`.
 In example to use logarithmic spacing to integrate from `t=20` to `t=70` one
 can use
 
-```@example
+```@example accuracy
 test_accuracy(5u"Å", 4, 24, 24; mode=:log, tmin=20, tmax=70, correction=false)
 ```
 
@@ -58,7 +62,7 @@ see "integration error" from output.
 
 To test the same aree with `loglocal` mode gives
 
-```@example
+```@example accuracy
 test_accuracy(5u"Å", 4, 24, 24; mode=:loglocal, tmin=20, tmax=70, correction=false)
 ```
 
