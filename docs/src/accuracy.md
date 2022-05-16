@@ -19,7 +19,7 @@ using HKQM
 ```
 
 ```@example accuracy
-test_accuracy(5u"Å", 4, 24)
+test_accuracy(5u"Å", 4, 24, 96)
 ```
 
 Which gives accuracy for 5 Å box with 4 elements per dimension and 24^3 Gauss-Lagrange points per element.
