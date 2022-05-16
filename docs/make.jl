@@ -11,7 +11,8 @@ makedocs(
     #modules = [HKQM],
     pages = [
         "Home" => "index.md",
-        "Guide" => "guide.md"
+        "Guide" => "guide.md",
+        "Accuracy Tests" => "accuracy.md"
     ]
 )
 
