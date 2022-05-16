@@ -176,10 +176,13 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
     @debug "V type = $(typeof(V))"
     ptime = showprogress ? 1 : Inf
     tmp = similar(V)
+    p = Progress(nt, ptime)
     V = sum( axes(transtensor.wt, 1) ) do t
-        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])  
+        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
+        next!(p)
+        tmp
     end
-    if tmax != nothing
+    if tmax !== nothing
         return V .+ coulomb_correction(ρ, tmax)
     end
     return V
