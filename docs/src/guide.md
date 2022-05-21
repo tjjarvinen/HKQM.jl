@@ -230,13 +230,15 @@ bracket(ψ, H, ψ)
 After that Helmholtz Greens function can be used to generate better estimate for the lowest eigen state
 
 ```@example guide
-ϕ = helmholtz_equation(ψ, H)
+ϕ, E = solve_eigen_states(H, ψ; max_iter=10, rtol=1E-6)
 ```
 
-Update to estimate can be done in place too
+You can add more states to the solution by giving more intial states
 
 ```@example guide
-helmholtz_equation!(ϕ, H)
+ψ111 = particle_in_box(ceg, 1,1,1)
+
+ϕ2, E2 = solve_eigen_states(H, ϕ..., ψ111)
 ```
 
 Once estimate is self consistent a true solution has been found.
