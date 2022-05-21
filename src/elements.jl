@@ -364,7 +364,7 @@ getelement(egv::ElementGridVector, i::Int) = egv.elements[i].element
 
 getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
 get_derivative_matrix(egv::ElementGridVector) = get_derivative_matrix(egv.elements[1])
-elementsize(egv::ElementGridVector) = sum( elementsize.(egv.elements)  )
+element_size(egv::ElementGridVector) = sum( elementsize.(egv.elements)  )
 
 ##
 
@@ -399,6 +399,11 @@ zgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
 getweight(egsb::ElementGridSymmetricBox) = getweight(egsb.egv)
 get_derivative_matrix(egsb::ElementGridSymmetricBox) = get_derivative_matrix(egsb.egv)
 get_1d_grid(egsb::ElementGridSymmetricBox, i=1::Int) = egsb.egv
+
+function element_size(egsb::ElementGridSymmetricBox)
+    a = element_size( egsb.egv )
+    return a, a, a
+end
 
 
 ## Gauss points for integration

@@ -142,6 +142,23 @@ end
 end
 
 
+@testset "1D Schrödinger equation" begin
+    ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
+    r = position_operator(ceg)    
+    r² = r ⋅ r 
+
+    V = -30u"eV" * exp(-0.1u"bohr^-2" * r²) 
+    H = HamiltonOperator(V)
+
+    W111 = particle_in_box(ceg, 1,1,1)
+    W112 = particle_in_box(ceg, 1,1,2)
+
+    estates, evals = solve_eigen_states(H, W111, W112; max_iter=2)
+    @test bracket(W111, H, W111) > evals[1]
+    @test bracket(W112, H, W112) > evals[2]
+end
+
+
 @testset "Hartree-Fock" begin
     ceg = CubicElementGrid(5u"Å", 2, 32)
 
