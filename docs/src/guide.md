@@ -236,9 +236,10 @@ After that Helmholtz Greens function can be used to generate better estimate for
 You can add more states to the solution by giving more intial states
 
 ```@example guide
-ψ111 = particle_in_box(ceg, 1,1,1)
+ψ111 = HKQM.particle_in_box(ceg, 1,1,1)
+ψ112 = HKQM.particle_in_box(ceg, 1,1,2)
 
-ϕ2, E2 = solve_eigen_states(H, ϕ..., ψ111)
+ϕ2, E2 = solve_eigen_states(H, ψ111, ψ112)
 ```
 
 Once estimate is self consistent a true solution has been found.
