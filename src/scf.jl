@@ -12,12 +12,16 @@ Solve Helmholz equation using Greens function.
 
 # Keywords
 - `showprogress=false`   :  display progress bar
+- `verbal=ture`          :  display energy for input state
 """
 function helmholtz_equation(ψ::QuantumState, H::HamiltonOperator;
                             showprogress=false)
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
-    @info "E=$E"
+    if E >= 0u"hartree"
+        DomainError("Quantum State has positive energy")
+    end
+    @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
     ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
@@ -30,7 +34,10 @@ function helmholtz_equation!(ψ::QuantumState, H::HamiltonOperator;
                             showprogress=false)
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
-    @info "E=$E"
+    if E >= 0u"hartree"
+        DomainError("Quantum State has positive energy")
+    end
+    @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
     ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
@@ -44,7 +51,10 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
                             showprogress=false)
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
-    @info "E=$E"
+    if E >= 0u"hartree"
+        DomainError("Quantum State has positive energy")
+    end
+    @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
     p = momentum_operator(H.T)
@@ -78,6 +88,9 @@ function helmholtz_update( sd::SlaterDeterminant,
     ψ = sd[i]
     Kψ = exchange_operator(sd, i, ct)
     E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
+    if E >= 0u"hartree"
+        DomainError("Orbital $i has positive energy")
+    end
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     ϕ = (H.V + 2J) * ψ - Kψ  
@@ -98,6 +111,9 @@ function helmholtz_update( sd::SlaterDeterminant,
     ψ = sd[i]
     Kψ = exchange_operator(sd, i, ct)
     E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
+    if E >= 0u"hartree"
+        DomainError("Orbital $i has positive energy")
+    end
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     p = momentum_operator(H.T)

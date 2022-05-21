@@ -4,11 +4,11 @@ function particle_in_box(ceg, nx::Int, ny::Int, nz::Int)
     @argcheck ny > 0
     @argcheck nz > 0
     r = position_operator(ceg)
-    L = ceg.elements.a
-    kx = nx*π/L
-    ky = ny*π/L
-    kz = nz*π/L
-    tmp = sin( kx*(r[1] + L/2) ) * sin( ky*(r[2] + L/2) ) * sin( kz*(r[3] + L/2) )
+    L = element_size(ceg)
+    kx = nx*π/L[1]
+    ky = ny*π/L[2]
+    kz = nz*π/L[3]
+    tmp = sin( kx*(r[1] + L[1]/2) ) * sin( ky*(r[2] + L[2]/2) ) * sin( kz*(r[3] + L[3]/2) )
     psi = QuantumState(ceg, tmp.vals)
     return normalize!(psi)
 end
