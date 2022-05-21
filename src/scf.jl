@@ -19,7 +19,7 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperator;
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
     if E >= 0u"hartree"
-        DomainError("Quantum State has positive energy")
+        DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
@@ -35,7 +35,7 @@ function helmholtz_equation!(ψ::QuantumState, H::HamiltonOperator;
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
     if E >= 0u"hartree"
-        DomainError("Quantum State has positive energy")
+        DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
@@ -52,7 +52,7 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
     normalize!(ψ)
     E = real(bracket(ψ,H,ψ))
     if E >= 0u"hartree"
-        DomainError("Quantum State has positive energy")
+        DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(E)) )
@@ -89,7 +89,7 @@ function helmholtz_update( sd::SlaterDeterminant,
     Kψ = exchange_operator(sd, i, ct)
     E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
     if E >= 0u"hartree"
-        DomainError("Orbital $i has positive energy")
+        DomainError("Orbital $i has positive energy") |> throw
     end
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
@@ -112,7 +112,7 @@ function helmholtz_update( sd::SlaterDeterminant,
     Kψ = exchange_operator(sd, i, ct)
     E = bracket(ψ, H, ψ) + 2*bracket(ψ, J, ψ) - bracket(ψ, Kψ) |> real
     if E >= 0u"hartree"
-        DomainError("Orbital $i has positive energy")
+        DomainError("Orbital $i has positive energy") |> throw
     end
     k  = sqrt( -2( austrip(E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
@@ -324,4 +324,50 @@ end
 function hf_energy(sd::SlaterDeterminant, H::AbstractHamiltonOperator)
     F = fock_matrix(sd, H)
     return hf_energy(sd, H, F)
+end
+
+
+## 1D system solver
+
+"""
+    solve_eigen_states(H, initial_states::QuantumState...; max_iter=10, rtol=1E-6  )
+    solve_eigen_states(H, sd::SlaterDeterminant; max_iter=10, rtol=1E-6 )
+
+Solves Eigen states of an Hamiltonian Operator for given initial states.
+Returns `Vector` holding eigen vectors and other holding eigen values.
+Inital states can also be given as Slater determinant, where individual
+orbitals are considered as initial states.
+"""
+function solve_eigen_states(H, initial_states::QuantumState...; max_iter=10, rtol=1E-6  )
+    sd = SlaterDeterminant(initial_states...)
+    return solve_eigen_states(H, sd; max_iter=max_iter, rtol=rtol )
+end
+
+
+function solve_eigen_states(H, sd::SlaterDeterminant; max_iter=10, rtol=1E-6 )
+    function _energy(Ψ)
+        E = pmap( Ψ ) do ϕ
+            bracket(ϕ, H, ϕ)
+        end
+        return E
+    end
+    
+    E₀ = _energy(sd)
+    E = []
+    for i in 1:max_iter
+        tmp = pmap( sd ) do ϕ
+            helmholtz_equation(ϕ, H)
+        end
+        sd = SlaterDeterminant(tmp...)
+        E = _energy(sd)
+        ΔE = abs.( ( E .- E₀ ) ./ E₀ )
+        if all( ΔE .< rtol )
+            @info "Solution found in $i iterations"
+            break
+        else
+            @info "i=$i  max relΔE= $(round(maximum(ΔE); sigdigits=2))"
+            E₀ = E
+        end
+    end
+    return collect(sd), E
 end
