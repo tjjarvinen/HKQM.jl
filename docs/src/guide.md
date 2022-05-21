@@ -203,7 +203,7 @@ Hamilton operator is a special operator that is needed for Helmholtz Greens func
 To create it you need to create potential energy operator first
 
 ```@example guide
-V = -20u"eV" * exp( exp(-0.25u"bohr^-2" * r²) )
+V = -30u"eV" * exp(-0.1u"bohr^-2" * r²) 
 
 H = HamiltonOperator(V)
 ```
@@ -221,7 +221,7 @@ nothing # hide
 You need to generate initial state for Hamiltonian that gives negative energy!
 
 ```@example guide
-ψ = QuantumState( exp(-1u"bohr^-2" * r²) )
+ψ = QuantumState( exp(-0.2u"bohr^-2" * r²) )
 normalize!(ψ)
 
 bracket(ψ, H, ψ)
@@ -246,11 +246,11 @@ Once estimate is self consistent a true solution has been found.
 Hartree-Fock equation can be solver with `scf` command.
 
 ```@example guide
-V = -60u"eV" * exp( exp(-0.1u"bohr^-2" * r²) )
+V = -100u"eV" * exp(-0.1u"bohr^-2" * r²) 
 H = HamiltonOperator(V)
 
-ψ₁ = QuantumState( exp(-1u"bohr^-2" * r²) )
-ψ₂ = 1u"bohr^-1"*r[1]*QuantumState( exp(-1u"bohr^-2" * r²) )
+ψ₁ = QuantumState( exp(-0.2u"bohr^-2" * r²) )
+ψ₂ = 1u"bohr^-1"*r[1]*QuantumState( exp(-0.2u"bohr^-2" * r²) )
 sd = SlaterDeterminant(ψ₁, ψ₂)
 ```
 
