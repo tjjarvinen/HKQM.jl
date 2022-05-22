@@ -70,6 +70,7 @@ export bracket,
        magnetic_current,
        momentum_operator,
        #nuclear_potential,
+       nuclear_potential_harrison_approximation,
        optimal_coulomb_tranformation,
        overlap_matrix,
        para_magnetic_current,
@@ -124,8 +125,8 @@ include("elements.jl")
 include("states.jl")
 #include("bubbles.jl")
 include("tensors.jl")
-include("nuclearpotential.jl")
 include("operators.jl")
+include("nuclearpotential.jl")
 include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")
