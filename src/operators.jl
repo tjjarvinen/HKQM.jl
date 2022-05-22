@@ -164,7 +164,7 @@ for op in (:erf,)
         so1 = auconvert(so)
         b = similar(so.vals)
         Threads.@threads for i in eachindex(b)
-            @inbounds b[i] = $op(so.vals[i])
+            @inbounds b[i] = $op(so1.vals[i])
         end
         return ScalarOperator(get_elementgrid(so), b)
      end
