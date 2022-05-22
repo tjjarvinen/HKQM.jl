@@ -4,7 +4,7 @@
 """
     nuclear_potential_harrison_approximation(args; kwargs)
 
-Calculates Harrison sityle nuclear potential.
+Calculates Harrison style nuclear potential.
 See [J. Chem. Phys. 121, 11587 (2004)](https://doi.org/10.1063/1.1791051)
 for reference.
 
