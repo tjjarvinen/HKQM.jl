@@ -35,7 +35,7 @@ function nuclear_potential_harrison_approximation(
     r² = ( rr ⋅ rr ) / (c_param*u"bohr")^2 |> auconvert  
     r  = sqrt(r²) + 1E-10  # Make sure that no zero division
 
-    U = erf(r)/r + 1/(3√π) * ( exp(-r²) + 16exp(-4r²) )
+    U = erf(r)/r + 1/(3*√π) * ( exp(-r²) + 16exp(-4r²) )
     return 1u"hartree" / c_param * (Z * austrip(electron_charge) ) * U
 end
 

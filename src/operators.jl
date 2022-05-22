@@ -163,9 +163,6 @@ for op in (:erf,)
         @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
         so1 = auconvert(so)
         b = similar(so.vals)
-        # Threads.@threads for i in eachindex(b)
-        #     @inbounds b[i] = $op(so1.vals[i])
-        # end
         Threads.@threads for i in eachindex(b)
             @inbounds b[i] = $op(so1.vals[i])
         end
