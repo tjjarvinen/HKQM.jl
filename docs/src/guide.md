@@ -286,3 +286,46 @@ fock_matrix(sd1, H)
 
 Check also that offdiagonal elements are insignificant to make sure
 the system real solution has been found.
+
+## Approximate Nuclear Potential
+
+There is an approximation to nuclear potential defined in here
+[J. Chem. Phys. 121, 11587 (2004)](https://doi.org/10.1063/1.1791051).
+It allows approximate electronic structure calculations.
+
+Here is an example for Hydrogen molecule.
+
+Define nuclear positions
+
+```@example guide
+r₁ = [0.37, 0., 0.] .* 1u"Å"
+r₂ = [-0.37, 0., 0.] .* 1u"Å"
+```
+
+After that create nuclear potential
+
+```@example guide
+V₁ = nuclear_potential_harrison_approximation(ceg, r₁, "H")
+V₂ = nuclear_potential_harrison_approximation(ceg, r₂, "H")
+
+V = V₁ + V₂
+```
+
+and Hamiltonian
+
+```@example guide
+H = HamiltonOperator(V)
+```
+
+Create initial orbital
+
+```@example guide
+ϕ = particle_in_box(ceg, 1,1,1)
+ψ = SlaterDeterminant( ϕ )
+```
+
+Solve SCF equations
+
+```julia
+ψ1 = scf(ψ, H)
+```

@@ -10,7 +10,7 @@ for reference.
 
 # Args
 - `ceg`                       : Element grid used in calculation
-- `r_atom::AbstractVector``   : Location of nucleus
+- `r_atom::AbstractVector`    : Location of nucleus
 - `atom_name::String`         : Atom symbol H, O, Na, etc.
 
 # Kwargs
