@@ -158,6 +158,7 @@ end
 
 
 for op in (:erf,)
+    #NOTE does not work with GPUs
     @eval function SpecialFunctions.$op(so::ScalarOperator)
         @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
         so1 = auconvert(so)
