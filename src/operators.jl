@@ -156,6 +156,21 @@ for op in (:sin, :cos, :tan, :exp, :log)
      end
 end
 
+
+for op in (:erf,)
+    #NOTE does not work with GPUs
+    @eval function SpecialFunctions.$op(so::ScalarOperator)
+        @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
+        so1 = auconvert(so)
+        b = similar(so.vals)
+        Threads.@threads for i in eachindex(b)
+            @inbounds b[i] = $op(so1.vals[i])
+        end
+        return ScalarOperator(get_elementgrid(so), b)
+     end
+end
+
+
 function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator)
     @assert dimension(a) == dimension(so) "Dimension missmatch"
     a == unit(so) && return so
