@@ -73,7 +73,7 @@ how large area at the edges is put to zero = values over zero are cut.
 function harmonic_potential_well(ceg, ħω, x)
     @assert dimension(x) == dimension(u"m")
     @assert dimension(ħω) == dimension(u"J")
-    d = elementsize( get_1d_grid(ceg) )
+    d = element_size( get_1d_grid(ceg) )
     x_max = 0.5 * d - x
 
     @assert 2x < d
