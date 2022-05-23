@@ -190,3 +190,12 @@ end
     S = overlap_matrix(sd1)
     @test bracket(H,sd) >  bracket(H, sd1)
 end
+
+
+@testset "Reference Potential" begin
+    ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
+
+    V, E = HKQM.ReferenceStates.harmonic_potential_well(ceg, 100u"eV", 1u"Å")
+
+    @test V.vals[1,1,1,1,1,1] ≈ 0
+end
