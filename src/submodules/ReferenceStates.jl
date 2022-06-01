@@ -58,7 +58,7 @@ end
 
 
 """
-    harmonic_potential_well(ceg, ħω, x) -> ScalarOperator, Float64
+    harmonic_potential_well(ceg, ħω, x) -> ScalarOperator, Float64, Int
 
 Gives harmonic potential and estimate for lowest eigenvalue for associated Hamiltonian.
 Potential is given so that all potential values are ≤ 0. Parameter `x` controls
@@ -75,27 +75,34 @@ function harmonic_potential_well(ceg, ħω, x)
     @assert dimension(ħω) == dimension(u"J")
     d = element_size( get_1d_grid(ceg) )
     x_max = 0.5 * d - x
+    
+    # x_max > 0
+    @assert 0u"bohr" <= 2x < d
 
-    @assert 2x < d
     ω = ħω / 1u"ħ_au"
+    k = ω^2 * 1u"me_au"
 
     # max n for bound state
-    n = 1//2 * ( austrip( ω*x^2 ) -1 )
-    @info "n < $( n )"
+    # Kinetic energy is also 0.5 * E = 0.5 * ħω(n+1.5)
+    # Potential energy is 0.5 * E - E_sift
+    # If E_kin + E_pot < 0 we have bound state
+    # Or E < E_sift => ħω(n+1.5) < E_sift
+    # n < E_sift / ħω - 1.5
+    E_sift = 1//2 * k * x_max^2
+    n_max = E_sift / ħω - 1.5
+    @info "n_max < $( n_max )"
 
-    k = ω^2 * 1u"me_au"
-    E = 1//2 * k * x_max^2
     r = position_operator(ceg)
-    r² = r⋅r
-    V = 1//2  * k * r² - E
+    r² = r ⋅ r
+    V = 1//2  * k * r² - E_sift
     for i in eachindex(V.vals)
         if V.vals[i] > 0
             V.vals[i] = 0
         end
     end
-    E₀ = -E + 3//2 * ħω |> auconvert
+    E₀ = -E_sift + 3//2 * ħω |> auconvert
     @info "E₀ = $E₀"
-    return auconvert(V), E₀
+    return auconvert(V), E₀, floor(n_max)
 end
 
 
