@@ -1,13 +1,26 @@
 using HKQM
 using Interpolations
-using GLMakie 
-
+using WGLMakie  # or GLMakie
+WGLMakie.activate!(; fps=30)
 
 ##
 
+"""
+    get3d(psi::QuantumState)
+    get3d(sop::ScalarOperator)
 
+Transform 6D tensor form to 3D euclidean coordinates.
+Returns `Array{T,3}`.
+"""
 function get3d(psi::QuantumState)
     tmp = permutedims(psi.psi, (1,4,2,5,3,6))
+    s = size(tmp)
+    return reshape(tmp, (s[1]*s[2], s[3]*s[4], s[5]*s[6]))
+end
+
+
+function get3d(sop::ScalarOperator)
+    tmp = permutedims(sop.vals, (1,4,2,5,3,6))
     s = size(tmp)
     return reshape(tmp, (s[1]*s[2], s[3]*s[4], s[5]*s[6]))
 end
