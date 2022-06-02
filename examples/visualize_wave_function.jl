@@ -59,14 +59,22 @@ function Base.maximum(ceg::AbstractElementGrid)
 end
 
 ##
+
 """
-    plot_psi(psi::QuantumState; levels=10, mask=0.3, alpha=0.05)
+    plot_wave_function(psi::QuantumState; Kwargs)
 
 Plots wave function using Makie. `mask` is used to remove very small values
 from plot. It is percentage relative to maximum and minimum values that are
 removed from plot. You might need to adjust it to get a good figure.
+
+# Keywords
+- `levels=10`   :  both positive and negative values are discretized to this many different colours
+- `mask=0.3`    :  mask values that have relative absolute value smaller than positive or negative extremum 
+- `alpha=0.05`  :  transparency of plot - smaller means more transparent
+- `n_points=30` :  number of interpolation points used per dimentsion in the figure
+- `resolution=(800, 800)`  :  resolution of returned figure
 """
-function plot_psi(psi::QuantumState; levels=10, mask=0.3, alpha=0.05, n_points=30, resolution=(800, 800))
+function plot_wave_function(psi::QuantumState; levels=10, mask=0.3, alpha=0.05, n_points=30, resolution=(800, 800))
     tmin = ustrip.( u"Å", minimum(HKQM.get_elementgrid(psi)) .* u"bohr" )
     tmax = ustrip.( u"Å", maximum(HKQM.get_elementgrid(psi)) .* u"bohr" )
 
