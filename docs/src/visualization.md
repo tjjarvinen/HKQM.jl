@@ -18,5 +18,5 @@ After that you can use e.g.
 ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
 psi = particle_in_box(ceg, 2, 3, 1)
 
-plot_psi(psi; resolution=(800,800))
+plot_wave_function(psi; resolution=(800,800))
 ```
