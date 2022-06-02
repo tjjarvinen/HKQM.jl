@@ -1,7 +1,9 @@
 using HKQM
 using Interpolations
-using WGLMakie  # or GLMakie
-WGLMakie.activate!(; fps=30)
+using GLMakie
+# or
+#using WGLMakie 
+#WGLMakie.activate!(; fps=30)
 
 ##
 
@@ -64,13 +66,13 @@ Plots wave function using Makie. `mask` is used to remove very small values
 from plot. It is percentage relative to maximum and minimum values that are
 removed from plot. You might need to adjust it to get a good figure.
 """
-function plot_psi(psi::QuantumState; levels=10, mask=0.3, alpha=0.05)
+function plot_psi(psi::QuantumState; levels=10, mask=0.3, alpha=0.05, n_points=30, resolution=(800, 800))
     tmin = ustrip.( u"Å", minimum(HKQM.get_elementgrid(psi)) .* u"bohr" )
     tmax = ustrip.( u"Å", maximum(HKQM.get_elementgrid(psi)) .* u"bohr" )
 
-    x = LinRange(tmin[1], tmax[1], 30)
-    y = LinRange(tmin[2], tmax[2], 30)
-    z = LinRange(tmin[3], tmax[3], 30)
+    x = LinRange(tmin[1], tmax[1], n_points)
+    y = LinRange(tmin[2], tmax[2], n_points)
+    z = LinRange(tmin[3], tmax[3], n_points)
 
     w = get_interpolator(psi)
     vol = [w(ix,iy,iz) for ix in x, iy in y, iz in z]
@@ -92,7 +94,7 @@ function plot_psi(psi::QuantumState; levels=10, mask=0.3, alpha=0.05)
     end
 
     cmap = :Hiroshige
-    fig = Figure(resolution = (1200, 1200))
+    fig = Figure(resolution = resolution)
     ax = Axis3(fig[1,1]; perspectiveness = 0.5, azimuth = 6.62,
         elevation = 0.57)
     contour!(ax, x, y, z, vol; colormap = cmap, alpha = alpha, levels = v)
