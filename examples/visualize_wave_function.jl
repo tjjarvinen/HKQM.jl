@@ -72,7 +72,7 @@ removed from plot. You might need to adjust it to get a good figure.
 - `mask=0.3`    :  mask values that have relative absolute value smaller than positive or negative extremum 
 - `alpha=0.05`  :  transparency of plot - smaller means more transparent
 - `n_points=30` :  number of interpolation points used per dimentsion in the figure
-- `resolution=(800, 800)`  :  resolution of returned figure
+- `resolution=(800, 800)`  :  resolution of the returned figure
 """
 function plot_wave_function(psi::QuantumState; levels=10, mask=0.3, alpha=0.05, n_points=30, resolution=(800, 800))
     tmin = ustrip.( u"Å", minimum(HKQM.get_elementgrid(psi)) .* u"bohr" )
