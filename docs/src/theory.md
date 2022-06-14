@@ -133,12 +133,37 @@ $$
 Which is a complex due to $e^{-ik|r_1-r_2|}$ term. If energy is negative, the $i$ in front $k$ can be moved inside the square root in $k$ and make the equation real
 
 $$
+\begin{equation}
 \psi(r_1) = -\frac{m}{2\pi\hbar^2}\int \frac{\exp(-\frac{ \sqrt{-2 mE} }{\hbar}|r_1-r_2|)}{|r_1-r_2|}V(r_2)\psi(r_2)dr_2
+\end{equation}
 $$
 
-This equation is iterative in nature due to it needing energy as an input.
+This equation is iterative in nature due to it needing energy as an input and because wavefunction is present on both sides of the equation.
 
-## References
+# Implementation
+
+## Reduce dimensionality of integrals
+
+All integrals above are 3-dimensional and thus expensive. It is thus very desirable to reduce the dimensionality of the integrals.
+
+To do this consider standard [Gaussian integral](https://en.wikipedia.org/wiki/Gaussian_integral)
+
+$$
+\begin{equation}
+    \int_{-\infty}^{\infty} e^{-at^2}dt = \sqrt{\frac{\pi}{a}}
+\end{equation}
+$$
+
+By taking $a=r^2$ this equation can be manipulated to
+
+$$
+\begin{equation}
+    \frac{1}{r} = \frac{2}{\sqrt{\pi}} \int_{0}^{\infty}e^{-r^2t^2}dt
+\end{equation}
+$$
+
+
+# References
 
 [1] M. H. Kalos; Phys. Rev. **128**, (1962); [https://doi.org/10.1103/PhysRev.128.1791]()
 
