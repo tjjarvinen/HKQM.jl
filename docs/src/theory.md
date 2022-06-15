@@ -85,7 +85,9 @@ $$
 Electric potential can be solved using Poisson equation Green's function Eq. (3)
 
 $$
-\phi(r_1) = -\int G(r_1,r_2)\frac{\rho(r_2)}{\varepsilon_0} dr_2 = \int \frac{\rho(r_2)}{4\pi \varepsilon_0 |r_1-r_2|}dr_2
+\begin{equation}
+\phi(r_1) = -\int G(r_1,r_2)\frac{\rho(r_2)}{\varepsilon_0} dr_2 = \int \frac{\rho(r_2)}{4\pi \varepsilon_0 |r_1-r_2|}dr_2 
+\end{equation}
 $$
 
 Electric potential can then be used to calculate ineraction
@@ -97,7 +99,7 @@ density
 $$
 \begin{align*}
 \phi_1(r) = & \int \frac{\rho_1(r_1)}{4\pi \varepsilon_0 |r-r_1|}dr_1 \\
-E_{eqnarray} = & \int \phi_1(r) \rho_2(r) dr
+E_{interaction} = & \int \phi_1(r) \rho_2(r) dr
 \end{align*}
 $$
 
@@ -162,6 +164,34 @@ $$
 \end{equation}
 $$
 
+This form allow us to get rid of square root in distance calculation $r=\sqrt{x^2+y^2+z^2}$, by just separating $r^2$ term
+
+$$
+r^2 = x^2 + y^2 + z^2
+$$
+
+With this the 3-dimensional integral in Eq. (5) can be changes to four 1-dimensional integrals
+
+$$
+\begin{align}
+\phi(r_1) = & \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(r_2) e^{-\Delta r^2t^2}dr_2 \nonumber \\
+= & \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(x_2,y_2,z_2) e^{-\Delta x^2t^2}e^{-\Delta y^2t^2}e^{-\Delta z^2t^2}dx_2dy_2dz_2
+\end{align}
+$$
+
+By introducing
+
+$$
+\begin{equation}
+T(x_1,x_2) = e^{-(x_1-x_2)^2t^2}
+\end{equation}
+$$
+
+The integral takes form
+
+$$
+\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int dx_2 T(x_1,x_2) \int dy_2 T(y_1,y_2)  \int dz_2\rho(r_2) T(z_1,z_2)
+$$
 
 # References
 
