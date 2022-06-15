@@ -190,7 +190,9 @@ $$
 The integral takes form
 
 $$
+\begin{equation}
 \phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int dx_2 T(x_1,x_2) \int dy_2 T(y_1,y_2)  \int dz_2\rho(r_2) T(z_1,z_2)
+\end{equation}
 $$
 
 # References
