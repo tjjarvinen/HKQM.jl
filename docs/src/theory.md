@@ -213,6 +213,7 @@ $\exp (-kr)$ therm
 
 With a standard Laplace transformation [3]
 
+
 ```math
 \int_{0}^{\infty}\exp(-sp)\frac{\exp(-\frac{a^2}{4p})}{\sqrt{\pi p}}dp
  = \frac{\exp(-a\sqrt{s})}{\sqrt{s}}
