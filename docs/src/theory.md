@@ -237,7 +237,7 @@ that is separaple in variable $r$. Using the $T$ that was defined above leads to
 This leads to final equation
 
 ```math
-    \psi(r_1) = -\frac{m}{\pi^{3/2}\hbar^2}\int_{0}^{\infty}dt\exp(-\frac{k^2}{4t^2}) *\int_{-\infty}^{\infty}dx_2 T(t, \Delta x)
+    \psi(r_1) = -\frac{m}{\pi^{3/2}\hbar^2}\int_{0}^{\infty}dt\exp(-\frac{k^2}{4t^2}) \int_{-\infty}^{\infty}dx_2 T(t, \Delta x)
     \int_{-\infty}^{\infty}dy_2 T(t, \Delta y)
     \int_{-\infty}^{\infty}dz_2 T(t, \Delta z)
     V(r_2)\psi(r_2)dr_2
