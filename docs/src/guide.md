@@ -342,7 +342,7 @@ A = vector_potential(ceg, B...)
 
 After that create a magnetic field Hamiltonian
 
-```@example guilde
+```@example guide
 Hm = HamiltonOperatorMagneticField(V,A)
 ```
 
