@@ -142,9 +142,9 @@ $$
 
 This equation is iterative in nature due to it needing energy as an input and because wavefunction is present on both sides of the equation.
 
-# Implementation
+## Implementation
 
-## Reduce dimensionality of integrals
+### Reduce dimensionality of integrals
 
 All integrals above are 3-dimensional and thus expensive. It is thus very desirable to reduce the dimensionality of the integrals.
 
@@ -352,7 +352,7 @@ the integration weight $w_i$ and the constant term in front
 ($\frac{m}{\pi^{3/2}\hbar^2}$) is ignored,
 because the wavefunction needs to be normalized in any case.
 
-# Hartree-Fock
+## Hartree-Fock
 
 Hartree-Fock equation is an eigen-value equation for Fock matrix
 
@@ -406,7 +406,7 @@ This has two consequences. First, scaling on number of orbitals is reduced
 to $O(N^2)$. Secondly, orbitals can be updated on parallel, followed by an
 ortogonalization. Meaning that the orbital optimization scales linearry on number of orbitals.
 
-# Magnetic Field Calculations
+## Magnetic Field Calculations
 
 In magnetic field the Hamiltonian for a charged particle is [4]
 
@@ -438,7 +438,7 @@ $$
 which can be solved in the normal way. With the only exception that
 the wavefunction is now complex.
 
-# References
+## References
 
 [1] M. H. Kalos; Phys. Rev. **128**, (1962)
 [https://doi.org/10.1103/PhysRev.128.1791]()
