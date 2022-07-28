@@ -210,7 +210,8 @@ $$
 With a standard Laplace transformation [3]
 
 $$
-\int_{0}^{\infty}\frac{\exp(-sp-\frac{a^2}{4p})}{\sqrt{\pi p}}dp = \frac{-a\exp(\sqrt{s})}{\sqrt{s}}
+\int_{0}^{\infty}\exp(-sp)\frac{\exp(-\frac{a^2}{4p})}{\sqrt{\pi p}}dp
+ = \frac{\exp(-a\sqrt{s})}{\sqrt{s}}
 $$
 
 and supstituting $p=t^2$, $s=r^2$ and $a=k$ we get
