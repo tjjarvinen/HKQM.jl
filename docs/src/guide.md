@@ -361,7 +361,8 @@ to solve SCF equations.
 Magnetic current can be extracted with
 
 ```julia
-j = magnetic_current(ψm, Hm)
+# orbital 1 current
+j = magnetic_current(ψm[1], Hm)
 ```
 
 In the future there will be a way to visualize or
