@@ -369,7 +369,7 @@ Where $h_{ij}$ is one particle Hamiltonian
 h = \frac{1}{2}\nabla^2 + V,
 ```
 
-``J`` is Coulomb operator
+Coulomb operator ``J`` is
 
 ```math
 J = \int\frac{\sum_{k}|\psi_{k}(r_2)|^2}{|r_1-r_2|}dr_2
