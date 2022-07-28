@@ -397,7 +397,7 @@ With Helmholtz equation there is only need to calculate the eigen-value
 of orbital, to calculta $k$
 
 $$
-<\psi_{j}|F_{ij}|\psi_{j}> 
+<\psi_{i}|F_{ii}|\psi_{i}> 
 $$
 
 and applying $\tilde{V}$ to orbitals once per orbital. The Fock matrix is thus only calculated diagonally to occupied orbitals.
