@@ -177,10 +177,11 @@ r^2 = x^2 + y^2 + z^2.
 With this the 3-dimensional integral in Eq. (5) can be changes to four 1-dimensional integrals
 
 ```math
-\begin{align}
-\phi(r_1) = & \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(r_2) e^{-\Delta r^2t^2}dr_2 \nonumber \\
-= & \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(x_2,y_2,z_2) e^{-\Delta x^2t^2}e^{-\Delta y^2t^2}e^{-\Delta z^2t^2}dx_2dy_2dz_2 \nonumber
-\end{align}
+\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(r_2) e^{-\Delta r^2t^2}dr_2 \nonumber \\
+```
+
+```math
+\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(x_2,y_2,z_2) e^{-\Delta x^2t^2}e^{-\Delta y^2t^2}e^{-\Delta z^2t^2}dx_2dy_2dz_2 \nonumber
 ```
 
 By introducing
@@ -213,7 +214,6 @@ $\exp (-kr)$ therm
 
 With a standard Laplace transformation [3]
 
-
 ```math
 \int_{0}^{\infty}\exp(-sp)\frac{\exp(-\frac{a^2}{4p})}{\sqrt{\pi p}}dp
  = \frac{\exp(-a\sqrt{s})}{\sqrt{s}}
@@ -237,13 +237,10 @@ that is separaple in variable $r$. Using the $T$ that was defined above leads to
 This leads to final equation
 
 ```math
-\begin{align}
-    \psi(r_1) = & -\frac{m}{\pi^{3/2}\hbar^2}\int_{0}^{\infty}dt\exp(-\frac{k^2}{4t^2}) \nonumber  \\
-    & *\int_{-\infty}^{\infty}dx_2 T(t, \Delta x)
+    \psi(r_1) = -\frac{m}{\pi^{3/2}\hbar^2}\int_{0}^{\infty}dt\exp(-\frac{k^2}{4t^2}) \int_{-\infty}^{\infty}dx_2 T(t, \Delta x)
     \int_{-\infty}^{\infty}dy_2 T(t, \Delta y)
     \int_{-\infty}^{\infty}dz_2 T(t, \Delta z)
-    V(r_2)\psi(r_2)dr_2 \nonumber
-\end{align}
+    V(r_2)\psi(r_2)dr_2
 ```
 
 that is almost the same as for Poisson equation.
@@ -447,10 +444,10 @@ the wavefunction is now complex.
 ## References
 
 [1] M. H. Kalos; Phys. Rev. **128**, (1962)
-[https://doi.org/10.1103/PhysRev.128.1791]()
+[https://doi.org/10.1103/PhysRev.128.1791](https://doi.org/10.1103/PhysRev.128.1791)
 
 [2] Harrision, et al.; J. Chem. Phys. **121**, 11587 (2004);
-[https://doi.org/10.1063/1.1791051]()
+[https://doi.org/10.1063/1.1791051](https://doi.org/10.1103/PhysRev.128.1791)
 
 [3] Schum's outlines Mathematical Handbook of Formulas and Tables,
 2nd edition; edit. Murray R. Spiegel and John Liu;
