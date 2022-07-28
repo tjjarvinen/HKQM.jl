@@ -329,3 +329,40 @@ Solve SCF equations
 ```julia
 ψ1 = scf(ψ, H)
 ```
+
+## Calculation in Magnetic Field
+
+To calculate magnetic field effects on the above
+hydrogen molecule, start by defining magnetic field
+
+```@example guide
+B = [0., 0., 100.0].*u"T"
+A = vector_potential(ceg, B...)
+```
+
+After that create a magnetic field Hamiltonian
+
+```@example guilde
+Hm = HamiltonOperatorMagneticField(V,A)
+```
+
+You can then just solve the system like above
+
+```julia
+ψm = scf(ψ, Hm)
+```
+
+It is a good idea to start form no magnetic field case.
+Because wavefunction is complex in magnetic field and
+thus more expensive to calculate. By starting from
+no field case you minimise the iterations needed
+to solve SCF equations.
+
+Magnetic current can be extracted with
+
+```julia
+j = magnetic_current(ψm, Hm)
+```
+
+In the future there will be a way to visualize or
+export the magnetic current!

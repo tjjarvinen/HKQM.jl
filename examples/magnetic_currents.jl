@@ -3,6 +3,15 @@ using Rotations
 using Interpolations
 using WGLMakie # Or some other Makie backend
 
+# This is an old example
+# and might not work anymore!!!
+# The documentation has an updated example!
+
+@warn "Note that this is an old example and most likely does not work anymore !!!!"
+
+
+
+
 
 ## Helper functions to initialize the system
 
