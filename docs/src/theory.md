@@ -451,4 +451,4 @@ the wavefunction is now complex.
 Mc Graw Hill; 1999; ISBN 0-07-116765-X
 
 [4] Lectures on Quantum Mechanics, 2nd edition; Steven Weinberg;
-Cambridge University press; 2015
+Cambridge University press; 2015; ISBN 978-1-107-11166-0
