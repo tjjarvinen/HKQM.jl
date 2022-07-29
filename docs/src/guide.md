@@ -330,7 +330,7 @@ Solve SCF equations
 ψ1 = scf(ψ, H)
 ```
 
-## Calculation in Magnetic Field
+## Calculations in Magnetic Field
 
 To calculate magnetic field effects on the above
 hydrogen molecule, start by defining magnetic field
