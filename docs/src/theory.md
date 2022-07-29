@@ -177,11 +177,13 @@ r^2 = x^2 + y^2 + z^2.
 With this the 3-dimensional integral in Eq. (5) can be changes to four 1-dimensional integrals
 
 ```math
-\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(r_2) e^{-\Delta r^2t^2}dr_2 \nonumber \\
+\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}}
+\int_{0}^{\infty}dt\int \rho(r_2) e^{-\Delta r^2t^2}dr_2
 ```
 
 ```math
-\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}dt\int \rho(x_2,y_2,z_2) e^{-\Delta x^2t^2}e^{-\Delta y^2t^2}e^{-\Delta z^2t^2}dx_2dy_2dz_2 \nonumber
+\phi(r_1) = \frac{1}{2\varepsilon_0\pi^{3/2}}
+\int_{0}^{\infty}dt\int \rho(x_2,y_2,z_2) e^{-\Delta x^2t^2}e^{-\Delta y^2t^2}e^{-\Delta z^2t^2}dx_2dy_2dz_2
 ```
 
 By introducing
