@@ -74,6 +74,7 @@ end
 """
     magnetic_current(ψ::QuantumState, H::HamiltonOperator)
     magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
+    magnetic_current(sd::SlaterDeterminant, H)
 
 Return magnetic current for systen with given Hamiltonian.
 
@@ -91,8 +92,16 @@ function magnetic_current(ψ::QuantumState, H::HamiltonOperatorMagneticField)
     return _magnetic_current(p, ψ)
 end
 
+function magnetic_current(sd::SlaterDeterminant, H)
+    j = sum(sd) do ψ
+        magnetic_current(ψ, H)
+    end
+    return j
+end
+
 """
     para_magnetic_current(ψ::QuantumState)
+    para_magnetic_current(sd::SlaterDeterminant)
 
 Calculates para magnetic current.
 
@@ -102,6 +111,13 @@ Calculates para magnetic current.
 function para_magnetic_current(ψ::QuantumState)
     p = momentum_operator(ψ)
     return _magnetic_current(p, ψ)
+end
+
+function para_magnetic_current(sd::SlaterDeterminant)
+    j = sum(sd) do ψ
+        para_magnetic_current(ψ)
+    end
+    return j
 end
 
 function _magnetic_current(p, ψ)
