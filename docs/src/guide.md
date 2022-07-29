@@ -289,7 +289,7 @@ the system real solution has been found.
 
 ## Approximate Nuclear Potential
 
-There is an approximation to nuclear potential defined in here
+There is an approximation to nuclear potential defined in
 [J. Chem. Phys. 121, 11587 (2004)](https://doi.org/10.1063/1.1791051).
 It allows approximate electronic structure calculations.
 
