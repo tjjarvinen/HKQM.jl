@@ -10,7 +10,7 @@ using HKQM
 ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
 ```
 
-This creates a cubic box with with side lenght of 5 Å that are
+This creates a cubic box with with side length of 5 Å that are
 divided to 4 elements and 24 Gauss-Lagrange points for each
 element. Resulting in total of `(4*24)^3=884736` points.
 
@@ -53,7 +53,7 @@ unit(r)
 unit(p)
 ```
 
-These operator are vector operator and have lenght defined
+These operator are vector operator and have length defined
 
 ```@example guide
 length(r)
@@ -187,7 +187,7 @@ Slater determinant is orthonormal set of quantum states
 st = SlaterDeterminant([ψ, (1u"bohr^-1"*x)*ψ])
 ```
 
-Slater determinat is an array of orbitals represented by quantum states
+Slater determinant is an array of orbitals represented by quantum states
 
 ```@example guide
 length(st)
@@ -208,7 +208,7 @@ V = -30u"eV" * exp(-0.1u"bohr^-2" * r²)
 H = HamiltonOperator(V)
 ```
 
-Default mass is one electron mass and it can be customised with `m` keyword
+Default mass is one electron mass and it can be customized with `m` keyword
 
 ```@example guide
 H_2me = HamiltonOperator(V; m=2u"me_au")
@@ -216,7 +216,7 @@ H_2me = HamiltonOperator(V; m=2u"me_au")
 nothing # hide
 ```
 
-## Solving Eigen States of a Hamiltonian
+## Solving Eigen-States of a Hamiltonian
 
 You need to generate initial state for Hamiltonian that gives negative energy!
 
@@ -227,13 +227,13 @@ normalize!(ψ)
 bracket(ψ, H, ψ)
 ```
 
-After that Helmholtz Greens function can be used to generate better estimate for the lowest eigen state
+After that Helmholtz Greens function can be used to generate better estimate for the lowest eigen-state
 
 ```@example guide
 ϕ, E = solve_eigen_states(H, ψ; max_iter=10, rtol=1E-6)
 ```
 
-You can add more states to the solution by giving more intial states
+You can add more states to the solution by giving more initial states
 
 ```@example guide
 ψ111 = particle_in_box(ceg, 1,1,1)
@@ -257,7 +257,7 @@ H = HamiltonOperator(V)
 sd = SlaterDeterminant(ψ₁, ψ₂)
 ```
 
-To check that all eigen values are negative calculate Fock matrix and look for diagonal values.
+To check that all eigen-values are negative calculate Fock matrix and look for diagonal values.
 
 ```julia
 fock_matrix(sd, H)
@@ -269,8 +269,8 @@ After that you can solve Hartree-Fock equations
 sd1 = scf(sd, H; tol=1E-6, max_iter=10)
 ```
 
-`tol` is maximum chance in orbital overlap untill convergence is
-archieved. `max_iter` is maximum iterations calculated.
+`tol` is maximum chance in orbital overlap until convergence is
+archived. `max_iter` is maximum iterations calculated.
 
 Hartree-Fock energy is calculated by calling `hf_energy`
 
@@ -284,12 +284,12 @@ Orbital energies can be found from diagonal of Fock matrix
 fock_matrix(sd1, H)
 ```
 
-Check also that offdiagonal elements are insignificant to make sure
+Check also that off-diagonal elements are insignificant to make sure
 the system real solution has been found.
 
 ## Approximate Nuclear Potential
 
-There is an approximation to nuclear potential defined in here
+There is an approximation to nuclear potential defined in
 [J. Chem. Phys. 121, 11587 (2004)](https://doi.org/10.1063/1.1791051).
 It allows approximate electronic structure calculations.
 
@@ -330,7 +330,7 @@ Solve SCF equations
 ψ1 = scf(ψ, H)
 ```
 
-## Calculation in Magnetic Field
+## Calculations in Magnetic Field
 
 To calculate magnetic field effects on the above
 hydrogen molecule, start by defining magnetic field
@@ -355,7 +355,7 @@ You can then just solve the system like above
 It is a good idea to start form no magnetic field case.
 Because wavefunction is complex in magnetic field and
 thus more expensive to calculate. By starting from
-no field case you minimise the iterations needed
+no field case you minimize the iterations needed
 to solve SCF equations.
 
 Magnetic current can be extracted with

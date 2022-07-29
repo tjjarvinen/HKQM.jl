@@ -38,7 +38,7 @@ Changing order of operating to $x$ and integration of $s$
 \mathcal{L}u(x)=\mathcal{L}\left(\int G(x,s)f(s)ds\right)
 ```
 
-leads to solultion
+leads to solution
 
 ```math
 \begin{equation}
@@ -64,7 +64,7 @@ G(r_1,r_2)=\frac{-1}{4\pi|r_1-r_2|}
 
 ### Helmholtz equation
 
-Inhomogenous Helmholtz equation is defined as 
+Inhomogeneous Helmholtz equation is defined as 
 
 ```math
 (\nabla^2 + k^2)\varphi = f
@@ -80,7 +80,7 @@ G(r_1,r_2)= e^{-ik|r_1-r_2|} \frac{-1}{4\pi|r_1-r_2|}
 
 ## Electronic integrals
 
-A charge density $\rho$ creates a electric potential $\phi$ acordingly Poisson equation (Gauss's Law)
+A charge density $\rho$ creates a electric potential $\phi$ accordingly Poisson equation (Gauss's Law)
 
 ```math
 \nabla^2\phi = -\frac{\rho}{\varepsilon_0}
@@ -94,7 +94,7 @@ Electric potential can be solved using Poisson equation Green's function Eq. (3)
 \end{equation}
 ```
 
-Electric potential can then be used to calculate ineraction
+Electric potential can then be used to calculate interaction
 between two charge densities $\rho_1$ and $\rho_2$ by
 first calculating electric potential from one charge
 density and then integrating together with other charge
@@ -219,14 +219,14 @@ With a standard Laplace transformation [3]
  = \frac{\exp(-a\sqrt{s})}{\sqrt{s}}
 ```
 
-and supstituting $p=t^2$, $s=r^2$ and $a=k$ we get
+and substituting $p=t^2$, $s=r^2$ and $a=k$ we get
 
 ```math
     \frac{\exp (-kr)}{r} = \frac{2}{\sqrt{\pi}}
     \int_{0}^{\infty}\exp(-\frac{k^2}{4t^2}-t^2r^2)dt
 ```
 
-that is separaple in variable $r$. Using the $T$ that was defined above leads to
+that is separable in variable $r$. Using the $T$ that was defined above leads to
 
 ```math
     \frac{\exp (-kr)}{r} = \frac{2}{\sqrt{\pi}}
@@ -271,7 +271,7 @@ be support for more complicated ones.
 ## Tensor Representation
 
 The basis is formed of elements and Gauss-Legendre polynomial points each
-of wich have x-,y- and z-coordinates. Thus wavefunctions, densities, etc.
+of which have x-,y- and z-coordinates. Thus wavefunctions, densities, etc.
 are six dimensional tensors.
 
 ```math
@@ -332,7 +332,7 @@ The representation is the same except for the extra term and potential
 energy.
 
 The calculation is done by first calculating energy to get $k$. After that
-the potential energy and the initial state are multiplyed
+the potential energy and the initial state are multiplied
 
 ```math
 \tilde{\psi} = V\psi.
@@ -343,7 +343,7 @@ This leads to a following tensor expression
 ```math
 \phi_{\alpha\beta\gamma IJK}=
 -\frac{m}{\pi^{3/2}\hbar^2}
-\sum_{i=1}^{N}\omega_{i}\exp(-\frac{k^2}{4t^2})
+\sum_{i=1}^{N}\omega_{i}\exp(-\frac{k^2}{4t_{i}^2})
 \tilde{T}_{\alpha\alpha'II'}^i
 \tilde{T}_{\beta\beta'JJ'}^i
 \tilde{T}_{\gamma\gamma'KK'}^i
@@ -375,7 +375,7 @@ Coulomb operator ``J`` is
 J = \int\frac{\sum_{k}|\psi_{k}(r_2)|^2}{|r_1-r_2|}dr_2
 ```
 
-and K is exhange operator
+and K is exchange operator
 
 ```math
 K_{ij}\psi_{j} = \sum_{k}\psi_{k}\int\frac{\psi_{j}^{*}(r_2)\psi_{k}(r_2)}{|r_1-r_2|}dr_2.
@@ -397,7 +397,7 @@ which is in same form as Schrödinger equation in above and thus can be
 solved the same way.
 
 With Helmholtz equation there is only need to calculate the eigen-value
-of orbital, to calculta $k$
+of orbital, to calculate $k$
 
 ```math
 <\psi_{i}|F_{ii}|\psi_{i}> 
@@ -407,7 +407,7 @@ and applying $\tilde{V}$ to orbitals once per orbital. The Fock matrix is thus o
 
 This has two consequences. First, scaling on number of orbitals is reduced
 to $O(N^2)$. Secondly, orbitals can be updated on parallel, followed by an
-ortogonalization. Meaning that the orbital optimization scales linearry on number of orbitals.
+orthogonalization. Meaning that the orbital optimization scales linearly on number of orbitals.
 
 ## Magnetic Field Calculations
 
