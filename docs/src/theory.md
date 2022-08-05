@@ -136,7 +136,9 @@ Green's function can then be used to find a solution to Schrödinger equation
 \psi(r_1) = -\frac{m}{2\pi\hbar^2}\int \frac{\exp(-ik|r_1-r_2|)}{|r_1-r_2|}V(r_2)\psi(r_2)dr_2
 ```
 
-Which is a complex due to $e^{-ik|r_1-r_2|}$ term. If energy is negative, the $i$ in front $k$ can be moved inside the square root in $k$ and make the equation real
+Which is a complex due to $e^{-ik|r_1-r_2|}$ term. If energy is negative,
+the $i$ in front $k$ can be moved inside the square root in $k$
+and make the equation real
 
 ```math
 \begin{equation}
@@ -144,7 +146,8 @@ Which is a complex due to $e^{-ik|r_1-r_2|}$ term. If energy is negative, the $i
 \end{equation}
 ```
 
-This equation is iterative in nature due to it needing energy as an input and because wavefunction is present on both sides of the equation.
+This equation is iterative in nature due to it needing energy as an input
+and because wavefunction is present on both sides of the equation.
 
 ## Implementation
 
@@ -160,7 +163,7 @@ To do this consider standard [Gaussian integral](https://en.wikipedia.org/wiki/G
 \end{equation}
 ```
 
-By taking $a=r^2$ this equation can be manipulated to
+By taking $a=r^2$ this equation can be manipulated into
 
 ```math
 \begin{equation}
@@ -168,7 +171,15 @@ By taking $a=r^2$ this equation can be manipulated to
 \end{equation}
 ```
 
-This form allow us to get rid of square root in distance calculation $r=\sqrt{x^2+y^2+z^2}$, by just separating $r^2$ term
+With this the Poisson equation Green's function is 
+
+```math
+\begin{equation}
+   G(r_1,r_2) = \frac{1}{2\varepsilon_0\pi^{3/2}} \int_{0}^{\infty}e^{-\Delta r^2t^2}dt
+\end{equation}
+```
+
+This form allow us to get rid of the square root in the distance calculation $r=\sqrt{x^2+y^2+z^2}$, by just separating $r^2$ term
 
 ```math
 r^2 = x^2 + y^2 + z^2.
@@ -204,6 +215,21 @@ the integral takes form
 This form has four one dimensional integrals that can be
 calculated in serial fashion. Meaning that the computational complexity
 was reduced from $N^3$ to $4N$
+
+**NOTE!!!**
+
+Changing to [atomic units](https://en.wikipedia.org/wiki/Hartree_atomic_units)
+causes an extra $4\pi$ term to be introduced, due to a.u. length having $4\pi$
+in its definition. Thus for atomic units the above equation is
+
+```math
+\begin{equation}
+\phi(r_1) = \frac{2}{\sqrt{\pi}}
+\int_{0}^{\infty}dt\int_{-\infty}^{\infty} dx_2 T(t, \Delta x)
+\int_{-\infty}^{\infty}dy_2 T(t, \Delta y)
+\int_{-\infty}^{\infty} dz_2 T(t, \Delta z)\rho(r_2).
+\end{equation}
+```
 
 ### Helmholtz Equation
 
@@ -249,6 +275,21 @@ that is almost the same as for Poisson equation.
 With only differences being that charge density is
 replaced with $V\psi$ and the extra $\exp(-\frac{k^2}{4t^2})$-term
 for *t*-integration.
+
+**NOTE!!!**
+
+Changing to [atomic units](https://en.wikipedia.org/wiki/Hartree_atomic_units)
+causes an extra $4\pi$ term to be introduced, due to a.u. length having $4\pi$
+in its definition. Thus for atomic units the above equation is
+
+```math
+\begin{equation}
+    \psi(r_1) = -\frac{2m}{\sqrt{\pi}}\int_{0}^{\infty}dt\exp(-\frac{k^2}{4t^2}) \int_{-\infty}^{\infty}dx_2 T(t, \Delta x)
+    \int_{-\infty}^{\infty}dy_2 T(t, \Delta y)
+    \int_{-\infty}^{\infty}dz_2 T(t, \Delta z)
+    V(r_2)\psi(r_2).
+\end{equation}
+```
 
 ## Basis
 
@@ -321,7 +362,7 @@ this leads to
 
 ```math
 \phi_{\alpha\beta\gamma IJK}=
-\frac{1}{2\varepsilon_0\pi^{3/2}}\sum_{i=1}^{N}\omega_{i}
+\frac{2}{\sqrt{\pi}}\sum_{i=1}^{N}\omega_{i}
 \tilde{T}_{\alpha\alpha'II'}^i
 \tilde{T}_{\beta\beta'JJ'}^i
 \tilde{T}_{\gamma\gamma'KK'}^i
@@ -344,7 +385,7 @@ This leads to a following tensor expression
 
 ```math
 \phi_{\alpha\beta\gamma IJK}=
--\frac{m}{\pi^{3/2}\hbar^2}
+-\frac{2m}{\sqrt{\pi}}
 \sum_{i=1}^{N}\omega_{i}\exp(-\frac{k^2}{4t_{i}^2})
 \tilde{T}_{\alpha\alpha'II'}^i
 \tilde{T}_{\beta\beta'JJ'}^i
@@ -354,7 +395,7 @@ This leads to a following tensor expression
 
 In practice the extra term $\exp(-\frac{k^2}{4t^2})$ is included in
 the integration weight $w_i$ and the constant term in front
-($\frac{m}{\pi^{3/2}\hbar^2}$) is ignored,
+($\frac{2m}{\sqrt{\pi}}$) can be ignored,
 because the wavefunction needs to be normalized in any case.
 
 ## Hartree-Fock
