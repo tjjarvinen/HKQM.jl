@@ -54,7 +54,6 @@ struct HelmholtzTensorLinear{T} <: AbstractHelmholtzTensorSingle
         t, wt = gausspoints(nt; elementsize=(tmin, tmax))
         elementgrid = get_1d_grid(eg)
         w = getweight(elementgrid)
-        s = size(w)
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{typeof(k*t[1])}(elementgrid, t, wt, w, tmin, tmax, k)
     end
@@ -139,7 +138,6 @@ struct HelmholtzTensorLog{T} <: AbstractHelmholtzTensorSingle
         wt = ws .* t
         elementgrid = get_1d_grid(eg)
         w = getweight(elementgrid)
-        s = size(w)
         wt = wt .* exp.(-(k^2)./(4t.^2))
         new{typeof(k*t[1])}(elementgrid, t, wt, w, tmin, tmax, k)
     end
