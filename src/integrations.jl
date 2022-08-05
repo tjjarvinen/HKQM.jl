@@ -127,49 +127,8 @@ end
 
 ## Coulomb integral / Poisson equation
 
-coulomb_correction(ρ, tmax) = 2/sqrt(π)*(π/tmax^2).*ρ
+coulomb_correction(ρ, tmax) = ( 2/sqrt(π)*(π/tmax^2) ) .* ρ
 
-function poisson_equation(ρ::AbstractArray,
-                          transtensor::AbtractTransformationTensor,
-                          I, J, K;
-                          tmax=nothing)
-    V = similar(ρ, size(ρ)[1:3]...)
-    V .= 0
-    v = similar(V)
-    @showprogress for p in Iterators.reverse(eachindex(transtensor.wt))
-        Tx = transtensor[:,:,:,I,p]
-        Ty = transtensor[:,:,:,J,p]
-        Tz = transtensor[:,:,:,K,p]
-        @tensoropt v[α,β,γ] = Tx[α,α',I'] * Ty[β,β',J'] * Tz[γ,γ',K'] * ρ[α',β',γ',I',J',K']
-        #@tensoropt v[α',β',γ',I',J',K'] = Tx[α,α',I'] * Ty[β,β',J'] * Tz[γ,γ',K'] * vρ[α,β,γ]
-        V = V .+ transtensor.wt[p].*v
-    end
-    if tmax != nothing
-        return muladd.(2/sqrt(π), V, coulomb_correction(ρ[:,:,:,I,J,K], tmax))
-    end
-    return  2/sqrt(π).*V
-end
-
-
-function poisson_equation(ρ::AbstractArray{<:Any,6},
-                          transtensor::AbtractTransformationTensor,
-                          t)
-    V = similar(ρ)
-    T = similar(ρ, size(transtensor)[1:end-1])
-    T .= transtensor[:,:,:,:,t]
-    @tensoropt V[α,β,γ,I,J,K] = T[α,α',I,I'] * T[β,β',J,J'] * T[γ,γ',K,K'] * ρ[α',β',γ',I',J',K']
-    return  (2/sqrt(π)*transtensor.wt[t]).*V
-end
-
-
-function poisson_equation!(V::AbstractArray{<:Any,6},
-                          ρ::AbstractArray{<:Any,6},
-                          transtensor::AbtractTransformationTensor,
-                          t)
-    T = transtensor[:,:,:,:,t]
-    @tensoropt V[α,β,γ,I,J,K] = T[α,α',I,I'] * T[β,β',J,J'] * T[γ,γ',K,K'] * ρ[α',β',γ',I',J',K']
-    return  (2/sqrt(π)*transtensor.wt[t]).*V
-end
 
 
 function poisson_equation!(V::AbstractArray{<:Any,6},
@@ -186,12 +145,10 @@ end
 function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
                           tmax=nothing, showprogress=false)
 
-    V = ρ.*transtensor.wt[1]
-    nt = size(transtensor)[end]
+    tmp = ρ.*transtensor.wt[1] # Make sure ve have correct type
+    nt = size(transtensor, 5)
     @debug "nt=$nt"
-    @debug "V type = $(typeof(V))"
     ptime = showprogress ? 1 : Inf
-    tmp = similar(V)
     p = Progress(nt, ptime)
     V = sum( axes(transtensor.wt, 1) ) do t
         poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
