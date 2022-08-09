@@ -15,7 +15,7 @@ end
 
 function poisson_equation(ρ::Array, transtensor::AbtractTransformationTensor;
         tmax=nothing, showprogress=false)
-    @info "GPU calculation"
+    @debug "GPU calculation"
     cu_ρ = CuArray(ρ)
     tmp = cu_ρ .* transtensor.wt[1] # Make sure we have correct type
     nt = size(transtensor, 5)
@@ -35,7 +35,7 @@ end
 
 function poisson_equation(ρ::CuArray, transtensor::AbtractTransformationTensor;
         tmax=nothing, showprogress=false)
-    @info "GPU calculation"
+    @debug "GPU calculation"
     tmp = ρ .* transtensor.wt[1] # Make sure we have correct type
     nt = size(transtensor, 5)
     @debug "nt=$nt"
