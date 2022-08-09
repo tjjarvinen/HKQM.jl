@@ -145,7 +145,7 @@ end
 function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
                           tmax=nothing, showprogress=false)
 
-    tmp = ρ.*transtensor.wt[1] # Make sure ve have correct type
+    tmp = ρ.*transtensor.wt[1] # Make sure we have correct type
     nt = size(transtensor, 5)
     @debug "nt=$nt"
     ptime = showprogress ? 1 : Inf
