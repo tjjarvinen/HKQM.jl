@@ -51,3 +51,22 @@ function poisson_equation(ρ::CuArray, transtensor::AbtractTransformationTensor;
     end
     return V
 end
+
+
+##
+
+function (lo::LaplaceOperator)(qs::QuantumState{<:Array, <:Any})
+    @debug "GPU Laplace"
+    tmp = CuArray(lo.g.dt)
+    @cutensor w[i,j]:=tmp[i,k]*tmp[k,j]
+    @cutensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*w[i,ii] + qs.psi[i,jj,k,I,J,K]*w[j,jj] + qs.psi[i,j,kk,I,J,K]*w[k,kk]
+    return QuantumState(get_elementgrid(qs), Array(ϕ), unit(qs)*unit(lo.g)^2)
+end
+
+function (lo::LaplaceOperator)(qs::QuantumState{<:CuArray, <:Any})
+    @debug "GPU Laplace"
+    tmp = CuArray(lo.g.dt)
+    @cutensor w[i,j]:=tmp[i,k]*tmp[k,j]
+    @cutensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*w[i,ii] + qs.psi[i,jj,k,I,J,K]*w[j,jj] + qs.psi[i,j,kk,I,J,K]*w[k,kk]
+    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
+end

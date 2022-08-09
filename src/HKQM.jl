@@ -63,6 +63,7 @@ export bracket,
        fock_matrix,
        get_1d_grid,
        get_center,
+       get_elementgrid,
        helmholtz_equation,
        helmholtz_equation!,
        helmholtz_update,
@@ -135,7 +136,7 @@ include("initial_states.jl")
 
 
 function __init__()
-    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" include("poisson_cuda.jl")
+    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" include("cuda_additions.jl")
 end
 
 
