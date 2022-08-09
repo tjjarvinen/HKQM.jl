@@ -585,7 +585,7 @@ function (lo::LaplaceOperator)(qs::QuantumState)
     tmp = similar(qs.psi, size(lo.g.dt))
     tmp .= lo.g.dt
     @tensor w[i,j]:=tmp[i,k]*tmp[k,j]
-    @tensor ϕ[i,j,k,I,J,K]:= w[i,ii]*qs.psi[ii,j,k,I,J,K] + w[j,jj]*qs.psi[i,jj,k,I,J,K] + w[k,kk]*qs.psi[i,j,kk,I,J,K]
+    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*w[i,ii] + qs.psi[i,jj,k,I,J,K]*w[j,jj] + qs.psi[i,j,kk,I,J,K]*w[k,kk]
     return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
 end
 
