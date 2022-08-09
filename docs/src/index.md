@@ -35,13 +35,14 @@ Base.Threads.nthreads()
 The second option is how many threads BLAS is using. This can be find out with command
 
 ```julia
-Base.LinearAlgebra.BLAS.get_num_threads()
+using LinearAlgebra
+LinearAlgebra.BLAS.get_num_threads()
 ```
 
 Setting up number of threads for BLAS is done with
 
 ```julia
-Base.LinearAlgebra.BLAS.set_num_threads(n)
+LinearAlgebra.BLAS.set_num_threads(n)
 ```
 
 ### Number of Processes
@@ -62,3 +63,19 @@ Number of worker processes can found out by typing
 ```julia
 nworkers()
 ```
+
+## GPU calculations
+
+GPU Calculations with [CUDA](https://github.com/JuliaGPU/CUDA.jl) are supported.
+At this moment the support is only for Poisson and Helmholtz equations.
+Other parts may work, but they are still work in process.
+
+To use GPU support first load CUDA and after that HKQM
+
+```julia
+using CUDA
+using HKQM
+```
+
+You can then proceed with normal calculations
+and all Poisson and Helmholtz equations computed with GPU.
