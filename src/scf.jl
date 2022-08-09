@@ -22,9 +22,9 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperator;
         DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
-    k  = sqrt( -2(austrip(E)) )
+    k  = sqrt( -2(austrip(H.T.m * E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
-    ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
+    ϕ = H.T.m * H.V * 1u"ħ_au^-2" * ψ
     ϕ = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
     normalize!(ϕ)
     return ϕ
@@ -38,9 +38,9 @@ function helmholtz_equation!(ψ::QuantumState, H::HamiltonOperator;
         DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
-    k  = sqrt( -2(austrip(E)) )
+    k  = sqrt( -2(austrip(H.T.m * E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
-    ϕ = H.T.m*H.V*1u"ħ_au^-2" * ψ
+    ϕ = (H.T.m * 1u"ħ_au^-2") * H.V * ψ
     ψ .= poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
     normalize!(ψ)
     return ψ
@@ -55,7 +55,7 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
         DomainError("Quantum State has positive energy") |> throw
     end
     @debug "E=$E"
-    k  = sqrt( -2(austrip(E)) )
+    k  = sqrt( -2(austrip(H.T.m * E)) )
     ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
     p = momentum_operator(H.T)
     #TODO These could run parallel
@@ -91,7 +91,7 @@ function helmholtz_update( sd::SlaterDeterminant,
     if E >= 0u"hartree"
         DomainError("Orbital $i has positive energy") |> throw
     end
-    k  = sqrt( -2( austrip(E) ) )
+    k  = sqrt( -2( austrip(H.T.m * E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     ϕ = (H.V + 2J) * ψ - Kψ  
     ϕ *= H.T.m * 1u"ħ_au^-2"
@@ -114,7 +114,7 @@ function helmholtz_update( sd::SlaterDeterminant,
     if E >= 0u"hartree"
         DomainError("Orbital $i has positive energy") |> throw
     end
-    k  = sqrt( -2( austrip(E) ) )
+    k  = sqrt( -2( austrip(H.T.m * E) ) )
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     p = momentum_operator(H.T)
     ϕ = (H.V + 2J) * ψ - Kψ  
