@@ -14,6 +14,7 @@ using SpecialFunctions
 using StaticArrays
 using TensorOperations
 using Tullio
+using Requires
 @reexport using PeriodicTable
 @reexport using Unitful
 @reexport using UnitfulAtomic
@@ -131,6 +132,12 @@ include("integrations.jl")
 include("accuracytests.jl")
 include("scf.jl")
 include("initial_states.jl")
+
+
+function __init__()
+    @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" include("poisson_cuda.jl")
+end
+
 
 
 
