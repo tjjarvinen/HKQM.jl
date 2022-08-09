@@ -9,23 +9,23 @@ Low lever integration routines. (users should not use these, as they can change)
 function integrate(ϕ, grid::CubicElementGrid, ψ)
     ω = ω_tensor(grid)
     c = ϕ.*ψ
-    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
+    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*c[1,3,5,2,4,6]
 end
 
 function integrate(ϕ, grid::AbstractElementGridSymmetricBox, ψ)
     ω = getweight(grid)
     c = ϕ.*ψ
-    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*c[α,β,γ,I,J,K]
+    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*c[1,3,5,2,4,6]
 end
 
 function integrate(grid::CubicElementGrid, ρ)
     ω = ω_tensor(grid)
-    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
+    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*ρ[1,3,5,2,4,6]
 end
 
 function integrate(grid::AbstractElementGridSymmetricBox, ρ)
     ω = getweight(grid)
-    return  @tensor ω[α,I]*ω[β,J]*ω[γ,K]*ρ[α,β,γ,I,J,K]
+    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*ρ[1,3,5,2,4,6]
 end
 
 function integrate(ϕ::QuantumState, ψ::QuantumState)
@@ -136,7 +136,7 @@ function poisson_equation!(V::AbstractArray{<:Any,6},
                           T::AbstractArray{<:Any,4},
                           wt)
     @assert size(V) == size(ρ)
-    @tensoropt V[α,β,γ,I,J,K] = T[α,α',I,I'] * T[β,β',J,J'] * T[γ,γ',K,K'] * ρ[α',β',γ',I',J',K']
+    @tensor V[-1,-2,-3,-4,-5,-6] = T[-1,1,-4,2] * T[-2,3,-5,4] * T[-3,5,-6,6] * ρ[1,3,5,2,4,6]
     V .*= (2/sqrt(π)*wt)
     return V
 end
