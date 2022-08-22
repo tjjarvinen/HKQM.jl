@@ -127,6 +127,9 @@ Base.:(*)(a::Number, qs::QuantumState) = QuantumState(qs.elementgrid, ustrip(a).
 Base.:(*)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, ustrip(a).*qs.psi, unit(qs)*unit(a))
 Base.:(/)(qs::QuantumState, a::Number) = QuantumState(qs.elementgrid, qs.psi./ustrip(a), unit(qs)/unit(a))
 
+Base.:(*)(a::AbstractVector, qs::QuantumState) = map(x->x*qs, a )
+Base.:(-)(qs::QuantumState) = -1*qs
+
 Base.conj(qs::QuantumState) = qs
 Base.conj(qs::QuantumState{Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.psi), unit(qs))
 Base.conj!(qs::QuantumState) = qs

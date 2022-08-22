@@ -1,11 +1,13 @@
 module ToroidalCurrent
 
+using Distributed
 using Interpolations
 
 using ..HKQM
 
 
 export read_sysmoic, read_current
+export toroidal_current, poloidal_current
 
 function read_sysmoic(fname)
     J = Float64[]
@@ -118,13 +120,15 @@ end
 function get_current_component(ceg, data, i, j)
     intp = give_J_interpolator(data, i, j )
     vals = [ intp(r...) for r in ceg ]
+    #NOTE unit is not correct
     return QuantumState(ceg, vals)
 end
 
 function get_derivative_component(ceg, data, i, j, k)
     intp = give_dJ_interpolator(data, i, j, k)
     vals = [ intp(r...) for r in ceg ]
-    return QuantumState(ceg, vals)
+    #NOTE unit is not correct
+    return QuantumState(ceg, vals, u"bohr^-1")
 end
 
 
@@ -141,5 +145,53 @@ function read_current(fname, ne=4, ng=32)
     dJ = [ get_derivative_component(ceg, data, i,j,k)   for (i,j,k) in Iterators.product(1:3, 1:3, 1:3) ]
     return J, dJ
 end
+
+
+function toroidal_current(dJ; B=[0.,0.,1.].*u"T")
+    @assert size(dJ) == (3,3,3)
+    # ∇²ψ = ∂Jₓ/∂y - ∂J_y/∂x
+    # Is this correct for magnetic responce?
+    ∇²ψ = [ dJ[1,i,2] - dJ[2,i,1] for i in 1:3 ]
+
+    ∇ = GradientOperator( dJ[begin] )
+
+    ψ = pmap( ∇²ψ ) do ρ
+        poisson_equation(ρ) 
+    end
+
+    # J and dJ are unitless
+    # So we need to adopt to it
+    Bt = uconvert.(u"T", B)
+    Bn = ustrip(Bt)
+
+    # We have magnetic responce so ...
+    J_toro = ∇×(Bn .* ψ)
+
+    return J_toro
+end
+
+
+function poloidal_current(J; B=[0.,0.,1.].*u"T")
+    @assert size(J) == (3,3)
+    # ∇²ϕ = -J_z
+    # Is this correct for magnetic responce?
+    ∇²ϕ = [ -J[3,i] for i in 1:3 ]
+
+    ∇ = GradientOperator( J[begin] )
+
+    ϕ = pmap( ∇²ϕ ) do ρ
+        poisson_equation(ρ) 
+    end
+
+    # J and dJ are unitless
+    # So we need to adopt to it
+    Bt = uconvert.(u"T", B)
+    Bn = ustrip(Bt)
+
+    # We have magnetic responce so ...
+    J_polo = ∇×∇×(Bn .* ϕ)
+    return J_polo
+end
+
 
 end

@@ -50,6 +50,14 @@ function cross(v1::AbstractOperator{3}, v2::AbstractOperator{3})
     return VectorOperator(r1,r2,r3)
 end
 
+function cross(v1::AbstractOperator{3}, v2::AbstractVector)
+    @assert length(v2) == 3
+    r1 = v1[2]*v2[3] - v1[3]*v2[2]
+    r2 = v1[1]*v2[3] - v1[3]*v2[1]
+    r3 = v1[1]*v2[2] - v1[2]*v2[1]
+    return [r1,r2,r3]
+end
+
 Base.:(*)(op::AbstractOperator{1}, qs::QuantumState) = op(qs)
 Base.:(*)(op::AbstractOperator, qs::QuantumState) = map(f->f(qs), op)
 
@@ -351,6 +359,9 @@ struct GradientOperator <: AbstractOperator{3}
     end
 end
 
+function GradientOperator(ψ)
+    return GradientOperator( get_elementgrid(ψ) )
+end
 
 function (go::GradientOperator)(ψ::QuantumState)
     return map(f->f(ψ), go)
