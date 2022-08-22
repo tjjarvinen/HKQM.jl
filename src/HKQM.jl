@@ -22,6 +22,7 @@ using Requires
 
 # Submodule
 include("submodules/ReferenceStates.jl")
+include("submodules/ToroidalCurrent.jl")
 using .ReferenceStates
 
 
