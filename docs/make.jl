@@ -14,7 +14,8 @@ makedocs(
         "Guide" => "guide.md",
         "Theory" => "theory.md",
         "Accuracy Tests" => "accuracy.md",
-        "Visualizing Wave Function" => "visualization.md"
+        "Visualizing Wave Function" => "visualization.md",
+        "Toroidal and Poloidal Currents" => "toroidal-poloidal.md"
     ]
 )
 

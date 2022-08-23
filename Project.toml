@@ -5,6 +5,7 @@ version = "0.2.1"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

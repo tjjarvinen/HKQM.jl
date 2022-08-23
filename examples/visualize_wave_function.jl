@@ -49,14 +49,15 @@ end
 
 ##
 
-function Base.minimum(ceg::AbstractElementGrid)
-    return ceg[ firstindex(ceg) ] 
-end
+# These have been moved to elements.jl and they should work
+# function Base.minimum(ceg::AbstractElementGrid)
+#     return ceg[ firstindex(ceg) ] 
+# end
 
 
-function Base.maximum(ceg::AbstractElementGrid)
-    return ceg[ lastindex(ceg) ]
-end
+# function Base.maximum(ceg::AbstractElementGrid)
+#     return ceg[ lastindex(ceg) ]
+# end
 
 ##
 

@@ -406,6 +406,17 @@ function element_size(egsb::ElementGridSymmetricBox)
 end
 
 
+##
+
+function Base.minimum(ceg::AbstractElementGrid)
+    return ceg[ firstindex(ceg) ] 
+end
+
+function Base.maximum(ceg::AbstractElementGrid)
+    return ceg[ lastindex(ceg) ]
+end
+
+
 ## Gauss points for integration
 
 
