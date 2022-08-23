@@ -163,8 +163,14 @@ end
 
 function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
                           tmax=nothing, showprogress=false)
-    @assert dimension(ψ) == dimension(u"bohr^-2")
-    ψ = uconvert(u"bohr^-2", ψ)
+    #@assert dimension(ψ) == dimension(u"bohr^-2")
+    #ψ = uconvert(u"bohr^-2", ψ)
+    ψ = auconvert(ψ)  # Length need to be in bohr's 
     V = poisson_equation(ψ.psi, transtensor, tmax=tmax, showprogress=showprogress)
-    return QuantumState(ψ.elementgrid, V)
+    return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
+end
+
+function poisson_equation(ψ::QuantumState)
+    ct = optimal_coulomb_tranformation(ψ)
+    return poisson_equation(ψ, ct; tmax=ct.tmax )
 end
