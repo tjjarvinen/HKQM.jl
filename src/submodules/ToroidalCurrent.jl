@@ -93,8 +93,9 @@ function read_sysmoic(fname)
     end
 
     J = reshape(J, 3, 3, length(x), length(y), length(z) )
-    J = permutedims(J, (2,1,3,4,5))
+    J = permutedims(J, (2,1,3,4,5) )
 
+    # Same for dJ
     if length(dJ) != 3*3*3 * length(x) * length(y) * length(z)
         ldJ = length(dJ)
         lref = 3*3*3 * length(x) * length(y) * length(z)
@@ -104,11 +105,13 @@ function read_sysmoic(fname)
     end
     
     dJ = reshape(dJ, 3, 3, 3, length(x), length(y), length(z) )
-    dJ = permutedims(dJ, (2,1,3,4,5,6))
+    dJ = permutedims(dJ, (2,1,3,4,5,6) )
 
     return Dict("J"=>J, "dJ"=>dJ, "x"=>x, "y"=>y, "z"=>z)
 end
 
+##
+# For calculations we need to interpolate the data to HKQM type element grids
 
 function give_J_interpolator(data, i, j )
     intp = LinearInterpolation( (data["x"], data["y"], data["z"]), data["J"][i,j,:,:,:])
@@ -136,6 +139,8 @@ function get_derivative_component(ceg, data, i, j, k)
 end
 
 
+##
+# Read data to QuantumState type that can be operated on
 function read_current(fname, ne=4, ng=32)
     @info "Reading file"
     data = read_sysmoic(fname)
