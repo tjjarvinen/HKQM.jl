@@ -205,7 +205,7 @@ end
 
 function write_currents(fname, J_toro, J_polo; n_points=20)
     # These are taken from ../examples/vizualizze_wave_function.jl
-    function get3d(psi::QuantumState)
+    function get3d(psi)
         tmp = permutedims(psi.psi, (1,4,2,5,3,6))
         s = size(tmp)
         return reshape(tmp, (s[1]*s[2], s[3]*s[4], s[5]*s[6]))
@@ -220,7 +220,7 @@ function write_currents(fname, J_toro, J_polo; n_points=20)
         z = reshape(tz, (length(tz)) )
         return x, y, z
     end
-    function get_interpolator(psi::QuantumState)
+    function get_interpolator(psi)
         x, y, z = get_coordinates(HKQM.get_elementgrid(psi))
         Psi3d = get3d(psi)
         return LinearInterpolation((x,y,z), Psi3d)
