@@ -80,6 +80,9 @@ function read_sysmoic(fname)
             @warn "Number of miss printed lines in SYSMOIC file is $error_count"
         end
 
+        if xmin != ymin != zmin || xmax != ymax != zmax
+            @warn "System is not cubic - the results may not be correct!!!"
+        end
         x = range(xmin, xmax; step=xstep )
         y = range(ymin, ymax; step=ystep )
         z = range(zmin, zmax; step=zstep )
@@ -114,12 +117,16 @@ end
 # For calculations we need to interpolate the data to HKQM type element grids
 
 function give_J_interpolator(data, i, j )
-    intp = LinearInterpolation( (data["x"], data["y"], data["z"]), data["J"][i,j,:,:,:])
+    intp = linear_interpolation( (data["x"], data["y"], data["z"]),
+                                 data["J"][i,j,:,:,:],
+                                 extrapolation_bc = Line() )
     return intp
 end
 
 function give_dJ_interpolator(data, i, j, k)
-    intp = LinearInterpolation( (data["x"], data["y"], data["z"]), data["dJ"][i,j,k,:,:,:])
+    intp = linear_interpolation( (data["x"], data["y"], data["z"]),
+                                  data["dJ"][i,j,k,:,:,:],
+                                  extrapolation_bc = Line() )
     return intp
 end
 
@@ -146,7 +153,9 @@ function read_current(fname, ne=4, ng=32)
     data = read_sysmoic(fname)
     x = data["x"]
     Δx = maximum(x) - minimum(x)
-    ceg = ElementGridSymmetricBox(Δx*1u"bohr", ne, ng)
+    Δy = maximum(y) - minimum(y)
+    Δz = maximum(z) - minimum(z)
+    ceg = ElementGridSymmetricBox(maximum(Δx, Δy, Δz) *1u"bohr", ne, ng)
     @info "Interpolating current"
     J = [ get_current_component(ceg, data, i,j)   for (i,j) in Iterators.product(1:3, 1:3) ]
 
