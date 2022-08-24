@@ -80,7 +80,7 @@ function read_sysmoic(fname)
             @warn "Number of miss printed lines in SYSMOIC file is $error_count"
         end
 
-        if xmin != ymin != zmin || xmax != ymax != zmax
+        if xmin != ymin || xmin != zmin || xmax != ymax || xmaz != zmax
             @warn "System is not cubic - the results may not be correct!!!"
         end
         x = range(xmin, xmax; step=xstep )
@@ -152,10 +152,12 @@ function read_current(fname, ne=4, ng=32)
     @info "Reading file"
     data = read_sysmoic(fname)
     x = data["x"]
+    y = data["y"]
+    z = data["y"]
     Δx = maximum(x) - minimum(x)
     Δy = maximum(y) - minimum(y)
     Δz = maximum(z) - minimum(z)
-    ceg = ElementGridSymmetricBox(maximum(Δx, Δy, Δz) *1u"bohr", ne, ng)
+    ceg = ElementGridSymmetricBox(max(Δx, Δy, Δz) *1u"bohr", ne, ng)
     @info "Interpolating current"
     J = [ get_current_component(ceg, data, i,j)   for (i,j) in Iterators.product(1:3, 1:3) ]
 
