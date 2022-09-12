@@ -151,7 +151,7 @@ function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationT
     ptime = showprogress ? 1 : Inf
     p = Progress(nt, ptime)
     V = sum( axes(transtensor.wt, 1) ) do t
-        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
+        poisson_equation!(tmp, ρ, transtensor(t), transtensor.wt[t])
         next!(p)
         tmp
     end

@@ -435,7 +435,7 @@ end
 
 function Base.getindex(ct::HelmholtzTensorLinearNum, i::Int, j::Int, I::Int, J::Int, tt::Int)
     r = ct.elementgrid[i,I] - ct.elementgrid[j,J]
-    if  false #abs(r) > 0.1 || ct.t[tt] < 15
+    if  abs(i - j) > 2 || I != J || ct.t[tt] < 15
         # No numerical issues
         return exp(-(ct.t[tt]*r)^2) * ct.w[j,J]
     else
@@ -448,19 +448,20 @@ function Base.getindex(ct::HelmholtzTensorLinearNum, i::Int, j::Int, I::Int, J::
         
         inp1(x) = ct.elementgrid.elements[I](x,u1)
         inp2(x) = ct.elementgrid.elements[J](x,u2)
-        h(r) = inp1(r[1]) * exp(-t^2 * (r[1]-r[2])^2) * inp2(r[2])
+        a = ct.elementgrid[i,I]
+        #h(r) = exp(-t^2 * (r-a)^2) * inp2(r)
+        h(r) = inp1(r[1]) * inp2(r[2]) * exp(-t^2 * (r[1]-r[2])^2)
 
         
         b1 = getboundaries(ct.elementgrid.elements[I]) .|> austrip
         b2 = getboundaries(ct.elementgrid.elements[J]) .|> austrip
-        n1, _ = quadgk(inp1, b1...)
-        n2, _ = quadgk(inp2, b2...)
-        @info "n1 = $n1"
-        @info "n2 = $n2"
+        #n1, _ = quadgk(inp1, b1...)
+        #n2, _ = quadgk(inp2, b2...)
 
         out, _ = hcubature(h, (b1[1],b2[1]), (b1[2],b2[2]))
+        #out, _ = quadgk(h, b2...)
 
-        return out/(n1*n2)
+        return out
     end
 end
 
@@ -603,6 +604,17 @@ function optimal_coulomb_tranformation(ceg, nt::Int=96; δ=0.25, tmax=700, tboun
     return optimal_coulomb_tranformation( tmp, nt; δ=δ, tmax=tmax, tboundary=tboundary, k=k )
 end
 
+
+## Speed up for the tensor
+
+function (ct::AbstractHelmholtzTensor)(t::Int)
+    @argcheck t in axes(ct,5)
+    out = Array{Float64}(undef, size(ct,1), size(ct,2), size(ct,3), size(ct,4))
+    Threads.@threads for i in axes(ct,1)
+        @inbounds out[i,:,:,:] = ct[i,:,:,:,t]
+    end
+    return out
+end
 
 ## Integration weight tensor
 

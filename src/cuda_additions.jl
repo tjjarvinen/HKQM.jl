@@ -23,7 +23,7 @@ function poisson_equation(ρ::Array, transtensor::AbtractTransformationTensor;
     ptime = showprogress ? 1 : Inf
     p = Progress(nt, ptime)
     V = sum( axes(transtensor.wt, 1) ) do t
-        poisson_equation!(tmp, cu_ρ, CuArray(transtensor[:,:,:,:,t]), transtensor.wt[t])
+        poisson_equation!(tmp, cu_ρ, CuArray(transtensor(t)), transtensor.wt[t])
         next!(p)
         tmp
     end
@@ -42,7 +42,7 @@ function poisson_equation(ρ::CuArray, transtensor::AbtractTransformationTensor;
     ptime = showprogress ? 1 : Inf
     p = Progress(nt, ptime)
     V = sum( axes(transtensor.wt, 1) ) do t
-        poisson_equation!(tmp, ρ, CuArray(transtensor[:,:,:,:,t]), transtensor.wt[t])
+        poisson_equation!(tmp, ρ, CuArray(transtensor(t)), transtensor.wt[t])
         next!(p)
         tmp
     end

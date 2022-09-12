@@ -175,6 +175,9 @@ function test_accuracy(a, ne::Int, ng::Int, nt::Int;
     elseif mode == :loglocal
         @info "Log local mode"
         ct = HelmholtzTensorLocalLog(ceg, nt; tmax=tmax, tmin=tmin, δ=δ)
+    elseif mode == :num 
+        @info "Numerical mode"
+        ct = HelmholtzTensorLinearNum(ceg, nt; tmax=tmax, tmin=tmin)
     elseif mode == :combination
         @info "Combination mode"
         ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=tboundary)
