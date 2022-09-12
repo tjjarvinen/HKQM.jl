@@ -5,6 +5,7 @@ using Reexport
 using ArgCheck
 using Distributed
 using FastGaussQuadrature
+using HCubature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
 using PolynomialBases

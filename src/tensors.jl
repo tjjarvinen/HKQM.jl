@@ -366,6 +366,114 @@ function Base.show(io::IO, ::MIME"text/plain", ht::HelmholtzTensorLocalLog)
 end
 
 
+## Numeric integration tensor
+
+"""
+    HelmholtzTensorLinear{T} <: AbstractHelmholtzTensorSingle
+
+Helmholtz/Poisson equation tensor with even spacing for t-points.
+
+If `k` is zero this tensor solves Poisson equation. If nonzero it works as
+Helmholz equation Greens function.
+
+# Fields
+- `elementgrid::AbstractElementGrid{<:Any, 2}` : Gauss points and elements in 1D
+- `t::Vector{Float64}`                         : t-coordinates
+- `wt::Vector{T}`                              : Weights for t-integration
+- `w::Matrix{Float64}`          : Weights for position coordinate integration
+- `tmin::Float64`               : t-integration lower limit  (default=0.)
+- `tmax::Float64`               : t-integration upper limit  (default=25.)
+- `k::T`                        : Helmholz equation constant (default=0.)
+
+
+# Contruction
+    HelmholtzTensorLinear(ceg::AbstractElementGridSymmetricBox, nt::Int; tmin=0., tmax=25., k=0.)
+
+
+# Example
+```jldoctest
+julia> ceg = CubicElementGrid(5u"Å", 4, 16)
+Cubic elements grid with 4^3 elements with 16^3 Gauss points
+
+julia> HelmholtzTensorLinear(ceg, 48)
+HelmholtzTensorLinear 4 elements and 16 Gauss points per element
+
+julia> ht = HelmholtzTensorLinear(ceg, 48; tmin=4., tmax=30., k=0.1)
+HelmholtzTensorLinear 4 elements and 16 Gauss points per element
+
+julia> typeof(ht) <: AbstractArray{Float64,5}
+true
+
+julia> ht[3,3,1,1,5] ≈ 0.1123897034
+true
+```
+"""
+struct HelmholtzTensorLinearNum{T} <: AbstractHelmholtzTensorSingle
+    elementgrid::AbstractElementGrid{<:Any, 2}
+    t::Vector{Float64}
+    wt::Vector{T}
+    w::Matrix{Float64}
+    tmin::Float64
+    tmax::Float64
+    k::T
+    function HelmholtzTensorLinearNum(eg::AbstractElementGridSymmetricBox, nt::Int; tmin=0., tmax=25., k=0.)
+        t, wt = gausspoints(nt; elementsize=(tmin, tmax))
+        elementgrid = get_1d_grid(eg)
+        w = getweight(elementgrid)
+        wt = wt .* exp.(-(k^2)./(4t.^2))
+        new{typeof(k*t[1])}(elementgrid, t, wt, w, tmin, tmax, k)
+    end
+
+end
+
+
+function Base.size(ct::HelmholtzTensorLinearNum)
+    s = size(ct.elementgrid)
+    st = length(ct.t)
+    return (s[1], s[1], s[2], s[2], st)
+end
+
+function Base.getindex(ct::HelmholtzTensorLinearNum, i::Int, j::Int, I::Int, J::Int, tt::Int)
+    r = ct.elementgrid[i,I] - ct.elementgrid[j,J]
+    if  false #abs(r) > 0.1 || ct.t[tt] < 15
+        # No numerical issues
+        return exp(-(ct.t[tt]*r)^2) * ct.w[j,J]
+    else
+        # Add numeric integration
+        t = ct.t[tt]
+        u1 = zeros(size(ct,1))
+        u1[i] = 1
+        u2 = zeros(size(ct,2))
+        u2[i] = 1
+        
+        inp1(x) = ct.elementgrid.elements[I](x,u1)
+        inp2(x) = ct.elementgrid.elements[J](x,u2)
+        h(r) = inp1(r[1]) * exp(-t^2 * (r[1]-r[2])^2) * inp2(r[2])
+
+        
+        b1 = getboundaries(ct.elementgrid.elements[I]) .|> austrip
+        b2 = getboundaries(ct.elementgrid.elements[J]) .|> austrip
+        n1, _ = quadgk(inp1, b1...)
+        n2, _ = quadgk(inp2, b2...)
+        @info "n1 = $n1"
+        @info "n2 = $n2"
+
+        out, _ = hcubature(h, (b1[1],b2[1]), (b1[2],b2[2]))
+
+        return out/(n1*n2)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::HelmholtzTensorLinearNum)
+    s = size(ct)
+    print(io, "HelmholtzTensorLinearNum $(s[3]) elements and $(s[1]) Gauss points per element")
+end
+
+
+
+
+##
+
 """
     HelmholtzTensorCombination{T} <: AbstractHelmholtzTensor
 
