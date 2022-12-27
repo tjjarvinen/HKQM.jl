@@ -167,7 +167,7 @@ Base.show(io::IO, ::ElementGrid) = print(io, "ElementGrid")
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
 get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
-element_size(eg::ElementGrid) = elementsize(eg.element)
+element_size(eg::ElementGrid) = element_size(eg.element)
 
 
 function (eg::ElementGrid)(r, u)
@@ -205,8 +205,8 @@ getelement(egv::ElementGridVector, i::Int) = egv.elements[i].element
 
 getweight(egv::ElementGridVector) = hcat( getweight.(egv.elements)... )
 get_derivative_matrix(egv::ElementGridVector, i::Int=1) = get_derivative_matrix(egv.elements[i])
-element_size(egv::ElementGridVector) = sum( elementsize.(egv.elements)  )
-element_size(egv::ElementGridVector, T::DataType) = sum( elementsize.(egv.elements, T)  )
+element_size(egv::ElementGridVector) = sum( element_size.(egv.elements)  )
+element_size(egv::ElementGridVector, T::DataType) = sum( element_size.(egv.elements, T)  )
 
 ##
 

@@ -572,7 +572,7 @@ struct DerivativeTensor{T} <: AbstractDerivativeTensor
         # functions and then calculating values over the derivatives.
         # f(x) = ∑aᵢpᵢ(x) → f'(x) = ∑aᵢpᵢ'(x)
         x = BigFloat.(ceg.gpoints)
-        xmin=-0.5*elementsize(ceg.elements)
+        xmin=-0.5*element_size(ceg.elements)
         xmax=-xmin
         grid = grid1d(ceg)
         ng, ne = size(grid)

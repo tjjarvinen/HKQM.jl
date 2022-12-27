@@ -62,7 +62,7 @@ end
 
 Cubes 1D side length
 """
-elementsize(ce::CubicElementArray) = ce.a/ce.npoints
+element_size(ce::CubicElementArray) = ce.a/ce.npoints
 
 
 
@@ -204,6 +204,47 @@ end
 
 
 
+## Gauss points for integration
+
+
+function gausspoints(n; elementsize=(-1.0, 1.0))
+    x, w = gausslegendre(n)
+    esize = austrip.(elementsize)
+    shift = (esize[2]+esize[1])./2
+    x = x .* (esize[2]-esize[1])./2 .+ shift
+    w .*= (esize[2]-esize[1])/2
+    return x, w
+end
+
+
+"""
+    gausspoints(el::Element1D, n::Int) -> (SVector, SVector)
+
+Create `n` Gauss-Legendre points for element.
+
+Returns a tuple with first index having Gauss points and
+second integration weights.
+"""
+function gausspoints(el::Element1D, n::Int)
+    return gausspoints(n; elementsize=austrip.((el.low, el.high)) )
+end
+
+"""
+    gausspoints(ce::CubicElements, npoints::Int) -> (SVector, SVector)
+
+Create `npoints` Gauss-Legendre points for element.
+
+Returns a tuple with first index having Gauss points and
+second integration weights.
+
+Only one set of Gauss points that can be used for all elements is returned.
+The returned points have center at 0 and need to be shifted for different elements.
+"""
+function gausspoints(ce::CubicElementArray, npoints::Int)
+    s = elementsize(ce)/2
+    return gausspoints(npoints; elementsize=(-s, s))
+end
+
 
 
 
@@ -219,6 +260,6 @@ Only one set of Gauss points that can be used for all elements is returned.
 The returned points have center at 0 and need to be shifted for different elements.
 """
 function gausspoints(ce::CubicElementArray, npoints::Int)
-    s = elementsize(ce)/2
+    s = element_size(ce)/2
     return gausspoints(npoints; elementsize=(-s, s))
 end
