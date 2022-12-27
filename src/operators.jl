@@ -96,10 +96,10 @@ Quantum state
 ```
 """
 struct ScalarOperator{T} <: AbstractScalarOperator
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    elementgrid::AbstractElementGrid
     vals::T
     unit::Unitful.FreeUnits
-    function ScalarOperator(ceg::AbstractElementGrid{SVector{3,Float64},6},
+    function ScalarOperator(ceg::AbstractElementGrid,
                             ψ::AbstractArray{<:Any,6}
                             ;unit::Unitful.FreeUnits=NoUnits)
         new{typeof(ψ)}(ceg, ψ, unit)
@@ -204,7 +204,7 @@ scalar operators.
     VectorOperator(op::AbstractOperator{1}...)
 """
 struct VectorOperator{N} <: AbstractOperator{N}
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    elementgrid::AbstractElementGrid
     operators::Vector{AbstractOperator{1}}
     function VectorOperator(op::AbstractOperator{1}...)
         si = size.(op)
@@ -274,11 +274,11 @@ Base.:(-)(a::VectorOperator) = VectorOperator( [-x for x in a]  )
 ## Position operator
 
 """
-    position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
+    position_operator(ceg::AbstractElementGrid)
 
 Returns position operator as a [`VectorOperator`](@ref).
 """
-function position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
+function position_operator(ceg::AbstractElementGrid)
     x(v) = v[1]
     y(v) = v[2]
     z(v) = v[3]
@@ -306,14 +306,14 @@ Calculates derivative when operating. `N` is coordinate that is derived.
     DerivativeOperator(ceg::CubicElementGrid, dt::DerivativeTensor, coordinatate::Int=1)
 """
 struct DerivativeOperator{N} <: AbstractOperator{1}
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    elementgrid::AbstractElementGrid
     dt::DerivativeTensor
-    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, coordinatate::Int=1)
+    function DerivativeOperator(ceg::AbstractElementGrid, coordinatate::Int=1)
         @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
         dt = DerivativeTensor(ceg)
         new{coordinatate}(ceg, dt)
     end
-    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, dt::DerivativeTensor, coordinatate::Int=1)
+    function DerivativeOperator(ceg::AbstractElementGrid, dt::DerivativeTensor, coordinatate::Int=1)
         @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
         @assert size(ceg)[1] == size(dt)[1]
         new{coordinatate}(ceg, dt)

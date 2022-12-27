@@ -125,6 +125,7 @@ export CubicElementArray,
 
 include("abstract_types.jl")
 include("elements.jl")
+include("deprecated.jl")
 include("states.jl")
 #include("bubbles.jl")
 include("tensors.jl")
