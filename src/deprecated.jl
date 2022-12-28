@@ -241,6 +241,6 @@ Only one set of Gauss points that can be used for all elements is returned.
 The returned points have center at 0 and need to be shifted for different elements.
 """
 function gausspoints(ce::CubicElementArray, npoints::Int)
-    s = elementsize(ce)/2
+    s = element_size(ce)/2
     return gausspoints(npoints; elementsize=(-s, s))
 end
