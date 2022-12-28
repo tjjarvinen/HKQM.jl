@@ -108,6 +108,8 @@ end
 
 get_values(so::ScalarOperator) = so.vals
 
+convert_array_type(T, so::ScalarOperator) = ScalarOperator(get_elementgrid(so), T(so.vals); unit=unit(so) )
+
 (so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ, unit(so))
 function (so::ScalarOperator)(qs::QuantumState)
     @assert size(so) == size(qs)
@@ -196,7 +198,7 @@ Operetor that can be considered to be a vector. This type is build out of severa
 scalar operators.
 
 # Fields
-- `elementgrid::CubicElementGrid`  : grid information
+- `elementgrid::AbstractElementGrid`  : grid information
 - `operators::Vector{AbstractOperator{1}}`    : scalar operator from which vector
     is build
 
@@ -223,6 +225,8 @@ Base.getindex(v::VectorOperator, i...) = v.operators[i...]
 Base.lastindex(v::VectorOperator) = length(v)
 
 Unitful.unit(v::VectorOperator) = unit(v[begin])
+
+convert_array_type(T, vo::VectorOperator) = VectorOperator( convert_array_type.(T, vo) )
 
 for OP in (:(+), :(-))
     @eval begin
@@ -274,11 +278,13 @@ Base.:(-)(a::VectorOperator) = VectorOperator( [-x for x in a]  )
 ## Position operator
 
 """
-    position_operator(ceg::AbstractElementGrid)
+    position_operator(ceg::AbstractElementGrid{<:Any, 6})
+    position_operator(T, ceg::AbstractElementGrid{<:Any, 6})
 
 Returns position operator as a [`VectorOperator`](@ref).
+With an optional array type `T` defined.
 """
-function position_operator(ceg::AbstractElementGrid)
+function position_operator(ceg::AbstractElementGrid{<:Any, 6})
     x(v) = v[1]
     y(v) = v[2]
     z(v) = v[3]
@@ -289,6 +295,10 @@ function position_operator(ceg::AbstractElementGrid)
                          )
 end
 
+function position_operator(T, ceg::AbstractElementGrid{<:Any, 6})
+    r = position_operator(ceg)
+    return convert_array_type(T, r)
+end
 
 ## Derivative Operator
 

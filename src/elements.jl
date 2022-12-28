@@ -167,7 +167,9 @@ Base.show(io::IO, ::ElementGrid) = print(io, "ElementGrid")
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
 get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
-element_size(eg::ElementGrid) = element_size(eg.element)
+function element_size(eg::ElementGrid{T}) where {T}
+    T(element_size(eg.element))
+end 
 
 
 function (eg::ElementGrid)(r, u)

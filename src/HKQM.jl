@@ -54,6 +54,7 @@ export AbstractElementGrid,
 # Methods
 export bracket,
        charge_density,
+       convert_array_type,
        coulomb_operator,
        cross, ×,
        density_operator,

@@ -54,6 +54,9 @@ end
 
 QuantumState(op::AbstractScalarOperator) = QuantumState(get_elementgrid(op), get_values(op), unit(op))
 
+array_type(qs::QuantumState) = typeof(qs.psi)
+convert_array_type(T, qs::QuantumState) = QuantumState(get_elementgrid(qs), T(qs.psi), qs.unit)
+
 
 function Base.show(io::IO, ::MIME"text/plain", ::AbstractQuantumState)
     print(io, "Quantum state")
