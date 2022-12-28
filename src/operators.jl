@@ -96,10 +96,10 @@ Quantum state
 ```
 """
 struct ScalarOperator{T} <: AbstractScalarOperator
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    elementgrid::AbstractElementGrid
     vals::T
     unit::Unitful.FreeUnits
-    function ScalarOperator(ceg::AbstractElementGrid{SVector{3,Float64},6},
+    function ScalarOperator(ceg::AbstractElementGrid,
                             ψ::AbstractArray{<:Any,6}
                             ;unit::Unitful.FreeUnits=NoUnits)
         new{typeof(ψ)}(ceg, ψ, unit)
@@ -107,6 +107,8 @@ struct ScalarOperator{T} <: AbstractScalarOperator
 end
 
 get_values(so::ScalarOperator) = so.vals
+
+convert_array_type(T, so::ScalarOperator) = ScalarOperator(get_elementgrid(so), T(so.vals); unit=unit(so) )
 
 (so::ScalarOperator)(ψ::AbstractArray{<:Any,6}) = QuantumState(so.elementgrid, so.vals.*ψ, unit(so))
 function (so::ScalarOperator)(qs::QuantumState)
@@ -196,7 +198,7 @@ Operetor that can be considered to be a vector. This type is build out of severa
 scalar operators.
 
 # Fields
-- `elementgrid::CubicElementGrid`  : grid information
+- `elementgrid::AbstractElementGrid`  : grid information
 - `operators::Vector{AbstractOperator{1}}`    : scalar operator from which vector
     is build
 
@@ -204,7 +206,7 @@ scalar operators.
     VectorOperator(op::AbstractOperator{1}...)
 """
 struct VectorOperator{N} <: AbstractOperator{N}
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
+    elementgrid::AbstractElementGrid
     operators::Vector{AbstractOperator{1}}
     function VectorOperator(op::AbstractOperator{1}...)
         si = size.(op)
@@ -223,6 +225,8 @@ Base.getindex(v::VectorOperator, i...) = v.operators[i...]
 Base.lastindex(v::VectorOperator) = length(v)
 
 Unitful.unit(v::VectorOperator) = unit(v[begin])
+
+convert_array_type(T, vo::VectorOperator) = VectorOperator( convert_array_type.(T, vo) )
 
 for OP in (:(+), :(-))
     @eval begin
@@ -274,11 +278,13 @@ Base.:(-)(a::VectorOperator) = VectorOperator( [-x for x in a]  )
 ## Position operator
 
 """
-    position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
+    position_operator(ceg::AbstractElementGrid{<:Any, 6})
+    position_operator(T, ceg::AbstractElementGrid{<:Any, 6})
 
 Returns position operator as a [`VectorOperator`](@ref).
+With an optional array type `T` defined.
 """
-function position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
+function position_operator(ceg::AbstractElementGrid{<:Any, 6})
     x(v) = v[1]
     y(v) = v[2]
     z(v) = v[3]
@@ -289,11 +295,15 @@ function position_operator(ceg::AbstractElementGrid{SVector{3,Float64}, 6})
                          )
 end
 
+function position_operator(T, ceg::AbstractElementGrid{<:Any, 6})
+    r = position_operator(ceg)
+    return convert_array_type(T, r)
+end
 
 ## Derivative Operator
 
 """
-    DerivativeOperator{NG,N}
+    DerivativeOperator{T,N}
 
 Calculates derivative when operating. `N` is coordinate that is derived.
 
@@ -305,32 +315,38 @@ Calculates derivative when operating. `N` is coordinate that is derived.
     DerivativeOperator(ceg::CubicElementGrid, coordinatate::Int=1)
     DerivativeOperator(ceg::CubicElementGrid, dt::DerivativeTensor, coordinatate::Int=1)
 """
-struct DerivativeOperator{N} <: AbstractOperator{1}
-    elementgrid::AbstractElementGrid{SVector{3,Float64},6}
-    dt::DerivativeTensor
-    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, coordinatate::Int=1)
-        @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
-        dt = DerivativeTensor(ceg)
-        new{coordinatate}(ceg, dt)
-    end
-    function DerivativeOperator(ceg::AbstractElementGrid{SVector{3,Float64},6}, dt::DerivativeTensor, coordinatate::Int=1)
+struct DerivativeOperator{T,N} <: AbstractOperator{1}
+    elementgrid::AbstractElementGrid
+    dt::DerivativeTensor{T}
+    function DerivativeOperator(ceg::AbstractElementGrid, dt::DerivativeTensor{T}, coordinatate::Int=1) where {T}
         @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
         @assert size(ceg)[1] == size(dt)[1]
-        new{coordinatate}(ceg, dt)
+        new{T, coordinatate}(ceg, dt)
     end
 end
 
-
-function (d::DerivativeOperator{1})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_x(d.dt, qs.psi), unit(qs)*unit(d) )
+function DerivativeOperator(T, ceg::AbstractElementGrid, coordinatate::Int=1)
+    @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
+    dt = DerivativeTensor(T, ceg)
+    return DerivativeOperator(ceg, dt, coordinatate)
 end
 
-function (d::DerivativeOperator{2})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_y(d.dt, qs.psi), unit(qs)*unit(d) )
+function DerivativeOperator(ceg::AbstractElementGrid, coordinatate::Int=1)
+    @assert coordinatate ∈ 1:3 "coordinate needs to be 1, 2 or 3"
+    dt = DerivativeTensor(ceg)
+    return DerivativeOperator(ceg, dt, coordinatate)
 end
 
-function (d::DerivativeOperator{3})(qs::QuantumState)
-    return QuantumState(d.elementgrid, operate_z(d.dt, qs.psi), unit(qs)*unit(d) )
+function (d::DerivativeOperator{<:Any,1})(qs::QuantumState)
+    return QuantumState(get_elementgrid(qs), operate_x(d.dt, qs.psi), unit(qs)*unit(d) )
+end
+
+function (d::DerivativeOperator{<:Any,2})(qs::QuantumState)
+    return QuantumState(get_elementgrid(qs), operate_y(d.dt, qs.psi), unit(qs)*unit(d) )
+end
+
+function (d::DerivativeOperator{<:Any,3})(qs::QuantumState)
+    return QuantumState(get_elementgrid(qs), operate_z(d.dt, qs.psi), unit(qs)*unit(d) )
 end
 
 
@@ -350,17 +366,39 @@ Calculates gradient when operating.
 # Creation
     GradientOperator(ceg::CubicElementGrid)
 """
-struct GradientOperator <: AbstractOperator{3}
-    elementgrid::AbstractElementGridSymmetricBox
-    dt::DerivativeTensor
-    function GradientOperator(ceg::AbstractElementGridSymmetricBox)
-        dt = DerivativeTensor(ceg)
-        new(ceg, dt)
+struct GradientOperator{T} <: AbstractOperator{3}
+    dx::DerivativeOperator{T,1}
+    dy::DerivativeOperator{T,2}
+    dz::DerivativeOperator{T,3}
+    function GradientOperator(
+            dx::DerivativeOperator{T,1},
+            dy::DerivativeOperator{T,2},
+            dz::DerivativeOperator{T,3}
+            ) where {T}
+        new{T}(dx, dy, dz)
     end
+end
+
+function GradientOperator(ceg::AbstractElementGridSymmetricBox)
+    dx = DerivativeOperator(ceg,1)
+    dy = DerivativeOperator(ceg,2)
+    dz = DerivativeOperator(ceg,3)
+    GradientOperator(dx, dy, dz)
+end
+
+function GradientOperator(T, ceg::AbstractElementGridSymmetricBox)
+    dx = DerivativeOperator(T, ceg,1)
+    dy = DerivativeOperator(T, ceg,2)
+    dz = DerivativeOperator(T, ceg,3)
+    GradientOperator(dx, dy, dz)
 end
 
 function GradientOperator(ψ)
     return GradientOperator( get_elementgrid(ψ) )
+end
+
+function GradientOperator(T, ψ)
+    return GradientOperator(T, get_elementgrid(ψ) )
 end
 
 function (go::GradientOperator)(ψ::QuantumState)
@@ -368,21 +406,30 @@ function (go::GradientOperator)(ψ::QuantumState)
 end
 
 function (go::GradientOperator)(a::AbstractVector{<:AbstractQuantumState})
+    # This is ∇⋅a
     @assert length(a) == 3
     @assert all(map(x->size(x)==size(go), a))
-    out = operate_x(go.dt, a[1].ψ)
-    out .+= operate_y(go.dt, a[2].ψ)
-    out .+= operate_z(go.dt, a[3].ψ)
-    return QuantumState(go.ceg, out, unit(a)*unit(g))
+    return mapreduce( i -> go[i]*a[i], +, eachindex(a) )
 end
 
-#(go::GradientOperator)(ψ::QuantumState) = go(ψ.ψ)
+Base.:(*)(go::GradientOperator, a::AbstractVector{<:AbstractQuantumState}) = go(a)
+dot(go::GradientOperator, a::AbstractVector{<:AbstractQuantumState}) = go(a)
+
 Base.length(::GradientOperator) = 3
 Base.show(io::IO, go::GradientOperator) = print(io::IO, "Gradient operator size=$(size(go))")
 
+get_elementgrid(go::GradientOperator) = get_elementgrid(go.dx)
+
 function Base.getindex(go::GradientOperator, i::Int)
-    @assert 1<=i<=3
-    return DerivativeOperator(go.elementgrid, go.dt, i)
+    if i == 1
+        return go.dx
+    elseif i == 2
+        return go.dy
+    elseif i == 3
+        return go.dz
+    else
+        AssertionError("GradientOperator has only 3 ")
+    end
 end
 
 Unitful.unit(::GradientOperator) = u"bohr"^-1
@@ -581,9 +628,10 @@ struct LaplaceOperator <: AbstractOperator{1}
     function LaplaceOperator(g::GradientOperator)
         new(get_elementgrid(g), g)
     end
-    function LaplaceOperator(ceg::AbstractElementGrid)
-        new(ceg, GradientOperator(ceg))
-    end
+end
+
+function LaplaceOperator(ceg::AbstractElementGrid)
+    LaplaceOperator( GradientOperator(ceg) )
 end
 
 Unitful.unit(lo::LaplaceOperator) = unit(lo.g)^2
@@ -593,10 +641,18 @@ Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 function (lo::LaplaceOperator)(qs::QuantumState)
-    tmp = similar(qs.psi, size(lo.g.dt))
-    tmp .= lo.g.dt
-    @tensor w[i,j]:=tmp[i,k]*tmp[k,j]
-    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*w[i,ii] + qs.psi[i,jj,k,I,J,K]*w[j,jj] + qs.psi[i,j,kk,I,J,K]*w[k,kk]
+    #TODO make the wx, wy and wz tensors permanent parts of the operator
+    # by making them at the creations point.
+    tmp = lo.g[1].dt.values
+    @tensor wx[i,j]:=tmp[i,k]*tmp[k,j]
+
+    tmp = lo.g[2].dt.values
+    @tensor wy[i,j]:=tmp[i,k]*tmp[k,j]
+
+    tmp = lo.g[3].dt.values
+    @tensor wz[i,j]:=tmp[i,k]*tmp[k,j]
+
+    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*wx[i,ii] + qs.psi[i,jj,k,I,J,K]*wy[j,jj] + qs.psi[i,j,kk,I,J,K]*wz[k,kk]
     return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
 end
 

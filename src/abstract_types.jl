@@ -4,7 +4,7 @@
 abstract type AbstractElement{Dims} end
 abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
 abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
-abstract type AbstractElementGridSymmetricBox <: AbstractElementGrid{SVector{3,Float64}, 6} end
+abstract type AbstractElementGridSymmetricBox{T} <: AbstractElementGrid{SVector{3,T}, 6} end
 
 ## Tensor types
 abstract type AbtractTransformationTensor{T,N} <: AbstractArray{T, N} end

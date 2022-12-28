@@ -234,7 +234,7 @@ end
 
 function NuclearPotentialTensorGaussian(r, ceg::AbstractElementGridSymmetricBox, nt; σ=0.1, tmin=0, tmax=20)
     egv = get_1d_grid(ceg)
-    min_d = elementsize(egv.elements[1].element) / size(ceg)[1] |> austrip
+    min_d = element_size(egv.elements[1].element) / size(ceg)[1] |> austrip
     #min_d = elementsize(ceg.elements) / size(ceg)[1] |> austrip
     β = 0.5*(σ*min_d)^-2
     return NuclearPotentialTensorGaussian(r, ceg, nt, β; tmin=tmin, tmax=tmax)

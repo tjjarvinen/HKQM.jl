@@ -98,6 +98,32 @@ end
     @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-12
 end
 
+@testset "Float32 support" begin
+    ceg = ElementGridSymmetricBox(Float32, 5u"Å", 4, 16)
+    r = position_operator(ceg)
+    @test eltype(r[1].vals) == Float32
+    r² = r⋅r
+    gv = exp(-1u"bohr^-2"*r²)
+    ψ = QuantumState(ceg, gv.vals)
+    @test eltype(ψ.psi) == Float32
+    normalize!(ψ)
+    @test bracket(ψ,ψ) ≈ 1
+    ϕ = ψ + 2ψ
+    @test eltype(ϕ.psi) == Float32
+    @test bracket(ϕ,ψ) ≈ 3
+    rr = bracket(ψ, r, ψ)
+    @test typeof(austrip(rr[1])) == Float32
+    @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-8
+
+    ceg_f64 = convert_variable_type(Float64, ceg)
+    @test ceg_f64 ≈ ceg
+
+    ψ_f64 = convert_variable_type(Float64, ψ)
+    @test ψ_f64.psi ≈ ψ.psi
+    @test unit(ψ_f64) == unit(ψ)
+    @test get_elementgrid(ψ_f64) ≈ get_elementgrid(ψ)
+end
+
 @testset "Nuclear potential" begin
     ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
     V = nuclear_potential_harrison_approximation(ceg, zeros(3)*u"bohr", "C")

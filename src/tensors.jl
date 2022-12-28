@@ -527,20 +527,23 @@ density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 
 """
-    DerivativeTensor <: AbstractDerivativeTensor
+    DerivativeTensor{T} <: AbstractDerivativeTensor
 
 Tensor that performs derivate over [`CubicElementGrid`](@ref).
 
 # Fields
-- `values::Matrix{Float64}`             : tensor values
+- `values::Matrix{T}`             : tensor values
 
 # Construction
     DerivativeTensor(ceg::CubicElementGrid)
+    DerivativeTensor(eg::AbstractElementGridSymmetricBox)
 """
-struct DerivativeTensor <: AbstractDerivativeTensor
-    values::Matrix{Float64}
-    function DerivativeTensor(eg::AbstractElementGridSymmetricBox)
-        new(get_derivative_matrix(eg))
+struct DerivativeTensor{T} <: AbstractDerivativeTensor
+    values::T
+    function DerivativeTensor(T, eg::AbstractElementGridSymmetricBox)
+        d = get_derivative_matrix(eg)
+        tmp = T(d)
+        new{typeof(tmp)}(tmp)
     end
     function DerivativeTensor(ceg::CubicElementGrid)
         function _lpoly(x)
@@ -570,7 +573,7 @@ struct DerivativeTensor <: AbstractDerivativeTensor
         # functions and then calculating values over the derivatives.
         # f(x) = ∑aᵢpᵢ(x) → f'(x) = ∑aᵢpᵢ'(x)
         x = BigFloat.(ceg.gpoints)
-        xmin=-0.5*elementsize(ceg.elements)
+        xmin=-0.5*element_size(ceg.elements)
         xmax=-xmin
         grid = grid1d(ceg)
         ng, ne = size(grid)
@@ -581,10 +584,13 @@ struct DerivativeTensor <: AbstractDerivativeTensor
         for i in eachindex(pd)
             ϕ[:,i] = a[i]*pd[i].(x)
         end
-        new(ϕ)
+        new{typeof(ϕ)}(ϕ)
     end
 end
 
+function DerivativeTensor(eg::AbstractElementGridSymmetricBox)
+    return DerivativeTensor(Array, eg)
+end
 
 function Base.getindex(dt::DerivativeTensor, i::Int, j::Int)
     return dt.values[i,j]

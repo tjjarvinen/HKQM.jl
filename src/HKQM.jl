@@ -54,6 +54,8 @@ export AbstractElementGrid,
 # Methods
 export bracket,
        charge_density,
+       convert_array_type,
+       convert_variable_type,
        coulomb_operator,
        cross, ×,
        density_operator,
@@ -125,6 +127,7 @@ export CubicElementArray,
 
 include("abstract_types.jl")
 include("elements.jl")
+include("deprecated.jl")
 include("states.jl")
 #include("bubbles.jl")
 include("tensors.jl")
