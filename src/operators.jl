@@ -438,23 +438,33 @@ Unitful.unit(::GradientOperator) = u"bohr"^-1
 # these are low level stuff to use only in special cases
 
 function operate_x!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[i,l] * ψ[l,j,k,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[i,l] * ψ[l,j,k,I,J,K]
+    s = size(ψ)
+    tmp = reshape(ψ, s[1], prod(s[2:end]) )
+    tout = reshape(dψ, s[1], prod(s[2:end]))
+    mul!(tout, dt.values, tmp)
     return dψ
 end
 
 function operate_y!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[j,l] * ψ[i,l,k,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[j,l] * ψ[i,l,k,I,J,K]
+    s = size(ψ)
+    tmp = permutedims(ψ, [2,1,3,4,5,6])
+    rtmp = reshape(tmp, s[2], prod([s[1], s[3:end]...]) )
+    p = dt.values * rtmp
+    rp = reshape(p, s[2], s[1], s[3:end]...)
+    permutedims!(dψ, rp, [2,1,3,4,5,6])
     return dψ
 end
 
 function operate_z!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[k,l] * ψ[i,j,l,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[k,l] * ψ[i,j,l,I,J,K]
+    s = size(ψ)
+    tmp = permutedims(ψ, [3,2,1,4,5,6])
+    rtmp = reshape(tmp, s[3], prod([s[1:2]..., s[4:end]...]) )
+    p = dt.values * rtmp
+    rp = reshape(p, s[3], s[2], s[1], s[4:end]...)
+    permutedims!(dψ, rp, [3,2,1,4,5,6])
     return dψ
 end
 
