@@ -114,6 +114,14 @@ end
     rr = bracket(ψ, r, ψ)
     @test typeof(austrip(rr[1])) == Float32
     @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-8
+
+    ceg_f64 = convert_variable_type(Float64, ceg)
+    @test ceg_f64 ≈ ceg
+
+    ψ_f64 = convert_variable_type(Float64, ψ)
+    @test ψ_f64.psi ≈ ψ.psi
+    @test unit(ψ_f64) == unit(ψ)
+    @test get_elementgrid(ψ_f64) ≈ get_elementgrid(ψ)
 end
 
 @testset "Nuclear potential" begin
