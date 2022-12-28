@@ -539,10 +539,11 @@ Tensor that performs derivate over [`CubicElementGrid`](@ref).
     DerivativeTensor(eg::AbstractElementGridSymmetricBox)
 """
 struct DerivativeTensor{T} <: AbstractDerivativeTensor
-    values::Matrix{T}
-    function DerivativeTensor(eg::AbstractElementGridSymmetricBox)
+    values::T
+    function DerivativeTensor(T, eg::AbstractElementGridSymmetricBox)
         d = get_derivative_matrix(eg)
-        new{eltype(d)}(d)
+        tmp = T(d)
+        new{typeof(tmp)}(tmp)
     end
     function DerivativeTensor(ceg::CubicElementGrid)
         function _lpoly(x)
@@ -583,10 +584,13 @@ struct DerivativeTensor{T} <: AbstractDerivativeTensor
         for i in eachindex(pd)
             ϕ[:,i] = a[i]*pd[i].(x)
         end
-        new{Float64}(ϕ)
+        new{typeof(ϕ)}(ϕ)
     end
 end
 
+function DerivativeTensor(eg::AbstractElementGridSymmetricBox)
+    return DerivativeTensor(Array, eg)
+end
 
 function Base.getindex(dt::DerivativeTensor, i::Int, j::Int)
     return dt.values[i,j]
