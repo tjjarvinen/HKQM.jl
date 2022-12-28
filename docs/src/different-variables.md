@@ -29,16 +29,16 @@ typeof(qs)
 
 ### Changing Type of Existing Data
 
-To change types use command `change_variable_type`
+To change types use command `convert_variable_type`
 
 ```@example f32
-eg_f64 = change_variable_type(Float64, eg)
+eg_f64 = convert_variable_type(Float64, eg)
 
 typeof(eg_f64)
 ```
 
 ```@example f32
-qs = change_variable_type(Float64, qs)
+qs = convert_variable_type(Float64, qs)
 
 typeof(qs)
 ```
