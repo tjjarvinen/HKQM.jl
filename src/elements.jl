@@ -164,6 +164,7 @@ Base.size(eg::ElementGrid) = size(eg.basis.nodes)
 Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
 Base.show(io::IO, ::ElementGrid) = print(io, "ElementGrid")
 
+convert_variable_type(T, eg::ElementGrid) = ElementGrid(T, eg.element, length(eg)) 
 
 getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
 get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
@@ -200,6 +201,14 @@ end
 
 ElementGridVector(a, b, ne::Int, ng::Int) = ElementGridVector(Float64, a, b, ne, ng)
 
+function convert_variable_type(T, egv::ElementGridVector)
+    a = egv.elements[begin].element.low
+    b = egv.elements[end].element.high
+    ne = size(egv, 2)
+    ng = size(egv, 1)
+    return ElementGridVector(T, a, b, ne, ng)
+end
+
 Base.size(egv::ElementGridVector) = (length(egv.elements[1]), length(egv.elements))
 Base.getindex(egv::ElementGridVector, i::Int, I::Int) = egv.elements[I][i]
 
@@ -224,6 +233,10 @@ end
 function ElementGridSymmetricBox(T::DataType, a, ne::Int, ng::Int)
     egv = ElementGridVector(T, -a/2, a/2, ne, ng)
     return ElementGridSymmetricBox(egv)
+end
+
+function convert_variable_type(T, egsb::ElementGridSymmetricBox)
+    return ElementGridSymmetricBox( convert_variable_type(T, egsb.egv) )
 end
 
 function Base.size(egsb::ElementGridSymmetricBox)
