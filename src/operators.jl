@@ -628,15 +628,22 @@ get_elementgrid(op::OperatorProduct) = get_elementgrid(op.op1)
 # Fields
 - `elementgrid::AbstractElementGrid`   :  grid information
 - `g::GradientOperator`             :  gradient operator
+- `unit::Unitful.FreeUnits`        :  unit for operator
 
 # Creation
     LaplaceOperator(g::GradientOperator)
 """
-struct LaplaceOperator <: AbstractOperator{1}
+struct LaplaceOperator{T} <: AbstractOperator{1}
     elementgrid::AbstractElementGrid
-    g::GradientOperator
+    d2x::T
+    d2y::T
+    d2z::T
+    unit::Unitful.FreeUnits
     function LaplaceOperator(g::GradientOperator)
-        new(get_elementgrid(g), g)
+        d2x = g[1].dt.values^2
+        d2y = g[2].dt.values^2
+        d2z = g[3].dt.values^2
+        new{typeof(d2x)}( get_elementgrid(g), d2x, d2y, d2z, unit(g)^2 )
     end
 end
 
@@ -644,26 +651,52 @@ function LaplaceOperator(ceg::AbstractElementGrid)
     LaplaceOperator( GradientOperator(ceg) )
 end
 
-Unitful.unit(lo::LaplaceOperator) = unit(lo.g)^2
+function LaplaceOperator(T, ceg::AbstractElementGrid)
+    LaplaceOperator( GradientOperator(T, ceg) )
+end
+
+Unitful.unit(lo::LaplaceOperator) = lo.unit
 
 Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
+# Old version that is faster by a little
+#function (lo::LaplaceOperator)(qs::QuantumState)
+#    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*lo.d2x[i,ii] + qs.psi[i,jj,k,I,J,K]*lo.d2y[j,jj] + qs.psi[i,j,kk,I,J,K]*lo.d2z[k,kk]
+#    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo))
+#end
+
+# New version, which works with GPU, but is a little bit slower on CPU
 function (lo::LaplaceOperator)(qs::QuantumState)
-    #TODO make the wx, wy and wz tensors permanent parts of the operator
-    # by making them at the creations point.
-    tmp = lo.g[1].dt.values
-    @tensor wx[i,j]:=tmp[i,k]*tmp[k,j]
+    ψ = qs.psi
+    out = similar(ψ)
 
-    tmp = lo.g[2].dt.values
-    @tensor wy[i,j]:=tmp[i,k]*tmp[k,j]
+    # d2x
+    s = size(ψ)
+    rqs = reshape(ψ, s[1], prod(s[2:end]) )
+    rout = reshape(out, s[1], prod(s[2:end]))
+    mul!(rout, lo.d2x, rqs)
 
-    tmp = lo.g[3].dt.values
-    @tensor wz[i,j]:=tmp[i,k]*tmp[k,j]
+    # d2y
+    tmp = permutedims(ψ, [2,1,3,4,5,6])
+    rtmp = reshape(tmp, s[2], prod([s[1], s[3:end]...]) )
+    temp_result = lo.d2y * rtmp  # we use this later for d2z tmp data
+    rp = reshape(temp_result, s[2], s[1], s[3:end]...)
+    rtmp = reshape(tmp, s[2], s[1], s[3:end]... )
+    permutedims!(rtmp, rp, [2,1,3,4,5,6])
+    out += rtmp
 
-    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*wx[i,ii] + qs.psi[i,jj,k,I,J,K]*wy[j,jj] + qs.psi[i,j,kk,I,J,K]*wz[k,kk]
-    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
+    # d2z
+    tmp = reshape(rtmp, s[3], s[2], s[1], s[4:end]... )
+    permutedims!(tmp , ψ, [3,2,1,4,5,6])
+    rtmp = reshape(tmp, s[3], prod([s[2], s[1], s[4:end]...]) )
+    rtemp_result = reshape(temp_result, s[3], prod([s[2], s[1], s[4:end]...]) )
+    mul!(rtemp_result, lo.d2z, rtmp)
+    rp = reshape(rtemp_result, s[3], s[2], s[1], s[4:end]...)
+    permutedims!(tmp, rp, [3,2,1,4,5,6])
+    out += tmp
+    return QuantumState(get_elementgrid(qs), out, unit(qs)*unit(lo))
 end
 
 
