@@ -256,7 +256,7 @@ end
 
 
 
-getweight(egsb::ElementGridSymmetricBox) = getweight(egsb.egv)
+getweight(egsb::ElementGridSymmetricBox, i::Int=1) = (getweight ∘ get_1d_grid)(egsb, i)
 get_derivative_matrix(egsb::ElementGridSymmetricBox, i::Int=1) = get_derivative_matrix(egsb.egv, i)
 get_1d_grid(egsb::ElementGridSymmetricBox, i::Int=1) = egsb.egv  # symmetric thus drop i
 

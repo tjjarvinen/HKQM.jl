@@ -127,11 +127,13 @@ end
     ⋆(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
 
-Return probability density ψ†ψ = |ψ><ψ|
+Return probability density ψ†ψ = |ψ><ψ|, as an array type the QuantumStates use.
+
+To get "⋆" use "star"
 
 ## Example
 ```julia
-julia> ψ⋆ψ
+julia> ψ⋆ψ;
 ```
 """
 function ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any}) where T
