@@ -124,6 +124,33 @@ end
     @test get_elementgrid(ψ_f64) ≈ get_elementgrid(ψ)
 end
 
+@testset "Derivatives" begin
+    ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
+    r = position_operator(ceg)
+    lo = LaplaceOperator(ceg)
+
+    # x derivatives
+    x = r[1] * 1u"bohr^-1"
+    s = QuantumState(sin(x))
+    dx = DerivativeOperator(ceg,1)
+    @test (cos(x)).vals ≈ (dx*s).psi # cos(x) = D*sin(x) 
+    @test s.psi ≈ (-lo*s).psi  # sin(x) = -∇²sin(x)
+
+    # y derivatives
+    y = r[2] * 1u"bohr^-1"
+    s = QuantumState(sin(y))
+    dy = DerivativeOperator(ceg,2)
+    @test (cos(y)).vals ≈ (dy*s).psi
+    @test s.psi ≈ (-lo*s).psi
+
+    # z derivatives
+    z = r[3] * 1u"bohr^-1"
+    s = QuantumState(sin(z))
+    dz = DerivativeOperator(ceg,3)
+    @test (cos(z)).vals ≈ (dz*s).psi
+    @test s.psi ≈ (-lo*s).psi
+end
+
 @testset "Nuclear potential" begin
     ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
     V = nuclear_potential_harrison_approximation(ceg, zeros(3)*u"bohr", "C")
