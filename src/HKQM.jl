@@ -7,6 +7,7 @@ using Distributed
 using FastGaussQuadrature
 using LinearAlgebra: dot, ⋅
 using LinearAlgebra: cross, ×
+using LinearAlgebra: mul!
 using PolynomialBases
 using Polynomials
 using ProgressMeter
