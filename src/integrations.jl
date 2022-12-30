@@ -232,22 +232,22 @@ function poisson_equation!(
 end
 
 
-function new_poisson_equation(ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
+function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
         correction=true, showprogress=false)
     # Reshape and permute arrays to better suit contractions
     s = size(ρ)
     tmp = permutedims(ρ, [1,4,2,5,3,6])
     rtmp = reshape(tmp, s[1]*s[4], s[2]*s[5], s[3]*s[6])
-    ttmp = similar(rtmp, eltype(transtensor), size(transtensor)...)
-    copyto!(ttmp, transtensor)
+    ttmp = give_whole_tensor(T, transtensor)
     pttmp = permutedims(ttmp, [1,3,2,4,5])
     st = size(transtensor)
     T_tensor = reshape(pttmp, st[1]*st[3], st[2]*st[4], st[5])
 
     # Create temporary arrays
-    T = promote_type(eltype(ρ), eltype(transtensor))
-    tmp1 = similar(rtmp, T)
-    tmp2 = similar(rtmp, T)
+    ET = promote_type(eltype(ρ), T)
+    tmp1 = similar(rtmp, ET)
+    tmp2 = similar(rtmp, ET)
+    tensor = similar(ρ, T, st[1]*st[3], st[2]*st[4] )
 
 
     # Set up progress meter
@@ -258,8 +258,8 @@ function new_poisson_equation(ρ::AbstractArray{<:Any,6}, transtensor::AbtractTr
 
     # Calculate
     V = sum( axes(transtensor.wt, 1) ) do t
-        tensor = @view T_tensor[:,:,t]
-        tmp = poisson_equation!(tmp1, tmp2, rtmp, tensor, tensor, tensor, transtensor.wt[t])
+        copyto!(tensor, @view T_tensor[:,:,t]) # NOTE this is slow on GPUs
+        tmp = poisson_equation!(tmp1, tmp2, rtmp, tensor, tensor, tensor, T(transtensor.wt[t]))
         next!(p)
         tmp
     end
@@ -277,13 +277,14 @@ end
 function new_poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
         correction=true, showprogress=false)
     ψ = auconvert(ψ)  # Length need to be in bohr's 
-    V = new_poisson_equation(ψ.psi, transtensor, correction=correction, showprogress=showprogress)
-    return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
+    T = (eltype ∘ eltype ∘ get_elementgrid)(ψ)
+    V = new_poisson_equation(T, ψ.psi, transtensor, correction=correction, showprogress=showprogress)
+    return QuantumState(get_elementgrid(ψ), V, unit(ψ)*u"bohr^2")
 end
 
-function new_poisson_equation(ψ::QuantumState)
+function new_poisson_equation(ψ::QuantumState; showprogress=false)
     ct = optimal_coulomb_tranformation(ψ)
-    return new_poisson_equation(ψ, ct )
+    return new_poisson_equation(ψ, ct ; showprogress=showprogress)
 end
 
 

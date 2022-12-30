@@ -496,6 +496,20 @@ function optimal_coulomb_tranformation(ceg, nt::Int=96; δ=0.25, tmax=700, tboun
 end
 
 
+"""
+    give_whole_tensor(T, tt::AbtractTransformationTensor)
+
+Returns the whole tensor as `Array{T,5}` type.
+"""
+function give_whole_tensor(T, tt::AbtractTransformationTensor)
+    ct = Array{T}(undef, size(tt)...)
+    Threads.@threads for i in eachindex(tt)
+        @inbounds ct[i] = T(tt[i])
+    end
+    return ct
+end
+
+
 ## Integration weight tensor
 
 """
