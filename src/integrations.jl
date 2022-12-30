@@ -177,8 +177,114 @@ end
 
 ## Coulomb integral / Poisson equation
 
-coulomb_correction(ρ, tmax) = ( 2/sqrt(π)*(π/tmax^2) ) .* ρ
+function coulomb_correction(ρ, tmax)
+    T = eltype(ρ)
+    return T( 2/sqrt(π)*(π/tmax^2) ) .* ρ
+end
 
+function poisson_equation!(
+        V1::AbstractArray{<:Any,3},
+        V2::AbstractArray{<:Any,3},
+        ρ::AbstractArray{<:Any,3},
+        Tx::AbstractArray{<:Any,2},
+        Ty::AbstractArray{<:Any,2},
+        Tz::AbstractArray{<:Any,2},
+        wt
+    )
+    @assert length(V1) == length(V2) == length(ρ)
+    # V1 and V2 work as temporary arrays to store
+    # the mid calculation results.
+
+    # Note that Tx, Ty and Tz are symmetric due to
+    # integration contant only being on right side!
+    # Thus we need to contract from right side.  
+
+    s = size(ρ)
+
+    # Contract x-axis
+    rxρ = reshape(ρ, s[1], s[2]*s[3])    # rxρ[x,yz]
+    tmp1 = reshape(V1, s[1], s[2]*s[3])  # tmp1[x,yz]
+    mul!(tmp1, Tx, rxρ)  # tmp1[x,yz] = Tx[x,k]*rxρ[k,yz]
+    
+    # Contract y-axis
+    rtmp1 = reshape(tmp1, s[1], s[2], s[3])  # rtmp1[x,y,z]
+    tmp2 = reshape(V2, s[2], s[1], s[3])     # tmp2[y,x,z]
+    permutedims!(tmp2, rtmp1, [2,1,3])       # tmp2[y,x,z]
+    rtmp2 = reshape(tmp2, s[2], s[1]*s[3])   # rtmp2[y,xz]
+    tmp1 = reshape(V1, s[2], s[1]*s[3])      # tmp1[y,xz]
+    mul!(tmp1, Ty, rtmp2) # tmp1[y,xz] = Ty[y,k]*rtmp2[k,xz]
+
+    # Contract z-axis
+    rtmp1 = reshape(tmp1, s[2], s[1], s[3])  # rtmp1[y,x,z]
+    tmp2 = reshape(V2, s[3], s[1], s[2])     # tmp2[z,x,y]
+    permutedims!(tmp2, rtmp1, [3,2,1])       # tmp2[z,x,y]
+    rtmp2 = reshape(tmp2, s[3], s[1]*s[2])   # rtmp2[z,xy]
+    tmp1 = reshape(V1, s[3], s[1]*s[2])      # tmp1[z,xy]
+    mul!(tmp1, Tz, rtmp2) # tmp1[z,xy] = Tz[z,k]*rtmp2[k,xy]
+
+
+    # Restore correct permutation and shape
+    rtmp1 = reshape(tmp1, s[3], s[1], s[2]) # rtmp1[z,x,y]
+    permutedims!(V2, rtmp1, [2,3,1])        # V2[x,y,z]
+
+    V2 .*= (2wt/sqrt(one(wt)*π))
+    return V2
+end
+
+
+function new_poisson_equation(ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
+        correction=true, showprogress=false)
+    # Reshape and permute arrays to better suit contractions
+    s = size(ρ)
+    tmp = permutedims(ρ, [1,4,2,5,3,6])
+    rtmp = reshape(tmp, s[1]*s[4], s[2]*s[5], s[3]*s[6])
+    ttmp = similar(rtmp, eltype(transtensor), size(transtensor)...)
+    copyto!(ttmp, transtensor)
+    pttmp = permutedims(ttmp, [1,3,2,4,5])
+    st = size(transtensor)
+    T_tensor = reshape(pttmp, st[1]*st[3], st[2]*st[4], st[5])
+
+    # Create temporary arrays
+    T = promote_type(eltype(ρ), eltype(transtensor))
+    tmp1 = similar(rtmp, T)
+    tmp2 = similar(rtmp, T)
+
+
+    # Set up progress meter
+    nt = size(transtensor, 5)
+    @debug "nt=$nt"
+    ptime = showprogress ? 1 : Inf
+    p = Progress(nt, ptime)
+
+    # Calculate
+    V = sum( axes(transtensor.wt, 1) ) do t
+        tensor = @view T_tensor[:,:,t]
+        tmp = poisson_equation!(tmp1, tmp2, rtmp, tensor, tensor, tensor, transtensor.wt[t])
+        next!(p)
+        tmp
+    end
+    # Reshape V back to correct shape and permutation
+    s = size(ρ)
+    rV = reshape(V, s[1], s[4], s[2], s[5], s[3], s[6])
+    V_out = reshape(tmp, s...)
+    permutedims!(V_out, rV, [1,3,5,2,4,6])
+    if correction
+        return V_out .+ coulomb_correction(ρ, transtensor.tmax)
+    end
+    return V_out
+end
+
+function new_poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
+        correction=true, showprogress=false)
+    ψ = auconvert(ψ)  # Length need to be in bohr's 
+    V = new_poisson_equation(ψ.psi, transtensor, correction=correction, showprogress=showprogress)
+    return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
+end
+
+function new_poisson_equation(ψ::QuantumState)
+    ct = optimal_coulomb_tranformation(ψ)
+    return new_poisson_equation(ψ, ct )
+end
 
 
 function poisson_equation!(V::AbstractArray{<:Any,6},
