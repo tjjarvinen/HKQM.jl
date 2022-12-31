@@ -94,7 +94,8 @@ Unitful.dimension(qs::QuantumState) = dimension(unit(qs))
 function Unitful.uconvert(u::Unitful.Units, qs::QuantumState)
     @assert dimension(u) == dimension(qs)
     u == unit(qs) && return qs
-    conv = ustrip(uconvert(u, 1*unit(qs))) * u / unit(qs)
+    T = (eltype ∘ eltype)(get_elementgrid(qs))  # make sure type is correct
+    conv = (T ∘ ustrip ∘ uconvert)(u, 1*unit(qs)) * u / unit(qs)
     return conv*qs
 end
 

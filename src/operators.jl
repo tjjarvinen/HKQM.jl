@@ -34,7 +34,8 @@ Unitful.dimension(ao::AbstractOperator) = dimension(unit(ao))
 function Unitful.uconvert(u::Unitful.Units, op::AbstractOperator)
     @assert dimension(u) == dimension(op)
     unit(op) == u && return op
-    conv = ustrip(uconvert(u, 1*unit(op))) * u / unit(op)
+    T = (eltype ∘ eltype)(get_elementgrid(op)) # make sure type is correct
+    conv = (T ∘ ustrip ∘ uconvert)(u, 1*unit(op)) * u / unit(op)
     return conv*op
 end
 
@@ -753,7 +754,10 @@ end
 Unitful.unit(H::HamiltonOperatorFreeParticle) =u"hartree*bohr^2"*unit(H.∇²)
 
 function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
-    return uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))*(H.∇²*qs)
+    T = (eltype ∘ eltype)(get_elementgrid(H))
+    a = uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))
+    b = T( ustrip(a) ) * u"hartree*bohr^2"
+    return b * (H.∇²*qs)
 end
 
 """
@@ -852,9 +856,9 @@ function vector_potential(ceg, Bx, By, Bz)
     @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")
     r = position_operator(ceg)
     # A = r×B/2
-    Ax = 0.5*(r[2]*Bz-r[3]*By)
-    Ay = 0.5*(r[3]*Bx-r[1]*Bz)
-    Az = 0.5*(r[1]*By-r[2]*Bx)
+    Ax = (r[2]*Bz-r[3]*By)/2
+    Ay = (r[3]*Bx-r[1]*Bz)/2
+    Az = (r[1]*By-r[2]*Bx)/2
     return VectorOperator(Ax, Ay, Az)
 end
 
