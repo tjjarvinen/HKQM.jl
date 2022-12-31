@@ -756,7 +756,7 @@ Unitful.unit(H::HamiltonOperatorFreeParticle) =u"hartree*bohr^2"*unit(H.∇²)
 function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
     T = (eltype ∘ eltype)(get_elementgrid(H))
     a = uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))
-    b = T( ustrip(a) ) * u"hartree*bohr^2"
+    b = T( ustrip(a) ) * u"hartree*bohr^2"  # this might break forward AD
     return b * (H.∇²*qs)
 end
 
