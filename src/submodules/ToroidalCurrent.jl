@@ -1,8 +1,10 @@
 module ToroidalCurrent
 
-using Distributed
-using Interpolations
 using DelimitedFiles
+using Distributed
+using Distances
+using Interpolations
+using TensorOperations
 
 using ..HKQM
 
@@ -167,16 +169,48 @@ function read_current(fname, ne=4, ng=32)
 end
 
 
-function toroidal_current(dJ; B=[0.,0.,1.].*u"T")
+function greens_function_2d(ceg; eps=1E-6u"Å")
+    r = Array( get_1d_grid(ceg) )
+    r1 = reshape(r, length(r))
+    xy = [ i==1 ? x : y  for (i,x,y) in Iterators.product(1:2, r1, r1) ]
+    xy1 = reshape(xy, 2, size(xy,2)*size(xy,3))
+    d = pairwise(SqEuclidean(), xy1, xy1)
+    d .+= austrip(eps)
+    tmp = ( 1/(4π) ) .* log.(d)
+
+    w = HKQM.getweight(ceg)
+    l = length(w)
+    out = reshape(tmp, l, l, l, l)
+
+    for i in 1:l, j in 1:l
+        out[:,:,i,j] .*= w[i] * w[j]
+    end
+    i = size(w,1)
+    j = size(w,2)
+    return reshape(out, i,j, i,j, i,j, i,j)
+end
+
+function solve_2d_poisson(G, psi)
+    @tensoropt tmp[x,y,z,X,Y,Z] := G[x,X,y,Y,i,I,j,J] * psi.psi[i,j,z,I,J,Z]
+    return QuantumState(get_elementgrid(psi), tmp, unit(psi)*u"bohr^2")
+end
+
+function solve_2d_poisson(psi)
+    return solve_2d_poisson( greens_function_2d( get_elementgrid(psi) ) , psi)
+end
+
+function toroidal_current(dJ; B=[0.,0.,1.].*u"T", eps=1E-6u"Å")
     @assert size(dJ) == (3,3,3)
-    # ∇²ψ = ∂Jₓ/∂y - ∂J_y/∂x
-    # Is this correct for magnetic responce?
-    ∇²ψ = [ dJ[1,i,2] - dJ[2,i,1] for i in 1:3 ]
+    # Δ²ψ = ∂Jₓ/∂y - ∂J_y/∂x
+    # where Δ² = ∂²/∂x² + ∂²/∂y²
+    Δ²ψ = [ dJ[1,i,2] - dJ[2,i,1] for i in 1:3 ]
 
     ∇ = GradientOperator( dJ[begin] )
 
-    ψ = pmap( ∇²ψ ) do ρ
-        poisson_equation(ρ) 
+    G = greens_function_2d( get_elementgrid(∇); eps=eps )
+
+    ψ = pmap( Δ²ψ ) do ρ
+        solve_2d_poisson(G, ρ) 
     end
 
     # J and dJ are unitless
@@ -191,16 +225,18 @@ function toroidal_current(dJ; B=[0.,0.,1.].*u"T")
 end
 
 
-function poloidal_current(J; B=[0.,0.,1.].*u"T")
+function poloidal_current(J; B=[0.,0.,1.].*u"T", eps=1E-6u"Å")
     @assert size(J) == (3,3)
-    # ∇²ϕ = -J_z
-    # Is this correct for magnetic responce?
-    ∇²ϕ = [ -J[3,i] for i in 1:3 ]
+    # Δ²ϕ = -J_z
+    # where Δ² = ∂²/∂x² + ∂²/∂y²
+    Δ²ϕ = [ -J[3,i] for i in 1:3 ]
 
     ∇ = GradientOperator( J[begin] )
 
-    ϕ = pmap( ∇²ϕ ) do ρ
-        poisson_equation(ρ) 
+    G = greens_function_2d( get_elementgrid(∇); eps=eps )
+
+    ϕ = pmap( Δ²ϕ ) do ρ
+        solve_2d_poisson(G, ρ)  
     end
 
     # J and dJ are unitless
