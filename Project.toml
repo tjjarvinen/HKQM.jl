@@ -6,6 +6,7 @@ version = "0.2.1"
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -28,6 +29,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 ArgCheck = "2"
+Distances = "0.10"
 FastGaussQuadrature = "0.4, 0.5"
 ForwardDiff = "0.10"
 Interpolations = "0.14"
