@@ -1,5 +1,7 @@
 module ToroidalCurrent
 
+using CSV
+using DataFrames
 using DelimitedFiles
 using Distributed
 using Distances
@@ -8,7 +10,7 @@ using TensorOperations
 
 using ..HKQM
 
-
+export make_data_frame
 export read_sysmoic, read_current
 export toroidal_current, poloidal_current
 export write_currents
@@ -250,7 +252,7 @@ function poloidal_current(J; B=[0.,0.,1.].*u"T", eps=1E-6u"Å")
 end
 
 
-function write_currents(fname, J_toro, J_polo; n_points=20)
+function make_data_frame(J_toro, J_polo; n_points=20)
     # These are taken from ../examples/vizualizze_wave_function.jl
     function get3d(psi)
         tmp = permutedims(psi.psi, (1,4,2,5,3,6))
@@ -262,17 +264,16 @@ function write_currents(fname, J_toro, J_polo; n_points=20)
         tx = get_1d_grid(ceg, 1) .* a
         ty = get_1d_grid(ceg, 2) .* a
         tz = get_1d_grid(ceg, 3) .* a
-        x = reshape(tx, (length(tx)) )
-        y = reshape(ty, (length(ty)) )
-        z = reshape(tz, (length(tz)) )
+        local x = reshape(tx, (length(tx)) )
+        local y = reshape(ty, (length(ty)) )
+        local z = reshape(tz, (length(tz)) )
         return x, y, z
     end
     function get_interpolator(psi)
-        x, y, z = get_coordinates(HKQM.get_elementgrid(psi))
+        local x, y, z = get_coordinates(HKQM.get_elementgrid(psi))
         Psi3d = get3d(psi)
         return LinearInterpolation((x,y,z), Psi3d)
     end
-
     ceg = get_elementgrid(J_toro[1])
     tmin = ustrip.( u"Å", minimum(ceg) .* u"bohr" )
     tmax = ustrip.( u"Å", maximum(ceg) .* u"bohr" )
@@ -280,7 +281,6 @@ function write_currents(fname, J_toro, J_polo; n_points=20)
     x = LinRange(tmin[1], tmax[1], n_points)
     y = LinRange(tmin[2], tmax[2], n_points)
     z = LinRange(tmin[3], tmax[3], n_points)
-
     j_toro = pmap(J_toro) do jᵢ
         w = get_interpolator(jᵢ)
         j = vec([ w(i,j,k) for i in x, j in y, k in z  ])
@@ -294,16 +294,26 @@ function write_currents(fname, J_toro, J_polo; n_points=20)
     wx = vec([ i for i in x, j in y, k in z  ])
     wy = vec([ j for i in x, j in y, k in z  ])
     wz = vec([ k for i in x, j in y, k in z  ])
-
-    @info "Writing data to $fname"
-    open(fname, "w") do io
-        writedlm(io, [wx wy wz j_toro[1] j_toro[3] j_toro[3] j_polo[1] j_polo[2] j_polo[3]])
-    end
-    @info "Writing complite"
-    @info "Distance is in Ångströms"
-    @info "Collumn order is x, y, z, Jx_toro, Jy_toro, Jz_toro, Jx_polo, Jy_polo, Jz_polo"
-
-    #return Dict("jt"=>j_toro, "jp"=>j_polo)
+    data = DataFrame(
+        x = wx,
+        y = wy,
+        z = wz,
+        Jtoro_x = j_toro[1],
+        Jtoro_y = j_toro[2],
+        Jtoro_z = j_toro[3],
+        Jpolo_x = j_polo[1],
+        Jpolo_y = j_polo[2],
+        Jpolo_z = j_polo[3]
+    )
+    return data
 end
+
+function write_currents(fname, J_toro, J_polo; n_points=20)
+    data = make_data_frame(J_toro, J_polo; n_points=n_points)
+    write_currents(fname, data)
+    return data
+end
+
+write_currents(fname, data::DataFrame) = CSV.write(fname, data)
 
 end
