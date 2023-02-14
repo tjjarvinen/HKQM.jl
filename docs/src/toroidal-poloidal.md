@@ -4,16 +4,18 @@
 
 ## Definition
 
-*Toroidal* current (ψ) is defined as
+*Toroidal* current is defined as
 
 ```math
 -\Delta_2 \psi = \frac{\partial J_y}{\partial x} - \frac{\partial J_x}{\partial y}
+J_toro =  ∇×ψ
 ```
 
-*Poloidal* current (ϕ) is defined as
+*Poloidal* current is defined as
 
 ```math
 -\Delta_2 \phi = J_z
+J_polo = ∇×∇×ϕ
 ```
 
 Where
@@ -84,6 +86,35 @@ To check that everything is correct type
 
 # If everything is correct this returns zeros
 bracket.(ΔJ, ΔJ)
+```
+
+## Change Magnetic Field direction
+
+The default direction of magnetic field is z-axis.
+You can change the direction by giving different direction
+
+```julia
+# Magnetic field in x-direction
+Bx = 1.u"T"
+By = 0.u"T"
+Bz = 0.u"T"
+
+B = [Bx, By, Bz]
+
+J_toro = toroidal_current(dJ; B=B)
+J_polo = poloidal_current(J; B=B)
+```
+
+```julia
+# Magnetic field between x- and y-directions
+Bx = cos(π/4) * u"T"
+By = sin(π/4) * u"T"
+Bz = 0.u"T"
+
+B = [Bx, By, Bz]
+
+J_toro = toroidal_current(dJ; B=B)
+J_polo = poloidal_current(J; B=B)
 ```
 
 ### Adjust integration parameters
