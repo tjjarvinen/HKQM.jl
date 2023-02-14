@@ -113,11 +113,10 @@ J_polo = poloidal_current(J; eps=1E-5u"bohr")
 You can write toroidal and poloidal current with
 
 ```julia
-write_currents("file_name", J_toro, J_polo)
+data = write_currents("output_file.csv", J_toro, J_polo)
 
 # change number of points per dimension
-write_currents("file_name", J_toro, J_polo; n_points=25)
+write_currents("output_file.csv", J_toro, J_polo; n_points=25)
 ```
 
-Distance is in Ångströms and order of variables is
-x, y, z, Jx_toro, Jy_toro, Jz_toro, Jx_polo, Jy_polo, Jz_polo
+The output is a CSV file.
