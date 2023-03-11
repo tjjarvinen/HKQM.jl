@@ -242,6 +242,7 @@ function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::Abtrac
     pttmp = permutedims(ttmp, [1,3,2,4,5])
     st = size(transtensor)
     T_tensor = reshape(pttmp, st[1]*st[3], st[2]*st[4], st[5])
+    t_step = prod(st[1:4])  # step size to help copy data later
 
     # Create temporary arrays
     ET = promote_type(eltype(ρ), T)
@@ -249,16 +250,16 @@ function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::Abtrac
     tmp2 = similar(rtmp, ET)
     tensor = similar(ρ, T, st[1]*st[3], st[2]*st[4] )
 
-
     # Set up progress meter
     nt = size(transtensor, 5)
     @debug "nt=$nt"
     ptime = showprogress ? 1 : Inf
     p = Progress(nt, ptime)
 
+
     # Calculate
     V = sum( axes(transtensor.wt, 1) ) do t
-        copyto!(tensor, @view T_tensor[:,:,t]) # NOTE this is slow on GPUs
+        copyto!(tensor, 1, T_tensor, 1+(t-1)*t_step, t_step)
         tmp = poisson_equation!(tmp1, tmp2, rtmp, tensor, tensor, tensor, T(transtensor.wt[t]))
         next!(p)
         tmp
