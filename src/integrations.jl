@@ -196,8 +196,8 @@ function poisson_equation!(
     # the mid calculation results.
 
     # Note that Tx, Ty and Tz are not symmetric due to
-    # integration contant only being on right side!
-    # Thus we need to contract from right side.  
+    # integration contant only being on the right side!
+    # Thus we need to contract from the right side.  
 
     s = size(ρ)
 
@@ -223,7 +223,7 @@ function poisson_equation!(
     mul!(tmp1, Tz, rtmp2) # tmp1[z,xy] = Tz[z,k]*rtmp2[k,xy]
 
 
-    # Restore correct permutation and shape
+    # Restore the correct permutation and shape
     rtmp1 = reshape(tmp1, s[3], s[1], s[2]) # rtmp1[z,x,y]
     permutedims!(V2, rtmp1, [2,3,1])        # V2[x,y,z]
 
@@ -265,7 +265,7 @@ function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::Abtrac
         next!(p)
         tmp
     end
-    # Reshape V back to correct shape and permutation
+    # Reshape V back to the correct shape and permutation
     s = size(ρ)
     rV = reshape(V, s[1], s[4], s[2], s[5], s[3], s[6])
     V_out = reshape(tmp, s...)
@@ -278,7 +278,7 @@ end
 
 function new_poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
         correction=true, showprogress=false)
-    ψ = auconvert(ψ)  # Length need to be in bohr's 
+    ψ = auconvert(ψ)  # Length needs to be in bohr's 
     T = (eltype ∘ eltype ∘ get_elementgrid)(ψ)
     V = new_poisson_equation(T, ψ.psi, transtensor, correction=correction, showprogress=showprogress)
     return QuantumState(get_elementgrid(ψ), V, unit(ψ)*u"bohr^2")
@@ -304,7 +304,7 @@ end
 function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
                           tmax=nothing, showprogress=false)
 
-    tmp = ρ.*transtensor.wt[1] # Make sure we have correct type
+    tmp = ρ.*transtensor.wt[1] # Make sure we have the correct type
     nt = size(transtensor, 5)
     @debug "nt=$nt"
     ptime = showprogress ? 1 : Inf
@@ -324,7 +324,7 @@ function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTe
                           tmax=nothing, showprogress=false)
     #@assert dimension(ψ) == dimension(u"bohr^-2")
     #ψ = uconvert(u"bohr^-2", ψ)
-    ψ = auconvert(ψ)  # Length need to be in bohr's 
+    ψ = auconvert(ψ)  # Length needs to be in bohr's 
     V = poisson_equation(ψ.psi, transtensor, tmax=tmax, showprogress=showprogress)
     return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
 end
