@@ -55,7 +55,7 @@ julia> using Metal
 julia> qs_mtl = particle_in_box(MtlArray, eg, 1, 1, 1)
 Quantum state
 
-julia> typeof(q_mtl)
+julia> typeof(qs_mtl)
 QuantumState{MtlArray{Float32, 6}, Float32}
 
 julia> r_mtl = position_operator(MtlArray, eg)
