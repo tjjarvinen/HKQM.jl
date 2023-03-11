@@ -259,6 +259,7 @@ function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::Abtrac
 
     # Calculate
     V = sum( axes(transtensor.wt, 1) ) do t
+        # copyto!(tensor, T_tensor[:,:,t]) but without extra allocation
         copyto!(tensor, 1, T_tensor, 1+(t-1)*t_step, t_step)
         tmp = poisson_equation!(tmp1, tmp2, rtmp, tensor, tensor, tensor, T(transtensor.wt[t]))
         next!(p)
