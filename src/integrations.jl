@@ -195,7 +195,7 @@ function poisson_equation!(
     # V1 and V2 work as temporary arrays to store
     # the mid calculation results.
 
-    # Note that Tx, Ty and Tz are symmetric due to
+    # Note that Tx, Ty and Tz are not symmetric due to
     # integration contant only being on right side!
     # Thus we need to contract from right side.  
 
