@@ -1,6 +1,4 @@
-using TensorOperations
 using QuadGK
-using Zygote
 using ForwardDiff
 using StaticArrays
 using LinearAlgebra
@@ -34,8 +32,8 @@ function gaussian_coulomb_integral_grad(a₁=1, a₂=1,  d=0; rtol=1e-12, tmin=0
         F₀=boys(θ*d^2)
         return 2π^(5//2)*sqrt(θ)*F₀/(a1*a2)^(3//2)
     end
-    h(x)=Zygote.gradient( z->Zygote.forwarddiff(eri_ssss, z), x)[1]
-    return h( [Float64(a₁), Float64(a₂), Float64(d)])
+    h(x) = ForwardDiff.gradient(eri_ssss, x)
+    return h( [a₁, a₂, d])
 end
 
 
@@ -66,7 +64,7 @@ Test nuclear potential accuracy to Gaussien electron density.
 """
 function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
                                 α=1, σ=0.1, origin=zeros(3), tmin=0, tmax=30, δ=0.25, mode="normal")
-    ceg = CubicElementGrid(a, ne, ng)
+    ceg = ElementGridSymmetricBox(a, ne, ng)
     if mode == "normal"
         @info "normal mode"
         npt1 = NuclearPotentialTensor(origin[1], ceg, nt; tmin=tmin, tmax=tmax)
@@ -118,8 +116,10 @@ function test_nuclear_potential(a, ne::Int, ng::Int, nt::Int;
     r = position_operator(ceg)
     r0 = r - austrip.(collect(origin)).*u"bohr"
     r2 = r0⋅r0
-    ρ = exp(-1u"bohr^-2"*α*r2).vals
-    integral = integrate(ρ, ceg, V)
+    OV = ScalarOperator(ceg, V)
+    ψ = QuantumState(exp(-0.5u"bohr^-2"*α*r2))
+    # ρ = ketbra(ψ)
+    integral = bracket(ψ, OV, ψ)   #integrate(ρ, ceg, V)
     ref = gaussian_density_nuclear_potential(α; tmin=tmin, tmax=tmax)
     ref_tot = gaussian_density_nuclear_potential(α)
     tail = gaussian_density_nuclear_potential(α; tmin=tmax)
@@ -162,7 +162,7 @@ Test accuracy on Gaussian charge distribution self energy.
 """
 function test_accuracy(a, ne::Int, ng::Int, nt::Int;
         tmax=300, tmin=0, mode=:optimal, δ=0.25, correction=true, tboundary=20, α1=1, α2=1, d=0u"bohr", showprogress=true)
-    ceg = CubicElementGrid(a, ne, ng)
+    ceg = ElementGridSymmetricBox(a, ne, ng)
     if mode == :normal
         @info "Normal mode"
         ct = HelmholtzTensorLinear(ceg, nt; tmax=tmax, tmin=tmin)
@@ -228,33 +228,30 @@ function test_accuracy(ceg::AbstractElementGridSymmetricBox, ct::AbstractHelmhol
 end
 
 function test_accuracy_ad(a, ne, ng, nt; tmax=300, α1=1, α2=1, d=0.5, δ=0.25, showprogress=true)
-    ceg = CubicElementGrid(a, ne, ng)
-    ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ, tboundary=20)
+    ceg = ElementGridSymmetricBox(a, ne, ng)
+    ct = optimal_coulomb_tranformation(ceg, nt; tmax=tmax, δ=δ)
     return test_accuracy_ad(ceg, ct; α1=α1, α2=α2, d=d, showprogress=showprogress)
 end
 
 
 function test_accuracy_ad(ceg::AbstractElementGridSymmetricBox, ct::AbstractHelmholtzTensor;
-                         α1=1., α2=1., d=0.5, showprogress=true)
+                         α1=1., α2=1., d=0.5, showprogress=true, correction=false)
     function f(x)
-        tmin = ct.tmin
-        tmax = ct.tmax
-        r1 = SVector(0.5x[3], 0., 0.)
-        r2 = SVector(-0.5x[3], 0., 0.)
-        ρ1 = density_tensor(ceg; a=x[1], r=r1)
-        ρ2 = density_tensor(ceg; a=x[2], r=r2)
-        V = poisson_equation(ρ1, ct; tmax=tmax, showprogress=showprogress)
-        return integrate(ρ2, ceg, V)
+        r = position_operator(ceg)
+        r1 = r + [0.5x[3], 0., 0.] .* u"bohr"
+        r2 = r - [0.5x[3], 0., 0.] .* u"bohr"
+        
+        ρ1 = QuantumState(exp(-1u"bohr^-2"*x[1]*dot(r1,r1)))
+        ρ2 = QuantumState(exp(-1u"bohr^-2"*x[2]*dot(r2,r2)))
+        V = poisson_equation(ρ1, ct; correction=correction, showprogress=showprogress)
+        return bracket(ρ2, V) |> ustrip
     end
-    x = [Float64(α1), Float64(α2), Float64(d)]
-    @info "Zygote forward mode"
-    g = Zygote.gradient( z->Zygote.forwarddiff(f, z), x)[1]
-    #@info "ForwardDiff"
-    #gf = x -> ForwardDiff.gradient(f, x)
-    #fd = gf(x)
+    x = [α1, α2, d]
+    @info "ForwardDiff"
+    gf(x) = ForwardDiff.gradient(f, x)
+    g = gf(x)
     g_ref = gaussian_coulomb_integral_grad(α1, α2, d)
-    @info "Zygote forward mode gradient $g"
-    #@info "ForwardDiff $fd"
+    @info "ForwardDiff $g"
     @info "Analytic $g_ref"
     @info "Relative error  $( round.((g.-g_ref)./g_ref; sigdigits=2))"
     return (g, g_ref)

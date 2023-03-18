@@ -526,16 +526,6 @@ end
 
 
 
-## Help functions to create charge density
-
-function density_tensor(grid::AbstractArray, r::AbstractVector, a)
-    return [ exp(-a*sum( (x-r).^2 )) for x in grid ]
-end
-
-density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
-
-
-
 ## Derivative tensor
 
 

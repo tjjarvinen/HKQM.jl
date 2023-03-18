@@ -662,11 +662,6 @@ Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
-# Old version that is faster by a little
-#function (lo::LaplaceOperator)(qs::QuantumState)
-#    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*lo.d2x[i,ii] + qs.psi[i,jj,k,I,J,K]*lo.d2y[j,jj] + qs.psi[i,j,kk,I,J,K]*lo.d2z[k,kk]
-#    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo))
-#end
 
 # New version, which works with GPU, but is a little bit slower on CPU
 function (lo::LaplaceOperator)(qs::QuantumState)
@@ -922,17 +917,9 @@ function electric_potential(cdensity::ScalarOperator, ct::AbstractCoulombTransfo
     @argcheck dimension(cdensity) == dimension(u"C")
     if unit(cdensity) != u"e_au"
         tmp = auconvert(cdensity)
-        if correction
-            ϕ = poisson_equation(tmp.vals, ct, tmax=ct.tmax, showprogress=showprogress)
-        else
-            ϕ = poisson_equation(tmp.vals, ct, showprogress=showprogress)
-        end
+        ϕ = poisson_equation(tmp.vals, ct, correction=correction, showprogress=showprogress)
     else
-        if correction
-            ϕ = poisson_equation(cdensity.vals, ct, tmax=ct.tmax, showprogress=showprogress)
-        else
-            ϕ = poisson_equation(cdensity.vals, ct, showprogress=showprogress)
-        end
+        ϕ = poisson_equation(cdensity.vals, ct, correction=correction, showprogress=showprogress)
     end
     return ScalarOperator(get_elementgrid(cdensity), ϕ; unit=u"hartree/e_au") 
 end

@@ -3,16 +3,10 @@
     integrate(ϕ, grid::AbstractElementGridSymmetricBox, ψ)
     integrate(grid::AbstractElementGridSymmetricBox, ρ)
     integrate(ϕ::QuantumState, ψ::QuantumState)
+    integrate(ωx::T, ωy::T, ωz::T, ρ::DT) where {T,DT}
 
 Low lever integration routines. (users should not use these, as they can change)
 """
-function integrate(ϕ, grid::CubicElementGrid, ψ)
-    # deprecated
-    ω = ω_tensor(grid)
-    c = ϕ.*ψ
-    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*c[1,3,5,2,4,6]
-end
-
 function integrate(ωx::T, ωy::T, ωz::T, ρ::DT) where {T,DT}
     tmp = permutedims(ρ, [1,4,2,5,3,6])
     s = size(tmp)
@@ -28,13 +22,6 @@ function integrate(ωx::T, ωy::T, ωz::T, ρ::DT) where {T,DT}
     return sum( tz * rωz )  # integrate z-axis  ## dot wont work with Metal.jl
 end
 
-
-
-function integrate(grid::CubicElementGrid, ρ)
-    # deprecated
-    ω = ω_tensor(grid)
-    return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*ρ[1,3,5,2,4,6]
-end
 
 
 """
@@ -232,20 +219,20 @@ function poisson_equation!(
 end
 
 
-function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
+function poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
         correction=true, showprogress=false)
     # Reshape and permute arrays to better suit contractions
     s = size(ρ)
     tmp = permutedims(ρ, [1,4,2,5,3,6])
     rtmp = reshape(tmp, s[1]*s[4], s[2]*s[5], s[3]*s[6])
-    ttmp = give_whole_tensor(T, transtensor)
+    ttmp = give_whole_tensor(T, transtensor) #TODO does not count type of transtensor
     pttmp = permutedims(ttmp, [1,3,2,4,5])
     st = size(transtensor)
     T_tensor = reshape(pttmp, st[1]*st[3], st[2]*st[4], st[5])
     t_step = prod(st[1:4])  # step size to help copy data later
 
     # Create temporary arrays
-    ET = promote_type(eltype(ρ), T)
+    ET = promote_type(eltype(ρ), T, eltype(ttmp))  
     tmp1 = similar(rtmp, ET)
     tmp2 = similar(rtmp, ET)
     tensor = similar(ρ, T, st[1]*st[3], st[2]*st[4] )
@@ -276,60 +263,21 @@ function new_poisson_equation(T, ρ::AbstractArray{<:Any,6}, transtensor::Abtrac
     return V_out
 end
 
-function new_poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
-        correction=true, showprogress=false)
-    ψ = auconvert(ψ)  # Length needs to be in bohr's 
-    T = (eltype ∘ eltype ∘ get_elementgrid)(ψ)
-    V = new_poisson_equation(T, ψ.psi, transtensor, correction=correction, showprogress=showprogress)
-    return QuantumState(get_elementgrid(ψ), V, unit(ψ)*u"bohr^2")
-end
-
-function new_poisson_equation(ψ::QuantumState; showprogress=false)
-    ct = optimal_coulomb_tranformation(ψ)
-    return new_poisson_equation(ψ, ct ; showprogress=showprogress)
-end
-
-
-function poisson_equation!(V::AbstractArray{<:Any,6},
-                          ρ::AbstractArray{<:Any,6},
-                          T::AbstractArray{<:Any,4},
-                          wt)
-    @assert size(V) == size(ρ)
-    @tensor V[-1,-2,-3,-4,-5,-6] = T[-1,1,-4,2] * T[-2,3,-5,4] * T[-3,5,-6,6] * ρ[1,3,5,2,4,6]
-    V .*= (2/sqrt(π)*wt)
-    return V
-end
-
-
-function poisson_equation(ρ::AbstractArray, transtensor::AbtractTransformationTensor;
-                          tmax=nothing, showprogress=false)
-
-    tmp = ρ.*transtensor.wt[1] # Make sure we have the correct type
-    nt = size(transtensor, 5)
-    @debug "nt=$nt"
-    ptime = showprogress ? 1 : Inf
-    p = Progress(nt, ptime)
-    V = sum( axes(transtensor.wt, 1) ) do t
-        poisson_equation!(tmp, ρ, transtensor[:,:,:,:,t], transtensor.wt[t])
-        next!(p)
-        tmp
-    end
-    if tmax !== nothing
-        return V .+ coulomb_correction(ρ, tmax)
-    end
-    return V
+function poisson_equation(ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
+    correction=true, showprogress=false)
+    T = eltype(ρ)
+    return poisson_equation(T, ρ, transtensor; correction=correction, showprogress=correction)
 end
 
 function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;
-                          tmax=nothing, showprogress=false)
-    #@assert dimension(ψ) == dimension(u"bohr^-2")
-    #ψ = uconvert(u"bohr^-2", ψ)
+        correction=true, showprogress=false)
     ψ = auconvert(ψ)  # Length needs to be in bohr's 
-    V = poisson_equation(ψ.psi, transtensor, tmax=tmax, showprogress=showprogress)
-    return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
+    T = (eltype ∘ eltype ∘ get_elementgrid)(ψ)
+    V = poisson_equation(T, ψ.psi, transtensor, correction=correction, showprogress=showprogress)
+    return QuantumState(get_elementgrid(ψ), V, unit(ψ)*u"bohr^2")
 end
 
-function poisson_equation(ψ::QuantumState)
+function poisson_equation(ψ::QuantumState; showprogress=false)
     ct = optimal_coulomb_tranformation(ψ)
-    return poisson_equation(ψ, ct; tmax=ct.tmax )
+    return poisson_equation(ψ, ct ; showprogress=showprogress)
 end

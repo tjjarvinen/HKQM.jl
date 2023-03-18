@@ -23,9 +23,9 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperator;
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(H.T.m * E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
+    ct = optimal_coulomb_tranformation(H; k=k);
     ϕ = H.T.m * H.V * 1u"ħ_au^-2" * ψ
-    ϕ = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
+    ϕ = poisson_equation(ϕ, ct; correction=true, showprogress=showprogress);
     normalize!(ϕ)
     return ϕ
 end
@@ -39,9 +39,9 @@ function helmholtz_equation!(ψ::QuantumState, H::HamiltonOperator;
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(H.T.m * E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
+    ct = optimal_coulomb_tranformation(H; k=k);
     ϕ = (H.T.m * 1u"ħ_au^-2") * H.V * ψ
-    ψ .= poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
+    ψ .= poisson_equation(ϕ, ct; correction=true, showprogress=showprogress);
     normalize!(ψ)
     return ψ
 end
@@ -56,14 +56,14 @@ function helmholtz_equation(ψ::QuantumState, H::HamiltonOperatorMagneticField;
     end
     @debug "E=$E"
     k  = sqrt( -2(austrip(H.T.m * E)) )
-    ct = optimal_coulomb_tranformation(H.elementgrid; k=k);
+    ct = optimal_coulomb_tranformation(H; k=k);
     p = momentum_operator(H.T)
     #TODO These could run parallel
     # There is a posible issue with types here
     ϕ = H.T.m * H.V * 1u"ħ_au^-2" * ψ
     ϕ = ϕ + (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * ψ
     ϕ = ϕ + (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * ψ
-    ϕ = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
+    ϕ = poisson_equation(ϕ, ct; correction=true, showprogress=showprogress);
     normalize!(ϕ)
     return ϕ
 end
@@ -95,7 +95,7 @@ function helmholtz_update( sd::SlaterDeterminant,
     ct = optimal_coulomb_tranformation(H, nt; k=k);
     ϕ = (H.V + 2J) * ψ - Kψ  
     ϕ *= H.T.m * 1u"ħ_au^-2"
-    tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
+    tmp = poisson_equation(ϕ, ct; correction=true, showprogress=showprogress);
     return normalize!(tmp)
 end
 
@@ -121,13 +121,13 @@ function helmholtz_update( sd::SlaterDeterminant,
     ϕ *= H.T.m * 1u"ħ_au^-2"
     ϕ += (H.q^2 * u"ħ_au^-2") * (H.A⋅H.A) * ψ
     ϕ += (H.q * u"ħ_au^-2") * (H.A⋅p + p⋅H.A) * ψ
-    tmp = poisson_equation(ϕ, ct; tmax=ct.tmax, showprogress=showprogress);
+    tmp = poisson_equation(ϕ, ct; correction=true, showprogress=showprogress);
 return normalize!(tmp)
 end
 
 
 function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, J::ScalarOperator, i::Int; nt=96, showprogress=false)
-    ct = optimal_coulomb_tranformation(get_elementgrid(sd), nt);
+    ct = optimal_coulomb_tranformation(sd, nt);
     return helmholtz_update(sd, H, J, i, ct; nt=nt, showprogress=false)
 end
 
@@ -188,11 +188,7 @@ function coulomb_operator(density::ScalarOperator, ct::AbstractCoulombTransforma
     # Given total charge density
     # Calculate electric potential and multiply it with charge
     # To get potential energy
-    if correction
-        ϕ = poisson_equation(density.vals, ct, tmax=ct.tmax, showprogress=showprogress)
-    else
-        ϕ = poisson_equation(density.vals, ct, showprogress=showprogress)
-    end
+    ϕ = poisson_equation(density.vals, ct, correction=correction, showprogress=showprogress)
     # Density is expected to be 0.5 * electron density
     # to create literature vesion where F = h + 2J + K and not F = h + J + K
     # Electron charge is expected to be -1
@@ -218,7 +214,7 @@ function exchange_operator(sd::SlaterDeterminant, i::Int, ct::AbstractCoulombTra
     # ΣⱼKⱼψᵢ
     ψ = sum(sd) do ϕ
         ρ = ketbra( ϕ, sd[i] )
-        tmp = poisson_equation(ρ, ct, tmax=ct.tmax)
+        tmp = poisson_equation(ρ, ct, correction=true)
         ScalarOperator(get_elementgrid(sd), tmp; unit=u"hartree") * ϕ
     end
     return ψ
