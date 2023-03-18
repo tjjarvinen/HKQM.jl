@@ -22,7 +22,6 @@ using Requires
 
 # Submodule
 include("submodules/ReferenceStates.jl")
-include("submodules/ToroidalCurrent.jl")
 using .ReferenceStates
 
 
@@ -142,6 +141,7 @@ include("initial_states.jl")
 function __init__()
     @require TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2" begin
         include("tensor_operations.jl")
+        include("submodules/ToroidalCurrent.jl")
         @require CUDA="052768ef-5323-5732-b1bb-66c8b64840ba" include("tensor_operations_cuda.jl")
     end
 end

@@ -6,6 +6,7 @@ There is a submodule for toroidal-poloidal decomposition
 of magnetic currents. To access it just
 
 ```julia
+using TensorOperations
 using HKQM
 using HKQM.ToroidalCurrent
 ```
