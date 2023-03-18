@@ -49,7 +49,6 @@ end
 
 function poisson_equation(ψ::QuantumState{<:Array, <:Any}, transtensor::AbtractTransformationTensor;
     correction=true, showprogress=false)
-#@assert dimension(ψ) == dimension(u"bohr^-2")
     ψ = auconvert(ψ)  # Length needs to be in bohr's 
     V = poisson_equation(ψ.psi, transtensor, correction=correction, showprogress=showprogress)
     return QuantumState(ψ.elementgrid, V, unit(ψ)*u"bohr^2")
