@@ -1,4 +1,4 @@
-# Changing Data Types
+# Changing Data Types and GPU Calculations
 
 ## Changing Variable Type
 
@@ -80,3 +80,64 @@ Operator 4^3 elements, 24^3 Gauss points per element
 julia> typeof(r_new[1])
 ScalarOperator{MtlArray{Float32, 6}}
 ```
+
+## TensorOperations backend
+
+The default backend maximizes compatibility to different
+GPUs, but it is not as well optimized. To get a little bit
+more performance you can use [TensorOperations](https://github.com/Jutho/TensorOperations.jl) backend, which also
+supports forward mode AD.
+
+To use TensorOperations backend, just load TensorOperations
+
+```julia
+using TensorOperations
+using HKQM
+```
+
+you will also need to use `Array` type (or `CuArray`) to
+use TensorOperations backend.
+
+In the future, when TensorOperations will have other
+backends, it will become the default backend (again).
+
+## GPU Calculations
+
+The main way to do GPU calculations is to change the array type to
+the one GPU supports
+
+ - `CuArray` -> [Nvidia GPUs](https://github.com/JuliaGPU/CUDA.jl)
+ - `oneArray` -> [Intel GPUs](https://github.com/JuliaGPU/oneAPI.jl)
+ - `ROCArray` -> [AMD GPUs](https://github.com/JuliaGPU/AMDGPU.jl)
+ - `MtlArray` -> [Apple GPUs](https://github.com/JuliaGPU/Metal.jl)
+
+For example to use on AMD GPU you could start by
+
+```julia
+using AMDGPU
+using HKQM
+
+eg = ElementGridSymmetricBox(Float64, 5u"Å", 4, 24)
+qs = particle_in_box(ROCArray, eg, 1, 1, 1)
+r = position_operator(ROCArray, eg)
+p = momentum_operator(ROCArray, eg)
+
+bracket(qs, r, qs)
+bracket(qs, p, qs)
+```
+
+### Alternative TensorOperations backend for CUDA
+
+For CUDA there is alternative TensorOperations backend
+that also support forward mode AD and is most likely faster
+than the default backend.
+
+To use TensorOperations CUDA backend start by
+
+```julia
+using CUDA
+using TensorOperations
+using HKQM
+```
+
+and use either `Array` or `CuArray` types.
