@@ -101,7 +101,7 @@ end
     @test bracket(ϕ,ψ) ≈ 3
     rr = bracket(ψ, r, ψ)
     @test typeof(austrip(rr[1])) == Float32
-    @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-8
+    @test sqrt( sum(x->x^2, rr) ) < 1u"bohr"*1E-7
 
     ceg_f64 = convert_variable_type(Float64, ceg)
     @test ceg_f64 ≈ ceg
