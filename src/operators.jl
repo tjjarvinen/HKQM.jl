@@ -34,7 +34,8 @@ Unitful.dimension(ao::AbstractOperator) = dimension(unit(ao))
 function Unitful.uconvert(u::Unitful.Units, op::AbstractOperator)
     @assert dimension(u) == dimension(op)
     unit(op) == u && return op
-    conv = ustrip(uconvert(u, 1*unit(op))) * u / unit(op)
+    T = (eltype ∘ eltype)(get_elementgrid(op)) # make sure type is correct
+    conv = (T ∘ ustrip ∘ uconvert)(u, 1*unit(op)) * u / unit(op)
     return conv*op
 end
 
@@ -438,23 +439,33 @@ Unitful.unit(::GradientOperator) = u"bohr"^-1
 # these are low level stuff to use only in special cases
 
 function operate_x!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[i,l] * ψ[l,j,k,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[i,l] * ψ[l,j,k,I,J,K]
+    s = size(ψ)
+    tmp = reshape(ψ, s[1], prod(s[2:end]) )
+    tout = reshape(dψ, s[1], prod(s[2:end]))
+    mul!(tout, dt.values, tmp)
     return dψ
 end
 
 function operate_y!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[j,l] * ψ[i,l,k,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[j,l] * ψ[i,l,k,I,J,K]
+    s = size(ψ)
+    tmp = permutedims(ψ, [2,1,3,4,5,6])
+    rtmp = reshape(tmp, s[2], prod([s[1], s[3:end]...]) )
+    p = dt.values * rtmp
+    rp = reshape(p, s[2], s[1], s[3:end]...)
+    permutedims!(dψ, rp, [2,1,3,4,5,6])
     return dψ
 end
 
 function operate_z!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::AbstractArray{<:Any,6})
-    tmp = similar(ψ, size(dt)...)
-    tmp .= dt
-    @tensor dψ[i,j,k,I,J,K] = tmp[k,l] * ψ[i,j,l,I,J,K]
+    # @tensor dψ[i,j,k,I,J,K] = dt.values[k,l] * ψ[i,j,l,I,J,K]
+    s = size(ψ)
+    tmp = permutedims(ψ, [3,2,1,4,5,6])
+    rtmp = reshape(tmp, s[3], prod([s[1:2]..., s[4:end]...]) )
+    p = dt.values * rtmp
+    rp = reshape(p, s[3], s[2], s[1], s[4:end]...)
+    permutedims!(dψ, rp, [3,2,1,4,5,6])
     return dψ
 end
 
@@ -618,15 +629,22 @@ get_elementgrid(op::OperatorProduct) = get_elementgrid(op.op1)
 # Fields
 - `elementgrid::AbstractElementGrid`   :  grid information
 - `g::GradientOperator`             :  gradient operator
+- `unit::Unitful.FreeUnits`        :  unit for operator
 
 # Creation
     LaplaceOperator(g::GradientOperator)
 """
-struct LaplaceOperator <: AbstractOperator{1}
+struct LaplaceOperator{T} <: AbstractOperator{1}
     elementgrid::AbstractElementGrid
-    g::GradientOperator
+    d2x::T
+    d2y::T
+    d2z::T
+    unit::Unitful.FreeUnits
     function LaplaceOperator(g::GradientOperator)
-        new(get_elementgrid(g), g)
+        d2x = g[1].dt.values^2
+        d2y = g[2].dt.values^2
+        d2z = g[3].dt.values^2
+        new{typeof(d2x)}( get_elementgrid(g), d2x, d2y, d2z, unit(g)^2 )
     end
 end
 
@@ -634,26 +652,47 @@ function LaplaceOperator(ceg::AbstractElementGrid)
     LaplaceOperator( GradientOperator(ceg) )
 end
 
-Unitful.unit(lo::LaplaceOperator) = unit(lo.g)^2
+function LaplaceOperator(T, ceg::AbstractElementGrid)
+    LaplaceOperator( GradientOperator(T, ceg) )
+end
+
+Unitful.unit(lo::LaplaceOperator) = lo.unit
 
 Base.:(*)(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
 dot(g1::GradientOperator, g2::GradientOperator) = LaplaceOperator(g1)
 
+
+# New version, which works with GPU, but is a little bit slower on CPU
 function (lo::LaplaceOperator)(qs::QuantumState)
-    #TODO make the wx, wy and wz tensors permanent parts of the operator
-    # by making them at the creations point.
-    tmp = lo.g[1].dt.values
-    @tensor wx[i,j]:=tmp[i,k]*tmp[k,j]
+    ψ = qs.psi
+    out = similar(ψ)
 
-    tmp = lo.g[2].dt.values
-    @tensor wy[i,j]:=tmp[i,k]*tmp[k,j]
+    # d2x
+    s = size(ψ)
+    rqs = reshape(ψ, s[1], prod(s[2:end]) )
+    rout = reshape(out, s[1], prod(s[2:end]))
+    mul!(rout, lo.d2x, rqs)
 
-    tmp = lo.g[3].dt.values
-    @tensor wz[i,j]:=tmp[i,k]*tmp[k,j]
+    # d2y
+    tmp = permutedims(ψ, [2,1,3,4,5,6])
+    rtmp = reshape(tmp, s[2], prod([s[1], s[3:end]...]) )
+    temp_result = lo.d2y * rtmp  # we use this later for d2z tmp data
+    rp = reshape(temp_result, s[2], s[1], s[3:end]...)
+    rtmp = reshape(tmp, s[2], s[1], s[3:end]... )
+    permutedims!(rtmp, rp, [2,1,3,4,5,6])
+    out += rtmp
 
-    @tensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*wx[i,ii] + qs.psi[i,jj,k,I,J,K]*wy[j,jj] + qs.psi[i,j,kk,I,J,K]*wz[k,kk]
-    return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
+    # d2z
+    tmp = reshape(rtmp, s[3], s[2], s[1], s[4:end]... )
+    permutedims!(tmp , ψ, [3,2,1,4,5,6])
+    rtmp = reshape(tmp, s[3], prod([s[2], s[1], s[4:end]...]) )
+    rtemp_result = reshape(temp_result, s[3], prod([s[2], s[1], s[4:end]...]) )
+    mul!(rtemp_result, lo.d2z, rtmp)
+    rp = reshape(rtemp_result, s[3], s[2], s[1], s[4:end]...)
+    permutedims!(tmp, rp, [3,2,1,4,5,6])
+    out += tmp
+    return QuantumState(get_elementgrid(qs), out, unit(qs)*unit(lo))
 end
 
 
@@ -710,7 +749,10 @@ end
 Unitful.unit(H::HamiltonOperatorFreeParticle) =u"hartree*bohr^2"*unit(H.∇²)
 
 function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
-    return uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))*(H.∇²*qs)
+    T = (eltype ∘ eltype)(get_elementgrid(H))
+    a = uconvert(u"hartree*bohr^2", u"ħ"^2/(-2H.m))
+    b = T( ustrip(a) ) * u"hartree*bohr^2"  # this might break forward AD
+    return b * (H.∇²*qs)
 end
 
 """
@@ -809,9 +851,9 @@ function vector_potential(ceg, Bx, By, Bz)
     @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")
     r = position_operator(ceg)
     # A = r×B/2
-    Ax = 0.5*(r[2]*Bz-r[3]*By)
-    Ay = 0.5*(r[3]*Bx-r[1]*Bz)
-    Az = 0.5*(r[1]*By-r[2]*Bx)
+    Ax = (r[2]*Bz-r[3]*By)/2
+    Ay = (r[3]*Bx-r[1]*Bz)/2
+    Az = (r[1]*By-r[2]*Bx)/2
     return VectorOperator(Ax, Ay, Az)
 end
 
@@ -875,17 +917,9 @@ function electric_potential(cdensity::ScalarOperator, ct::AbstractCoulombTransfo
     @argcheck dimension(cdensity) == dimension(u"C")
     if unit(cdensity) != u"e_au"
         tmp = auconvert(cdensity)
-        if correction
-            ϕ = poisson_equation(tmp.vals, ct, tmax=ct.tmax, showprogress=showprogress)
-        else
-            ϕ = poisson_equation(tmp.vals, ct, showprogress=showprogress)
-        end
+        ϕ = poisson_equation(tmp.vals, ct, correction=correction, showprogress=showprogress)
     else
-        if correction
-            ϕ = poisson_equation(cdensity.vals, ct, tmax=ct.tmax, showprogress=showprogress)
-        else
-            ϕ = poisson_equation(cdensity.vals, ct, showprogress=showprogress)
-        end
+        ϕ = poisson_equation(cdensity.vals, ct, correction=correction, showprogress=showprogress)
     end
     return ScalarOperator(get_elementgrid(cdensity), ϕ; unit=u"hartree/e_au") 
 end

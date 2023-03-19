@@ -94,7 +94,8 @@ Unitful.dimension(qs::QuantumState) = dimension(unit(qs))
 function Unitful.uconvert(u::Unitful.Units, qs::QuantumState)
     @assert dimension(u) == dimension(qs)
     u == unit(qs) && return qs
-    conv = ustrip(uconvert(u, 1*unit(qs))) * u / unit(qs)
+    T = (eltype ∘ eltype)(get_elementgrid(qs))  # make sure type is correct
+    conv = (T ∘ ustrip ∘ uconvert)(u, 1*unit(qs)) * u / unit(qs)
     return conv*qs
 end
 
@@ -127,14 +128,16 @@ end
     ⋆(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
 
-Return probability density ψ†ψ = |ψ><ψ|
+Return probability density ψ†ψ = |ψ><ψ|, as an array type the QuantumStates use.
+
+To get "⋆" use "star"
 
 ## Example
 ```julia
-julia> ψ⋆ψ
+julia> ψ⋆ψ;
 ```
 """
-function ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any}) where T
+function ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     @assert size(qs1) == size(qs2)
     conj(qs1).psi .* qs2.psi
 end

@@ -496,6 +496,20 @@ function optimal_coulomb_tranformation(ceg, nt::Int=96; δ=0.25, tmax=700, tboun
 end
 
 
+"""
+    give_whole_tensor(T, tt::AbtractTransformationTensor)
+
+Returns the whole tensor as `Array{T,5}` type.
+"""
+function give_whole_tensor(T, tt::AbtractTransformationTensor)
+    ct = Array{T}(undef, size(tt)...)
+    Threads.@threads for i in eachindex(tt)
+        @inbounds ct[i] = T(tt[i])
+    end
+    return ct
+end
+
+
 ## Integration weight tensor
 
 """
@@ -509,16 +523,6 @@ function ω_tensor(ceg::CubicElementGrid)
     l = length(ceg.w)
     ω = reshape( repeat(ceg.w, n), l, n )
 end
-
-
-
-## Help functions to create charge density
-
-function density_tensor(grid::AbstractArray, r::AbstractVector, a)
-    return [ exp(-a*sum( (x-r).^2 )) for x in grid ]
-end
-
-density_tensor(grid; r=SVector(0.,0.,0.), a=1.) = density_tensor(grid, r, a)
 
 
 
