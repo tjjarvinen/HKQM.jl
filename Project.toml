@@ -43,7 +43,7 @@ TensorOperations = "3.0"
 Tullio = "0.2, 0.3"
 Unitful = "1.5"
 UnitfulAtomic = "1.0"
-julia = "1.7"
+julia = "1.8"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
