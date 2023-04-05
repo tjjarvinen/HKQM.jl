@@ -109,3 +109,37 @@ function plot_wave_function(psi::QuantumState; levels=10, mask=0.3, alpha=0.05, 
     contour!(ax, x, y, z, vol; colormap = cmap, alpha = alpha, levels = v)
     return fig
 end
+
+
+##
+
+function plot_current(j; z=0, n=32, mode_3d=false, ng=30, arrow_size=0.06, title="title")
+    X = vec(xgrid(get_elementgrid(j[begin]))) |> collect
+    x = ustrip.( uconvert.(u"Å", X.*u"bohr") )
+    u = interpolate((x,x,x), get3d(j[1]), Gridded(Linear()))
+    v = interpolate((x,x,x), get3d(j[2]), Gridded(Linear()))
+    w = interpolate((x,x,x), get3d(j[3]), Gridded(Linear()))
+
+    f(rx,ry,rz) = Point3(
+        u(rx,ry,rz),
+        v(rx,ry,rz),
+        w(rx,ry,rz)
+    )
+    f(rx,ry) = Point2(
+        u(rx,ry,z),
+        v(rx,ry,z)
+    )
+    xmin = minimum(x)
+    xmax = maximum(x)
+    r = range(xmin; stop=xmax, length=n)
+    if mode_3d
+        ngrid = min(ng, 15)
+        fig = streamplot(f, r, r, r; colormap = :viridis, arrow_size = arrow_size, gridsize = (ngrid, ngrid))
+        return fig
+    else
+        fig = Figure()
+        Axis(fig[1,1], xlabel="x [Å]", ylabel="y [Å]", title=title )
+        sp = streamplot!(f, r, r; colormap = :magma, arrow_size = arrow_size, gridsize = (ng, ng), title=title)
+        return fig
+    end
+end

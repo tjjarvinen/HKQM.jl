@@ -20,3 +20,18 @@ psi = particle_in_box(ceg, 2, 3, 1)
 
 plot_wave_function(psi; resolution=(800,800))
 ```
+
+## Magnetic current visualizations
+
+Also visualizing magnetic current is supported
+
+```
+# J is magnetic current
+
+# 3D plot
+plot_current(J_toro; mode_3d=true)
+
+
+# 2D plot on xy-plane with z=0
+plot_current(J_toro; z=0)
+```

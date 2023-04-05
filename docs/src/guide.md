@@ -352,11 +352,15 @@ You can then just solve the system like above
 ψm = scf(ψ, Hm)
 ```
 
-It is a good idea to start form no magnetic field case.
+It is a good idea to start form the no magnetic field case.
 Because wavefunction is complex in magnetic field and
 thus more expensive to calculate. By starting from
 no field case you minimize the iterations needed
 to solve SCF equations.
+
+```julia
+ψm = scf(ψ1, Hm)
+```
 
 Magnetic current can be extracted with
 
