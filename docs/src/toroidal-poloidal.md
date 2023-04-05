@@ -8,14 +8,14 @@
 
 ```math
 -\Delta_2 \psi = \frac{\partial J_y}{\partial x} - \frac{\partial J_x}{\partial y}
-J_toro =  ∇×ψ
+J_{toro} =  ∇×ψ
 ```
 
 *Poloidal* current is defined as
 
 ```math
 -\Delta_2 \phi = J_z
-J_polo = ∇×∇×ϕ
+J_{polo} = ∇×∇×ϕ
 ```
 
 Where

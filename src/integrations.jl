@@ -159,7 +159,11 @@ end
 
 function _magnetic_current(p, ψ)
     ϕ = conj(ψ)
-    return map( x->real.(ψ⋆(x*ψ) .+ ϕ⋆(x*ϕ)), p)
+    j = map( p ) do pᵢ
+        tmp = real.(ψ⋆(pᵢ*ψ) .+ ϕ⋆(pᵢ*ϕ))
+        QuantumState(get_elementgrid(ψ), tmp, unit(p)*unit(ψ))
+    end
+    return j
 end
 
 ## Coulomb integral / Poisson equation
@@ -266,7 +270,7 @@ end
 function poisson_equation(ρ::AbstractArray{<:Any,6}, transtensor::AbtractTransformationTensor;
     correction=true, showprogress=false)
     T = eltype(ρ)
-    return poisson_equation(T, ρ, transtensor; correction=correction, showprogress=correction)
+    return poisson_equation(T, ρ, transtensor; correction=correction, showprogress=showprogress)
 end
 
 function poisson_equation(ψ::QuantumState, transtensor::AbtractTransformationTensor;

@@ -128,7 +128,7 @@ end
 
 function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator, J::ScalarOperator, i::Int; nt=96, showprogress=false)
     ct = optimal_coulomb_tranformation(sd, nt);
-    return helmholtz_update(sd, H, J, i, ct; nt=nt, showprogress=false)
+    return helmholtz_update(sd, H, J, i, ct; nt=nt, showprogress=showprogress)
 end
 
 
@@ -143,7 +143,7 @@ function helmholtz_update(sd::SlaterDeterminant, H::AbstractHamiltonOperator; sh
         @debug "Doing non parallel helmholtz_update"
         J = coulomb_operator(sd)
         tmp = map( axes(sd,1) ) do i
-            helmholtz_update(sd, H, J, i)
+            helmholtz_update(sd, H, J, i; showprogress)
         end
     else
         @debug "Doing parallel helmholtz_update"

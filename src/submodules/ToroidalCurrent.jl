@@ -84,7 +84,7 @@ function read_sysmoic(fname)
             @warn "Number of miss printed lines in SYSMOIC file is $error_count"
         end
 
-        if xmin != ymin || xmin != zmin || xmax != ymax || xmaz != zmax
+        if xmin != ymin || xmin != zmin || xmax != ymax || xmax != zmax
             @warn "System is not cubic - the results may not be correct!!!"
         end
         x = range(xmin, xmax; step=xstep )
@@ -139,14 +139,14 @@ function get_current_component(ceg, data, i, j)
     intp = give_J_interpolator(data, i, j )
     vals = [ intp(r...) for r in ceg ]
     #NOTE unit is not correct
-    return QuantumState(ceg, vals)
+    return QuantumState(ceg, vals, u"ħ_au/bohr/T")
 end
 
 function get_derivative_component(ceg, data, i, j, k)
     intp = give_dJ_interpolator(data, i, j, k)
     vals = [ intp(r...) for r in ceg ]
     #NOTE unit is not correct
-    return QuantumState(ceg, vals, u"bohr^-1")
+    return QuantumState(ceg, vals, u"ħ_au/bohr^2/T")
 end
 
 
