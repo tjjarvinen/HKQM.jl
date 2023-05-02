@@ -139,7 +139,8 @@ julia> ψ⋆ψ;
 """
 function ketbra(qs1::QuantumState{<:Any,<:Any}, qs2::QuantumState{<:Any,<:Any})
     @assert size(qs1) == size(qs2)
-    conj(qs1).psi .* qs2.psi
+    _f(x,y) = conj(x) * y
+    _f.(qs1.psi, qs2.psi)
 end
 
 const ⋆ = ketbra
