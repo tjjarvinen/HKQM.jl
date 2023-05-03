@@ -6,7 +6,6 @@ using DelimitedFiles
 using Distributed
 using Distances
 using Interpolations
-using TensorOperations
 
 using ..HKQM
 
@@ -192,10 +191,6 @@ function greens_function_2d(ceg; eps=1E-6u"Å")
     return reshape(out, i,j, i,j, i,j, i,j)
 end
 
-function solve_2d_poisson(G, psi)
-    @tensoropt tmp[x,y,z,X,Y,Z] := G[x,X,y,Y,i,I,j,J] * psi.psi[i,j,z,I,J,Z]
-    return QuantumState(get_elementgrid(psi), tmp, unit(psi)*u"bohr^2")
-end
 
 function solve_2d_poisson(psi)
     return solve_2d_poisson( greens_function_2d( get_elementgrid(psi) ) , psi)
