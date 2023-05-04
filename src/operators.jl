@@ -744,6 +744,10 @@ struct HamiltonOperatorFreeParticle{T} <: AbstractHamiltonOperator
         @assert dimension(m) == dimension(u"kg")
         new{typeof(m)}(ceg, LaplaceOperator(ceg), m)
     end
+    function HamiltonOperatorFreeParticle(T, ceg::AbstractElementGrid;m=1u"me_au")
+        @assert dimension(m) == dimension(u"kg")
+        new{typeof(m)}(ceg, LaplaceOperator(T, ceg), m)
+    end
 end
 
 Unitful.unit(H::HamiltonOperatorFreeParticle) =u"hartree*bohr^2"*unit(H.∇²)
@@ -777,6 +781,13 @@ struct HamiltonOperator{TF,TV} <: AbstractHamiltonOperator
         @assert dimension(m) == dimension(u"kg")
         T = HamiltonOperatorFreeParticle(get_elementgrid(V); m=m)
         new{typeof(T.m),typeof(V)}(get_elementgrid(V), T, V)
+    end
+    function HamiltonOperator(Tt, V::AbstractOperator{1}; m=1u"me_au")
+        @assert dimension(V) == dimension(u"J")
+        @assert dimension(m) == dimension(u"kg")
+        T = HamiltonOperatorFreeParticle(Tt, get_elementgrid(V); m=m)
+        vv = convert_array_type(Tt, V)
+        new{typeof(T.m),typeof(vv)}(get_elementgrid(V), T, vv)
     end
 end
 

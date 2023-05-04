@@ -77,3 +77,10 @@ function operate_z!(dψ::AbstractArray{<:Any,6}, dt::DerivativeTensor, ψ::Array
     @tensor dψ[i,j,k,I,J,K] = dt.values[k,l] * ψ[i,j,l,I,J,K]
     return dψ
 end
+
+##
+
+function ToroidalCurrent.solve_2d_poisson(G, psi)
+    @tensoropt tmp[x,y,z,X,Y,Z] := G[x,X,y,Y,i,I,j,J] * psi.psi[i,j,z,I,J,Z]
+    return QuantumState(get_elementgrid(psi), tmp, unit(psi)*u"bohr^2")
+end
