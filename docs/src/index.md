@@ -64,18 +64,10 @@ Number of worker processes can found out by typing
 nworkers()
 ```
 
-## GPU calculations
+## Package Extension
 
-GPU Calculations with [CUDA](https://github.com/JuliaGPU/CUDA.jl) are supported.
-At this moment the support is only for Poisson and Helmholtz equations.
-Other parts may work, but they are still work in process.
+Package extensions are in place for
 
-To use GPU support first load CUDA and after that HKQM
-
-```julia
-using CUDA
-using HKQM
-```
-
-You can then proceed with normal calculations
-and all Poisson and Helmholtz equations computed with GPU.
+- [TensorOperations](https://github.com/Jutho/TensorOperations.jl) - alternative framework for contractions
+- [Tullio](https://github.com/mcabbott/Tullio.jl) - extra type of nuclear potentials
+- [TensorOperations](https://github.com/Jutho/TensorOperations.jl) with [CUDA](https://github.com/JuliaGPU/CUDA.jl) - TensorOperations CUDA backend
