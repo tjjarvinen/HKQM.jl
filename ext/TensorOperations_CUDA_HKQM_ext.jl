@@ -1,3 +1,9 @@
+module TensorOperations_CUDA_HKQM_ext
+    
+using CUDA
+using TensorOperations
+using HKQM
+
 
 const CuArray = CUDA.CuArray
 
@@ -13,7 +19,7 @@ function poisson_equation!(V::CuArray{<:Any,6},
 end
 
 
-function poisson_equation(ρ::Array, transtensor::AbtractTransformationTensor;
+function poisson_equation(ρ::Array, transtensor::HKQM.AbtractTransformationTensor;
         tmax=nothing, showprogress=false)
     @debug "GPU calculation"
     cu_ρ = CuArray(ρ)
@@ -33,7 +39,7 @@ function poisson_equation(ρ::Array, transtensor::AbtractTransformationTensor;
     return Array(V)
 end
 
-function poisson_equation(ρ::CuArray, transtensor::AbtractTransformationTensor;
+function poisson_equation(ρ::CuArray, transtensor::HKQM.AbtractTransformationTensor;
         tmax=nothing, showprogress=false)
     @debug "GPU calculation"
     tmp = ρ .* transtensor.wt[1] # Make sure we have correct type
@@ -69,4 +75,6 @@ function (lo::LaplaceOperator)(qs::QuantumState{<:CuArray, <:Any})
     @cutensor w[i,j]:=tmp[i,k]*tmp[k,j]
     @cutensor ϕ[i,j,k,I,J,K]:= qs.psi[ii,j,k,I,J,K]*w[i,ii] + qs.psi[i,jj,k,I,J,K]*w[j,jj] + qs.psi[i,j,kk,I,J,K]*w[k,kk]
     return QuantumState(get_elementgrid(qs), ϕ, unit(qs)*unit(lo.g)^2)
+end
+
 end
