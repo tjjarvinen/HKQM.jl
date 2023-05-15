@@ -12,4 +12,8 @@ disable_logging(Logging.Info)
 
 include("tests.jl")
 
-include("test-tensor-ops.jl")
+@testset "TensorOperations" begin
+    include("test-tensor-ops.jl")
+end
+
+include("nuclear-potential.jl")

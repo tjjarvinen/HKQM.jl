@@ -2,6 +2,7 @@ module TensorOperations_HKQM_ext
 
 using HKQM
 using TensorOperations
+using ProgressMeter
 
 function HKQM.integrate(ϕ, grid::CubicElementGrid, ψ)
     # deprecated
