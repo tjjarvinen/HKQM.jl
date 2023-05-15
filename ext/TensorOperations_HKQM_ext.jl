@@ -16,7 +16,7 @@ function HKQM.integrate(grid::CubicElementGrid, ρ)
     return  @tensor ω[1,2]*ω[3,4]*ω[5,6]*ρ[1,3,5,2,4,6]
 end
 
-function HKQM.integrate(ωx::T, ωy::T, ωz::T, ρ::DT) where {T,DT}
+function HKQM.integrate(ωx::Matrix, ωy::Matrix, ωz::Matrix, ρ::Array{<:Any,6})
     return @tensor ωx[1,2]*ωy[3,4]*ωz[5,6]*ρ[1,3,5,2,4,6]
 end
 
@@ -31,7 +31,7 @@ function HKQM.poisson_equation!(V::AbstractArray{<:Any,6},
 end
 
 
-function HKQM.poisson_equation(ρ::Array{<:Any,6}, transtensor::AbtractTransformationTensor;
+function HKQM.poisson_equation(ρ::Array{<:Any,6}, transtensor::HKQM.AbtractTransformationTensor;
                           correction=true, showprogress=false)
 
     tmp = ρ.*transtensor.wt[1] # Make sure we have the correct type
@@ -50,7 +50,7 @@ function HKQM.poisson_equation(ρ::Array{<:Any,6}, transtensor::AbtractTransform
     return V
 end
 
-function HKQM.poisson_equation(ψ::QuantumState{<:Array, <:Any}, transtensor::AbtractTransformationTensor;
+function HKQM.poisson_equation(ψ::QuantumState{<:Array, <:Any}, transtensor::HKQM.AbtractTransformationTensor;
     correction=true, showprogress=false)
     ψ = auconvert(ψ)  # Length needs to be in bohr's 
     V = poisson_equation(ψ.psi, transtensor, correction=correction, showprogress=showprogress)

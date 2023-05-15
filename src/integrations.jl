@@ -7,7 +7,7 @@
 
 Low lever integration routines. (users should not use these, as they can change)
 """
-function integrate(ωx::T, ωy::T, ωz::T, ρ::DT) where {T,DT}
+function integrate(ωx, ωy, ωz, ρ)
     tmp = permutedims(ρ, [1,4,2,5,3,6])
     s = size(tmp)
     rtmp = reshape(tmp, s[1]*s[2], prod( s[3:end] ) )
