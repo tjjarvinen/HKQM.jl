@@ -31,14 +31,15 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
 [extensions]
-TensorOperations_HKQM_ext = "TensorOperations"
 TensorOperations_CUDA_HKQM_ext = ["TensorOperations", "CUDA"]
+TensorOperations_HKQM_ext = "TensorOperations"
 Tullio_HKQM_ext = "Tullio"
 
 [compat]
 ArgCheck = "2"
 CSV = "0.10"
 DataFrames = "1"
+DelimitedFiles = "1"
 Distances = "0.10"
 FastGaussQuadrature = "0.4, 0.5"
 ForwardDiff = "0.10"
