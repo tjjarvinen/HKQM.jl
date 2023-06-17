@@ -52,6 +52,25 @@
         end
     end
 
+    @testset "ElementGridVectors" begin
+        gridtypes = [:ElementGridVectorLegendre]
+        for gt in gridtypes
+            @testset "$(gt)" begin
+                ev = ElementVector(0, 1.5, 3.0)
+                egv = @eval $(gt)($ev, 24)
+                @test length(egv) == 24*2
+                @test eltype(egv) == Float64
+                @test element_size(egv) ≈ element_size(ev)
+                @test all( element_bounds(egv) .≈ element_bounds(ev) )
+                @test unit(egv) == u"bohr"
+                q = convert_variable_type(Float32, egv)
+                @test eltype(q) == Float32
+                D = HKQM.get_derivative_matrix(q)
+                @test eltype(q) == Float32
+            end
+        end
+    end
+
     ca = CubicElementArray(5u"Å", 3)
     @test size(ca) == (3,3,3)
     @test get_center(ca[2,2,2]) ≈ zeros(3).*u"bohr"

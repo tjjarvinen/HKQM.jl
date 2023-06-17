@@ -194,7 +194,7 @@ struct ElementGridLobatto{T} <: AbstractElementGrid{T, 1}
     end
 end
 
-const ElmentGrid = ElementGridLegendre
+const ElmentGrid = ElementGridLegendre #TODO remove this later
 
 ElementGridLegendre(a, b, n) = ElementGridLegendre(Element1D(a,b), n)
 ElementGridLobatto(a, b, n) = ElementGridLobatto(Element1D(a,b), n)
@@ -203,7 +203,8 @@ ElementGridLobatto(T::DataType, a, b, n) = ElementGridLobatto(T, Element1D(a,b),
 
 Base.size(eg::Union{ElementGridLegendre, ElementGridLobatto}) = size(eg.basis.nodes)
 Base.getindex(eg::Union{ElementGridLegendre, ElementGridLobatto}, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
-#Base.show(io::IO, ::ElementGridLegendre) = print(io, "ElementGrid")
+Base.show(io::IO, ::ElementGridLegendre) = print(io, "ElementGridLegendre")
+Base.show(io::IO, ::ElementGridLobatto) = print(io, "ElementGridLobatto")
 
 Unitful.unit(eg::Union{ElementGridLegendre, ElementGridLobatto}) = unit(get_element(eg))
 
@@ -228,6 +229,76 @@ get_element(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.element
 function (eg::Union{ElementGridLegendre, ElementGridLobatto})(r, u)
     x = @. ( r - eg.shift ) / eg.scaling
     return interpolate(x, u, eg.basis)
+end
+
+##
+
+struct ElementGridVectorLegendre{T} <: AbstractElementGrid{T, 1}
+    elements::Vector{ElementGridLegendre{T}}
+    index::Vector{Pair{Int,Int}}
+    function ElementGridVectorLegendre(eg::ElementGridLegendre...)
+        if length(eg) > 1
+            s = element_bounds(eg[begin])[2]
+            u = unit(eg[begin])
+            for i in 2:length(eg)
+                tmp = element_bounds(eg[i])
+                @assert s ≈ tmp[1] "Elements need to be next to each other"
+                s = tmp[2]
+                @assert u == unit(eg[i]) "Elements need to have same unit"
+            end
+        end
+        tmp = Pair{Int,Int}[]
+        i = 1
+        for ie in 1:length(eg)
+            for ig in 1:length(eg[ie])
+                push!(tmp, ie=>ig)
+                i += 1
+            end
+        end
+        new{eltype(eg[begin])}(collect(eg), tmp)
+    end
+end
+
+
+
+
+function ElementGridVectorLegendre(ev::ElementVector, ng)
+    elements = [ ElementGridLegendre(x, ng) for x in ev ]
+    return ElementGridVectorLegendre(elements...)
+end
+
+function ElementGridVectorLegendre(DT::DataType, ev::ElementVector, ng)
+    elements = [ ElementGridLegendre(DT, x, ng) for x in ev ]
+    return ElementGridVectorLobatto(elements...)
+end
+
+Base.size(egv::ElementGridVectorLegendre) = size(egv.index)
+function Base.getindex(egv::ElementGridVectorLegendre, i::Int)
+    return egv.elements[ egv.index[i].first ][egv.index[i].second]
+end
+
+Unitful.unit(egv::ElementGridVectorLegendre) = unit(egv.elements[begin])
+
+function convert_variable_type(T, egv::ElementGridVectorLegendre)
+    return ElementGridVectorLegendre( convert_variable_type.(T, egv.elements)... )
+end
+
+function element_bounds(egv::ElementGridVectorLegendre) 
+    low = element_bounds( egv.elements[begin])[1]
+    high = element_bounds( egv.elements[end])[2]
+    return (low, high)
+end
+
+function get_derivative_matrix(egv::ElementGridVectorLegendre)
+    D = zeros(eltype(egv), length(egv), length(egv))
+    i = 1
+    for el in egv.elements
+        l = i + length(el) - 1
+        tmp = get_derivative_matrix(el)
+        D[i:l,i:l] = tmp
+        i = l+1
+    end
+    return D
 end
 
 
