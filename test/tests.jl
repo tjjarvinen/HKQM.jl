@@ -1,4 +1,57 @@
 @testset "Elements" begin
+    @testset "Element1D" begin
+        e = Element1D(-2u"m", 3.1u"m")
+        q = uconvert(u"Å", e)
+        @test element_size(e) ≈ 3.1u"m" - (-2u"m")
+        @test element_size(q) ≈ element_size(e)
+        @test unit(e) == u"m"
+        @test unit(q) == u"Å"
+        @test all( element_bounds(e) .≈ (-2u"m", 3.1u"m") )
+    end
+    @testset "ElementVector" begin
+        e = Element1D(-2u"m", 3.1u"m")
+        q = Element1D(31u"dm", 50u"dm")
+        ev = ElementVector(e, q)
+        @test length(ev) == 2
+        @test element_size(ev) ≈ element_size(e) + element_size(q)
+        @test element_size(ev) ≈ sum(x->element_size(x), ev)
+        @test unit(ev) == unit(e)
+        @test unit(ev[1]) == unit(e)
+        @test unit(ev[2]) == unit(e)
+        @test unit( uconvert(u"Å", ev) ) == u"Å"
+        @test all( element_bounds(ev) .≈ (-2u"m", 5u"m") )
+
+        evv = ElementVector(0u"m", 2u"m", 5u"m", 7u"m")
+        @test length(evv) == 3
+    end
+    @testset "ElementGrids" begin
+        gridtypes = [:ElementGridLegendre, :ElementGridLobatto]
+        for gt in gridtypes
+            @testset "$(gt)" begin
+                eg = @eval $(gt)(Element1D(-2u"Å", 2u"Å"), 32)
+                @test length(eg) == 32
+                @test unit(eg) == u"bohr"
+                ee = @eval $(gt)(Element1D(-2u"Å", 2u"Å"), 32; unit=u"Å")
+                @test unit(ee) == u"Å"
+
+                @test maximum(ee) * unit(ee) <=  2u"Å"
+                @test minimum(ee) * unit(ee) >= -2u"Å" 
+                @test maximum(eg) * unit(eg) <= 2u"Å"
+                @test minimum(eg) * unit(eg) >= -2u"Å"
+
+                @test all( element_bounds(eg) .≈ (-2u"Å", 2u"Å") )
+                @test element_size(eg) ≈ 4u"Å"
+                q = convert_variable_type(Float32, eg)
+                @test eltype(q) == Float32
+                @test eltype(eg) == Float64
+
+                #test interpolation
+                u = sin.(eg)
+                @test eg(1.1, u) ≈ sin(1.1)
+            end
+        end
+    end
+
     ca = CubicElementArray(5u"Å", 3)
     @test size(ca) == (3,3,3)
     @test get_center(ca[2,2,2]) ≈ zeros(3).*u"bohr"
@@ -7,9 +60,8 @@
     @test size(ceg) == (16,16,16,4,4,4)
 
     ev = ElementVector(0, 2, 5, 7)
-    @test length(ev) == 3
 
-    eg = ElementGrid(0, 3, 32)
+    eg = ElementGridLegendre(0, 3, 32)
     u = sin.(eg)
     x = range(0,3; length=200)
     @test sin.(x) ≈ eg(x, u)

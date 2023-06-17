@@ -1,29 +1,57 @@
 
 
 """
-    Element1D <: AbstractElement{1}
+    Element1D{T} <: AbstractElement{1}
 
-Stores information for 1D element.
+Stores information for 1D element. Where `T<:Unitful.Length`.
 
 # Fields
-- `low::typeof(1.0u"bohr")` : lowest value within element
-- `high::typeof(1.0u"bohr")` : highest value within element
+- `low::T` : lowest value within element
+- `high::T` : highest value within element
 """
-struct Element1D <: AbstractElement{1}
-    low::typeof(1.0u"bohr")
-    high::typeof(1.0u"bohr")
+struct Element1D{T} <: AbstractElement{1}
+    low::T
+    high::T
     function Element1D(low::Unitful.Length, high::Unitful.Length)
         @assert high > low
-        new(low, high)
+        T = unit(low)
+        tmp = promote( ustrip(low), ustrip(T, high) )
+        new{ typeof(tmp[1] * T) }( tmp[1]*T, tmp[2]*T )
     end
 end
 
 function Element1D(low, high)
+    #TODO remove this
     @assert dimension(low) == dimension(high) == NoDims
     return Element1D(low*u"bohr", high*u"bohr")
 end
 
+function Element1D(a)
+    return Element1D(element_bounds(a)...)
+end
 
+Unitful.uconvert(T, e::Element1D) = Element1D( uconvert(T, e.low),  uconvert(T, e.high) )
+Unitful.unit(e::Element1D) = unit(e.low)
+
+element_bounds(e::Element1D) = (e.low, e.high)
+
+"""
+    element_size(e::Element1D)
+
+Return element length/size.
+"""
+element_size(e::Element1D) = e.high - e.low
+
+
+"""
+    getcenter(e::Element1D)
+
+Center location of element
+"""
+getcenter(e::Element1D) = (e.high + e.low) / 2
+
+
+# Vector type to store elements of different sizes
 
 """
     ElementVector <: AbstractElementArray{Element1D,1}
@@ -52,56 +80,44 @@ struct ElementVector <: AbstractElementArray{Element1D,1}
                 s = e.high
             end
         end
-        new(Vector(el))
-    end
-    function ElementVector(start, bounds...)
-        s = start
-        for b in bounds
-            @assert s < b  "Invalid element boundaries"
-            s = b
-        end
-        v = [Element1D(start, bounds[begin])]
-        if length(bounds) > 1
-            s = bounds[begin]
-            for b in bounds[begin+1:end]
-                push!(v, Element1D(s,b))
-                s = b
-            end
-        end
-        new(v)
+        T = unit(el[begin])
+        new( collect( uconvert.(T, el) ) )
     end
 end
 
+function ElementVector(start, bounds...)
+    s = start
+    for b in bounds
+        @assert s < b  "Invalid element boundaries"
+        s = b
+    end
+    v = [Element1D(start, bounds[begin])]
+    if length(bounds) > 1
+        s = bounds[begin]
+        for b in bounds[begin+1:end]
+            push!(v, Element1D(s,b))
+            s = b
+        end
+    end
+    ElementVector(v...)
+end
 
 Base.size(ev::ElementVector) = size(ev.v)
 Base.getindex(ev::ElementVector, i) = ev.v[i]
 
-Unitful.unit(e::Element1D) = unit(e.low)
-Unitful.unit(ev::ElementVector) = unit(ev.v[begin])
+Unitful.unit(ev::AbstractElementArray{<:Any,1}) = unit(ev[begin])
+Unitful.uconvert(T, ev::ElementVector) = ElementVector( map( x->uconvert(T,x), ev)... )
 
-"""
-    element_size(e::Element1D)
-    element_size(e::Element1D, T::DataType)
-
-Return element length/size. `T` can be given to
-define number type. Unit is given by the element.
-"""
-element_size(e::Element1D) = e.high - e.low
-
-function element_size(e::Element1D, T::DataType)
-    es = elemen_tsize(e)
-    s = austrip(es) 
-    c = convert(T, s)
-    return c * unit(es)
+function element_bounds(ev::AbstractElementArray{<:Any,1})
+    low = element_bounds(ev[1])[1]
+    high = element_bounds(ev[2])[2]
+    return (low, high)
 end
 
-"""
-    getcenter(e::Element1D)
-
-Center location of element
-"""
-getcenter(e::Element1D) = 0.5*(e.high + e.low)
-
+function element_size(ev::AbstractElementArray{<:Any,1})
+    low, high = element_bounds(ev)
+    return high - low
+end
 
 
 ## Element grids
@@ -140,53 +156,89 @@ zgrid(egsb::AbstractElementGridSymmetricBox) = get_1d_grid(egsb)
 ## 1D grids
 # Plan is to build noncubic grids based on these
 
-struct ElementGrid{T} <: AbstractElementGrid{T, 1}
+struct ElementGridLegendre{T} <: AbstractElementGrid{T, 1}
     basis::GaussLegendre{T}
     element::Element1D
     scaling::T
     shift::T
-    function ElementGrid(element::Element1D, n::Int)
-        scaling = ( element.high - element.low ) / 2 |> austrip
-        shift = ( element.high + element.low ) / 2 |> austrip
+    function ElementGridLegendre(element, n::Int; unit=u"bohr")
+        element = uconvert(unit, Element1D(element) )
+        scaling = ustrip(unit, element_size(element) ) / 2 
+        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
         new{Float64}(GaussLegendre(n-1), element, scaling, shift)
     end
-    function ElementGrid(DT::DataType, element::Element1D, n::Int)
-        scaling = ( element.high - element.low ) / 2 |> austrip
-        shift = ( element.high + element.low ) / 2 |> austrip
+    function ElementGridLegendre(DT::DataType, element, n::Int; unit=u"bohr")
+        element = uconvert(unit, Element1D(element) )
+        scaling = ustrip(unit, element_size(element) ) / 2 
+        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
         new{DT}(GaussLegendre(n-1, DT), element, scaling, shift)
     end
 end
 
-ElementGrid(a, b, n) = ElementGrid(Element1D(a,b), n)
-ElementGrid(T::DataType, a, b, n) = ElementGrid(T, Element1D(a,b), n)
+struct ElementGridLobatto{T} <: AbstractElementGrid{T, 1}
+    basis::LobattoLegendre{T}
+    element::Element1D
+    scaling::T
+    shift::T
+    function ElementGridLobatto(element, n::Int; unit=u"bohr")
+        element = uconvert(unit, Element1D(element) )
+        scaling = ustrip(unit, element_size(element) ) / 2 
+        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
+        new{Float64}(LobattoLegendre(n-1), element, scaling, shift)
+    end
+    function ElementGridLobatto(DT::DataType, element, n::Int; unit=u"bohr")
+        element = uconvert(unit, Element1D(element) )
+        scaling = ustrip(unit, element_size(element) ) / 2 
+        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
+        new{DT}(LobattoLegendre(n-1, DT), element, scaling, shift)
+    end
+end
 
-Base.size(eg::ElementGrid) = size(eg.basis.nodes)
-Base.getindex(eg::ElementGrid, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
-Base.show(io::IO, ::ElementGrid) = print(io, "ElementGrid")
+const ElmentGrid = ElementGridLegendre
 
-convert_variable_type(T, eg::ElementGrid) = ElementGrid(T, eg.element, length(eg)) 
+ElementGridLegendre(a, b, n) = ElementGridLegendre(Element1D(a,b), n)
+ElementGridLobatto(a, b, n) = ElementGridLobatto(Element1D(a,b), n)
+ElementGridLegendre(T::DataType, a, b, n) = ElementGridLegendre(T, Element1D(a,b), n)
+ElementGridLobatto(T::DataType, a, b, n) = ElementGridLobatto(T, Element1D(a,b), n)
 
-getweight(eg::ElementGrid) = eg.basis.weights .* eg.scaling
-get_derivative_matrix(eg::ElementGrid) = eg.basis.D ./ eg.scaling
-function element_size(eg::ElementGrid{T}) where {T}
+Base.size(eg::Union{ElementGridLegendre, ElementGridLobatto}) = size(eg.basis.nodes)
+Base.getindex(eg::Union{ElementGridLegendre, ElementGridLobatto}, i::Int) = muladd( eg.basis.nodes[i], eg.scaling, eg.shift )
+#Base.show(io::IO, ::ElementGridLegendre) = print(io, "ElementGrid")
+
+Unitful.unit(eg::Union{ElementGridLegendre, ElementGridLobatto}) = unit(get_element(eg))
+
+convert_variable_type(T, eg::ElementGridLegendre) = ElementGridLegendre(T, get_element(eg), length(eg))
+convert_variable_type(T, eg::ElementGridLobatto) = ElementGridLobatto(T, get_element(eg), length(eg)) 
+
+element_bounds(eg::Union{ElementGridLegendre, ElementGridLobatto}) = element_bounds( get_element(eg) )
+function element_size(eg::AbstractElementGrid{<:Any, 1})
+    low, high = element_bounds(eg)
+    return high - low 
+end
+
+getweight(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.basis.weights * eg.scaling
+get_derivative_matrix(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.basis.D / eg.scaling
+function element_size(eg::Union{ElementGridLegendre{T}, ElementGridLobatto{T}}) where {T}
     T(element_size(eg.element))
 end 
 
+get_element(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.element
 
-function (eg::ElementGrid)(r, u)
-    x = ( r .- eg.shift ) ./ eg.scaling
-    return  interpolate(x, u, eg.basis)
+
+function (eg::Union{ElementGridLegendre, ElementGridLobatto})(r, u)
+    x = @. ( r - eg.shift ) / eg.scaling
+    return interpolate(x, u, eg.basis)
 end
 
 
 struct ElementGridVector{T} <: AbstractElementGrid{T, 2}
-    elements::Vector{ElementGrid{T}}
+    elements::Vector{ElementGridLegendre{T}}
     function ElementGridVector(ev::ElementVector, ng)
-        elements = [ ElementGrid(x, ng) for x in ev ]
+        elements = [ ElementGridLegendre(x, ng) for x in ev ]
         new{Float64}(elements)
     end
     function ElementGridVector(DT::DataType, ev::ElementVector, ng)
-        elements = [ ElementGrid(DT, x, ng) for x in ev ]
+        elements = [ ElementGridLegendre(DT, x, ng) for x in ev ]
         new{DT}(elements)
     end
 end
