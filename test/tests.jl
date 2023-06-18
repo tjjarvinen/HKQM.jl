@@ -1,4 +1,5 @@
 @testset "Elements" begin
+
     @testset "Element1D" begin
         e = Element1D(-2u"m", 3.1u"m")
         q = uconvert(u"Å", e)
@@ -8,6 +9,7 @@
         @test unit(q) == u"Å"
         @test all( element_bounds(e) .≈ (-2u"m", 3.1u"m") )
     end
+
     @testset "ElementVector" begin
         e = Element1D(-2u"m", 3.1u"m")
         q = Element1D(31u"dm", 50u"dm")
@@ -24,6 +26,7 @@
         evv = ElementVector(0u"m", 2u"m", 5u"m", 7u"m")
         @test length(evv) == 3
     end
+
     @testset "ElementGrids" begin
         gridtypes = [:ElementGridLegendre, :ElementGridLobatto]
         for gt in gridtypes
@@ -48,17 +51,35 @@
                 #test interpolation
                 u = sin.(eg)
                 @test eg(1.1, u) ≈ sin(1.1)
+
+                #test integration
+                w = get_weight(eg)
+                c = cos.(eg)
+                integral = sum( w .* c )
+                a, b = ustrip.( element_bounds(eg) )
+                @test integral ≈ sin(b) - sin(a)
+
+                #test derivative
+                D = HKQM.get_derivative_matrix(eg)
+                s = sin.(eg)
+                c = D * s
+                @test all( c .≈ cos.(eg) )
             end
         end
     end
 
     @testset "ElementGridVectors" begin
-        gridtypes = [:ElementGridVectorLegendre]
+        gridtypes = [:ElementGridVectorLegendre, :ElementGridVectorLobatto]
         for gt in gridtypes
             @testset "$(gt)" begin
                 ev = ElementVector(0, 1.5, 3.0)
                 egv = @eval $(gt)($ev, 24)
-                @test length(egv) == 24*2
+                if gt == :ElementGridVectorLobatto
+                    # Lobatto basis combines points thus total is less
+                    @test length(egv) == 24*2 - 1
+                else
+                    @test length(egv) == 24*2
+                end
                 @test eltype(egv) == Float64
                 @test element_size(egv) ≈ element_size(ev)
                 @test all( element_bounds(egv) .≈ element_bounds(ev) )
@@ -66,7 +87,26 @@
                 q = convert_variable_type(Float32, egv)
                 @test eltype(q) == Float32
                 D = HKQM.get_derivative_matrix(q)
+                @test size(D,1) == size(D,2) == length(egv)
                 @test eltype(q) == Float32
+                @test eltype(D) == Float32
+                w = get_weight(q)
+                @test eltype(w) == eltype(q)
+
+                #test integration
+                w = get_weight(egv)
+                @test eltype(w) == eltype(egv)
+                c = cos.(egv)
+                integral = sum( w .* c )
+                a, b = ustrip.( element_bounds(egv) )
+                @test integral ≈ sin(b) - sin(a)
+
+                #test derivative
+                D = HKQM.get_derivative_matrix(egv)
+                @test eltype(D) == eltype(egv)
+                s = sin.(egv)
+                c = D * s
+                @test all( c .≈ cos.(egv) )
             end
         end
     end
@@ -79,11 +119,6 @@
     @test size(ceg) == (16,16,16,4,4,4)
 
     ev = ElementVector(0, 2, 5, 7)
-
-    eg = ElementGridLegendre(0, 3, 32)
-    u = sin.(eg)
-    x = range(0,3; length=200)
-    @test sin.(x) ≈ eg(x, u)
 
     egv = ElementGridVector(ev, 6)
     @test size(egv) == (6,3)

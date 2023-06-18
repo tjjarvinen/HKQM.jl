@@ -217,7 +217,8 @@ function element_size(eg::AbstractElementGrid{<:Any, 1})
     return high - low 
 end
 
-getweight(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.basis.weights * eg.scaling
+get_weight(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.basis.weights * eg.scaling
+getweight(egv::ElementGridLegendre) = get_weight(egv)  # Remove this later
 get_derivative_matrix(eg::Union{ElementGridLegendre, ElementGridLobatto}) = eg.basis.D / eg.scaling
 function element_size(eg::Union{ElementGridLegendre{T}, ElementGridLobatto{T}}) where {T}
     T(element_size(eg.element))
@@ -248,15 +249,51 @@ struct ElementGridVectorLegendre{T} <: AbstractElementGrid{T, 1}
             end
         end
         tmp = Pair{Int,Int}[]
-        i = 1
         for ie in 1:length(eg)
             for ig in 1:length(eg[ie])
                 push!(tmp, ie=>ig)
-                i += 1
             end
         end
         new{eltype(eg[begin])}(collect(eg), tmp)
     end
+end
+
+struct ElementGridVectorLobatto{T} <: AbstractElementGrid{T, 1}
+    elements::Vector{ElementGridLobatto{T}}
+    index::Vector{Pair{Int,Int}}
+    function ElementGridVectorLobatto(eg::ElementGridLobatto...)
+        if length(eg) > 1
+            s = element_bounds(eg[begin])[2]
+            u = unit(eg[begin])
+            for i in 2:length(eg)
+                tmp = element_bounds(eg[i])
+                @assert s ≈ tmp[1] "Elements need to be next to each other"
+                s = tmp[2]
+                @assert u == unit(eg[i]) "Elements need to have same unit"
+            end
+        end
+        tmp = Pair{Int,Int}[]
+        for ie in 1:length(eg)
+            for ig in 1:length(eg[ie]) - 1 # skip last point
+                push!(tmp, ie=>ig)
+            end
+        end
+        # Add last point
+        l = length(eg)
+        ll = length(eg[l])
+        push!(tmp, l=>ll)
+        new{eltype(eg[begin])}(collect(eg), tmp)
+    end
+end
+
+function ElementGridVectorLobatto(ev::ElementVector, ng)
+    elements = [ ElementGridLobatto(x, ng) for x in ev ]
+    return ElementGridVectorLobatto(elements...)
+end
+
+function ElementGridVectorLobatto(DT::DataType, ev::ElementVector, ng)
+    elements = [ ElementGridLobatto(DT, x, ng) for x in ev ]
+    return ElementGridVectorLobatto(elements...)
 end
 
 
@@ -269,21 +306,26 @@ end
 
 function ElementGridVectorLegendre(DT::DataType, ev::ElementVector, ng)
     elements = [ ElementGridLegendre(DT, x, ng) for x in ev ]
-    return ElementGridVectorLobatto(elements...)
+    return ElementGridVectorLegendre(elements...)
 end
 
-Base.size(egv::ElementGridVectorLegendre) = size(egv.index)
-function Base.getindex(egv::ElementGridVectorLegendre, i::Int)
+Base.size(egv::Union{ElementGridVectorLegendre, ElementGridVectorLobatto}) = size(egv.index)
+
+function Base.getindex(egv::Union{ElementGridVectorLegendre, ElementGridVectorLobatto}, i::Int)
     return egv.elements[ egv.index[i].first ][egv.index[i].second]
 end
 
-Unitful.unit(egv::ElementGridVectorLegendre) = unit(egv.elements[begin])
+Unitful.unit(egv::Union{ElementGridVectorLegendre, ElementGridVectorLobatto}) = unit(egv.elements[begin])
 
 function convert_variable_type(T, egv::ElementGridVectorLegendre)
     return ElementGridVectorLegendre( convert_variable_type.(T, egv.elements)... )
 end
 
-function element_bounds(egv::ElementGridVectorLegendre) 
+function convert_variable_type(T, egv::ElementGridVectorLobatto)
+    return ElementGridVectorLobatto( convert_variable_type.(T, egv.elements)... )
+end
+
+function element_bounds(egv::Union{ElementGridVectorLegendre, ElementGridVectorLobatto}) 
     low = element_bounds( egv.elements[begin])[1]
     high = element_bounds( egv.elements[end])[2]
     return (low, high)
@@ -300,6 +342,57 @@ function get_derivative_matrix(egv::ElementGridVectorLegendre)
     end
     return D
 end
+
+function get_derivative_matrix(egv::ElementGridVectorLobatto)
+    if length(egv.elements) == 1
+        return get_derivative_matrix(egv.elements[begin])
+    end
+    # Build derivative matrix and integration weights
+    dv = [ derivative_matrix(x) for x in egv.elements ]
+    cr = [ length(x) for x in egv.elements ]
+    # Size of derivative matrix. Lobatto basis overlaps with adjacent elements
+    # and we need to remove this overlap, by reducing number of points.
+    l = length(egv)
+    D = zeros(eltype(egv) ,l, l)  # Derivate matrix
+    D[1:cr[1], 1:cr[1]] = dv[1]
+    # Index range for final derivative matrix build from element ones
+    tmp = ones(Int, length(cr))
+    tmp[1] = 0
+    cum_index = cumsum( cr .- tmp )
+    for i in 2:length(cum_index)
+        ir = cum_index[i-1]:cum_index[i]
+        D[ir, ir] += dv[i]
+        D[cum_index[i-1],:] .*= 0.5 # remove double count from overlap point
+    end
+    return D
+end
+
+
+function get_weight(egv::ElementGridVectorLegendre)
+    return vcat( map( x->get_weight(x), egv.elements )... )
+end
+
+function get_weight(egv::ElementGridVectorLobatto)
+    if length(egv.elements) == 1
+        return get_weight(egv.elements[1])
+    end
+    cr = [length(x) for x in egv.elements]
+    l = length(egv)
+    w = zeros(eltype(egv), l)      # Integration weights
+    w[1:cr[1]] = get_weight(egv.elements[1])
+    # Index range for final derivative matrix build from element ones
+    tmp = ones(Int, length(cr))
+    tmp[1] = 0
+    cum_index = cumsum( cr .- tmp )
+    for i in 2:length(cum_index)
+        ir = cum_index[i-1]:cum_index[i]
+        w[ir] += get_weight(egv.elements[i])
+    end
+    return w
+end
+
+
+##
 
 
 struct ElementGridVector{T} <: AbstractElementGrid{T, 2}
