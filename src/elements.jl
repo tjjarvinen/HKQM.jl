@@ -394,6 +394,55 @@ end
 
 ##
 
+struct ElementGridArray{T,TV,TA,N} <: AbstractElementGrid{SVector{N,T}, N}
+    elements::Vector{AbstractElementGrid{T, 1}}
+    derivatives::Vector{TA}
+    r::Vector{TV}
+    weights::Vector{TV}
+    function ElementGridArray(egv::AbstractElementGrid{T, 1}...; array_type=Array) where T
+        d = [ array_type( get_derivative_matrix(x) ) for x in egv]
+        w = [ array_type( get_weight(x) ) for x in egv]
+        r = [ array_type( x ) for x in egv ]
+        new{T, typeof(w[begin]), typeof(d[begin]), length(egv)}(collect(egv), d, r, w)
+    end
+end
+
+
+function Base.size(ega::ElementGridArray)
+    return ([ length(x) for x in ega.r ]...,)
+end
+
+@generated function Base.getindex(ega::ElementGridArray{T,<:Any,<:Any,N}, i::Int...) where {N,T}
+    if N != length(i)
+        error("Not supported to call with $(length(i)) indices, you need to call with $N indices")
+    end
+    s = "SVector{$N,$T}("
+    for j in 1:N
+        s *= "ega.r[$j][(i[$j])],"
+    end
+    s *= ")"
+    return Meta.parse(s)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ega::ElementGridArray)
+    s = size(ega)
+    print(io, "ElementGridArray of size = $(s)")
+end
+
+function Base.show(io::IO, ega::ElementGridArray)
+    s = size(ega)
+    print(io, "ElementGridArray of size = $(s)")
+end
+
+get_elementgrid(ega::ElementGridArray, i::Int) = ega.elements[i]
+get_derivative_matrix(ega::ElementGridArray, i::Int) = ega.derivatives[i]
+get_weight(ega::ElementGridArray, i::Int) = ega.weights[i]
+
+element_bounds(ega::ElementGridArray, i::Int) = element_bounds(ega.elements[i])
+element_size(ega::ElementGridArray, i::Int) = element_size(ega.elements[i])
+
+##
+
 
 struct ElementGridVector{T} <: AbstractElementGrid{T, 2}
     elements::Vector{ElementGridLegendre{T}}

@@ -60,7 +60,7 @@
                 @test integral ≈ sin(b) - sin(a)
 
                 #test derivative
-                D = HKQM.get_derivative_matrix(eg)
+                D = get_derivative_matrix(eg)
                 s = sin.(eg)
                 c = D * s
                 @test all( c .≈ cos.(eg) )
@@ -86,7 +86,7 @@
                 @test unit(egv) == u"bohr"
                 q = convert_variable_type(Float32, egv)
                 @test eltype(q) == Float32
-                D = HKQM.get_derivative_matrix(q)
+                D = get_derivative_matrix(q)
                 @test size(D,1) == size(D,2) == length(egv)
                 @test eltype(q) == Float32
                 @test eltype(D) == Float32
@@ -102,13 +102,24 @@
                 @test integral ≈ sin(b) - sin(a)
 
                 #test derivative
-                D = HKQM.get_derivative_matrix(egv)
+                D = get_derivative_matrix(egv)
                 @test eltype(D) == eltype(egv)
                 s = sin.(egv)
                 c = D * s
                 @test all( c .≈ cos.(egv) )
             end
         end
+    end
+
+    @testset "ElementGridArray" begin
+        ev = ElementVector(0, 1.5, 3.0)
+        egv = ElementGridVectorLegendre(ev, 24)
+        ega = ElementGridArray(egv, egv, egv)
+        @test size(ega) == (length(egv), length(egv), length(egv))
+        @test all( ega[1,3,5] .== [egv[1], egv[3], egv[5]] )
+        @test get_weight(ega,1) ≈ get_weight(egv)
+        @test all( element_bounds(ega,1) .≈ element_bounds(egv) )
+        @test get_derivative_matrix(ega,2) ≈ get_derivative_matrix(egv)
     end
 
     ca = CubicElementArray(5u"Å", 3)
