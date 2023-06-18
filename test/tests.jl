@@ -114,12 +114,14 @@
     @testset "ElementGridArray" begin
         ev = ElementVector(0, 1.5, 3.0)
         egv = ElementGridVectorLegendre(ev, 24)
-        ega = ElementGridArray(egv, egv, egv)
-        @test size(ega) == (length(egv), length(egv), length(egv))
-        @test all( ega[1,3,5] .== [egv[1], egv[3], egv[5]] )
+        ego = ElementGridVectorLobatto(ev, 24)
+        ega = ElementGridArray(egv, ego, egv)
+        @test size(ega) == (length(egv), length(ego), length(egv))
+        @test all( ega[1,3,5] .== [egv[1], ego[3], egv[5]] )
         @test get_weight(ega,1) ≈ get_weight(egv)
         @test all( element_bounds(ega,1) .≈ element_bounds(egv) )
-        @test get_derivative_matrix(ega,2) ≈ get_derivative_matrix(egv)
+        @test get_derivative_matrix(ega,2) ≈ get_derivative_matrix(ego)
+        @test get_derivative_matrix(ega,1) ≈ get_derivative_matrix(egv)
     end
 
     ca = CubicElementArray(5u"Å", 3)
