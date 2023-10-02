@@ -1,5 +1,7 @@
 module TensorOperations_CUDA_HKQM_ext
-    
+# This is retired for now
+# as TensorOperations v4 does not need this
+ 
 using CUDA
 using TensorOperations
 using HKQM

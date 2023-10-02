@@ -26,12 +26,10 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulAtomic = "a7773ee8-282e-5fa2-be4e-bd808c38a91a"
 
 [weakdeps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
 [extensions]
-TensorOperations_CUDA_HKQM_ext = ["TensorOperations", "CUDA"]
 TensorOperations_HKQM_ext = "TensorOperations"
 Tullio_HKQM_ext = "Tullio"
 
@@ -52,7 +50,7 @@ QuadGK = "2.4"
 Reexport = "0.2, 1.0"
 SpecialFunctions = "0.10, 1.0, 2"
 StaticArrays = "0.12, 1.0"
-TensorOperations = "3.0"
+TensorOperations = "4"
 Tullio = "0.3"
 Unitful = "1.5"
 UnitfulAtomic = "1.0"
