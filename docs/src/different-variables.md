@@ -129,15 +129,15 @@ bracket(qs, p, qs)
 ### Alternative TensorOperations backend for CUDA
 
 For CUDA there is alternative TensorOperations backend
-that also support forward mode AD and is most likely faster
-than the default backend.
+that from TensorOperations extension.
 
 To use TensorOperations CUDA backend start by
 
 ```julia
 using CUDA
+using cuCUDA
 using TensorOperations
 using HKQM
 ```
 
-and use either `Array` or `CuArray` types.
+and using `CuArray` type should now use TensorOperations cuTENSOR backend.
