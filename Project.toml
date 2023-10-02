@@ -28,9 +28,11 @@ UnitfulAtomic = "a7773ee8-282e-5fa2-be4e-bd808c38a91a"
 [weakdeps]
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 
 [extensions]
 TensorOperations_HKQM_ext = "TensorOperations"
+TensorOperations_cuTENSOR_HKQM_ext = ["TensorOperations", "cuTENSOR"]
 Tullio_HKQM_ext = "Tullio"
 
 [compat]
