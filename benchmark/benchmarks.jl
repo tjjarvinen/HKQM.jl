@@ -11,6 +11,7 @@ np = 32
 eg = ElementGridSymmetricBox(5u"Å", ne, np)
 
 ψ = particle_in_box(eg, 1,2,3)
+ψ2 = 2*ψ
 r = position_operator(eg)
 p = momentum_operator(eg)
 Dx = DerivativeOperator(eg,1)
@@ -64,7 +65,8 @@ SUITE["QuantumState"]["substraction"] = @benchmarkable ψ - ψ
 SUITE["QuantumState"]["multiply"] = @benchmarkable 2 * ψ
 SUITE["QuantumState"]["divide"] = @benchmarkable ψ/2
 
-SUITE["Integration"]["Overlap"] = @benchmarkable bracket($ψ, $ψ)
+SUITE["Integration"]["Norm"] = @benchmarkable bracket($ψ, $ψ)
+SUITE["Integration"]["Overlap"] = @benchmarkable bracket($ψ, $ψ2)
 SUITE["Integration"]["ScalarOperator"] = @benchmarkable bracket($ψ, $x, $ψ)
 SUITE["Integration"]["VectorOperator"] = @benchmarkable bracket($ψ, $r, $ψ)
 SUITE["Integration"]["MomentumOperator"] = @benchmarkable bracket($ψ, $p, $ψ)
