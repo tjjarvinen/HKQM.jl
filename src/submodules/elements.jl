@@ -1,19 +1,7 @@
-# This is meant to be the new elements that could be later taken as an own module
-module Elements
-
-using PolynomialBases
-using StaticArrays
-using Unitful
-using UnitfulAtomic
-
-export element_bounds
-export element_size
-export get_center
-
 abstract type AbstractElement{Dims} end
 abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
 abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
-abstract type AbstractElementGridSymmetricBox{T} <: AbstractElementGrid{SVector{3,T}, 6} end
+
 
 
 ## 1D element. All else a based on this
@@ -113,6 +101,12 @@ function ElementVector(start, bounds...)
     ElementVector(v...)
 end
 
+function ElementVector(l::Unitful.Length, n::Integer)
+    d = l/n
+    bounds = [ i*d - l/2   for i in 1:n ]
+    return ElementVector(-l/2, bounds...)
+end
+
 Base.size(ev::ElementVector) = size(ev.v)
 Base.getindex(ev::ElementVector, i) = ev.v[i]
 
@@ -153,21 +147,16 @@ struct ElementGridLobatto{T} <: AbstractElementGrid{T, 1}
     element::Element1D
     scaling::T
     shift::T
-    function ElementGridLobatto(element, n::Int; unit=u"bohr")
-        element = uconvert(unit, Element1D(element) )
-        scaling = ustrip(unit, element_size(element) ) / 2 
-        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
-        new{Float64}(LobattoLegendre(n-1), element, scaling, shift)
-    end
-    function ElementGridLobatto(DT::DataType, element, n::Int; unit=u"bohr")
-        element = uconvert(unit, Element1D(element) )
-        scaling = ustrip(unit, element_size(element) ) / 2 
-        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
+    function ElementGridLobatto(DT::DataType, element, n::Int)
+        scaling = (ustrip ∘ element_size)(element) / 2 
+        shift = (ustrip ∘ sum ∘ element_bounds)(element) / 2
         new{DT}(LobattoLegendre(n-1, DT), element, scaling, shift)
     end
 end
 
-ElementGridLegendre(element, n::Int; unit=u"bohr") = ElementGridLegendre(Float64, element, n; unit=unit)
+
+ElementGridLegendre(element, n::Int) = ElementGridLegendre(Float64, element, n)
+ElementGridLobatto(element, n::Int) = ElementGridLobatto(Float64, element, n)
 ElementGridLegendre(a, b, n) = ElementGridLegendre(Element1D(a,b), n)
 ElementGridLobatto(a, b, n) = ElementGridLobatto(Element1D(a,b), n)
 ElementGridLegendre(T::DataType, a, b, n) = ElementGridLegendre(T, Element1D(a,b), n)
@@ -272,7 +261,10 @@ function ElementGridVectorLobatto(DT::DataType, ev::ElementVector, ng)
     return ElementGridVectorLobatto(elements...)
 end
 
-
+function ElementGridVectorLobatto(l::Unitful.Length, ne, ng)
+    ev = ElementVector(l, ne)
+    return ElementGridVectorLobatto(ev, ng)
+end
 
 
 function ElementGridVectorLegendre(ev::ElementVector, ng)
@@ -284,6 +276,12 @@ function ElementGridVectorLegendre(DT::DataType, ev::ElementVector, ng)
     elements = [ ElementGridLegendre(DT, x, ng) for x in ev ]
     return ElementGridVectorLegendre(elements...)
 end
+
+function ElementGridVectorLegendre(l::Unitful.Length, ne, ng)
+    ev = ElementVector(l, ne)
+    return ElementGridVectorLegendre(ev, ng)
+end
+
 
 Base.size(egv::Union{ElementGridVectorLegendre, ElementGridVectorLobatto}) = size(egv.index)
 
@@ -385,7 +383,7 @@ end
 
 
 function Base.size(ega::ElementGridArray)
-    return ( length(x) for x in ega.r )
+    return Tuple( length(x) for x in ega.r )
 end
 
 @generated function Base.getindex(ega::ElementGridArray{T,<:Any,<:Any,N}, i::Int...) where {N,T}
@@ -416,8 +414,3 @@ get_weight(ega::ElementGridArray, i::Int) = ega.weights[i]
 
 element_bounds(ega::ElementGridArray, i::Int) = element_bounds(ega.elements[i])
 element_size(ega::ElementGridArray, i::Int) = element_size(ega.elements[i])
-
-
-
-
-end

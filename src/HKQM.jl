@@ -142,7 +142,7 @@ include("accuracytests.jl")
 include("scf.jl")
 include("initial_states.jl")
 include("submodules/ToroidalCurrent.jl")
-include("submodules/Elements.jl")
+include("submodules/HelmholtzKernel.jl")
 
 
 
