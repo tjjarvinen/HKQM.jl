@@ -134,10 +134,9 @@ struct ElementGridLegendre{T} <: AbstractElementGrid{T, 1}
     element::Element1D
     scaling::T
     shift::T
-    function ElementGridLegendre(DT::DataType, element, n::Int; unit=u"bohr")
-        element = uconvert(unit, Element1D(element) )
-        scaling = ustrip(unit, element_size(element) ) / 2 
-        shift = ustrip(unit, sum(element_bounds(element)) ) / 2
+    function ElementGridLegendre(DT::DataType, element, n::Int)
+        scaling = ustrip(element_size(element) ) / 2 
+        shift = ustrip(sum(element_bounds(element)) ) / 2
         new{DT}(GaussLegendre(n-1, DT), element, scaling, shift)
     end
 end
