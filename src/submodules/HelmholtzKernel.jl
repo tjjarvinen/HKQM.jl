@@ -1,6 +1,7 @@
 # This is meant to be the new elements that could be later taken as an own module
 module HelmholtzKernel
 
+using LinearAlgebra: mul!
 using PolynomialBases
 using StaticArrays
 using Unitful

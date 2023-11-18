@@ -408,9 +408,19 @@ function Base.show(io::IO, ega::ElementGridArray)
     print(io, "ElementGridArray of size = $(s)")
 end
 
-get_elementgrid(ega::ElementGridArray, i::Int) = ega.elements[i]
-get_derivative_matrix(ega::ElementGridArray, i::Int) = ega.derivatives[i]
-get_weight(ega::ElementGridArray, i::Int) = ega.weights[i]
+get_elementgrid(ega::ElementGridArray, i::Integer) = ega.elements[i]
+get_derivative_matrix(ega::ElementGridArray, i::Integer) = ega.derivatives[i]
+get_weight(ega::ElementGridArray, i::Integer) = ega.weights[i]
 
-element_bounds(ega::ElementGridArray, i::Int) = element_bounds(ega.elements[i])
-element_size(ega::ElementGridArray, i::Int) = element_size(ega.elements[i])
+element_bounds(ega::ElementGridArray, i::Integer) = element_bounds(ega.elements[i])
+element_size(ega::ElementGridArray, i::Integer) = element_size(ega.elements[i])
+
+##
+
+function get_derivative_matrix(grid, index::Integer, order::Integer)
+    if order == 1
+        return get_derivative_matrix(grid, index)
+    else
+        return get_derivative_matrix(grid, index)^order
+    end
+end
