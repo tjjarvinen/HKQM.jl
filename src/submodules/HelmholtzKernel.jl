@@ -31,8 +31,11 @@ export ElementGridLobatto
 export ElementGridVectorLegendre
 export ElementGridVectorLobatto
 export ElementVector
+export HelmholtzTensor
+export PoissonTensor
 
 include("elements.jl")
+include("kernels.jl")
 include("integrations.jl")
 
 

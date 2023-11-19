@@ -8,7 +8,7 @@ abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
 """
     Element1D{T} <: AbstractElement{1}
 
-Stores information for 1D element. Where `T<:Unitful.Length`.
+Stores information for 1D element.
 
 # Fields
 - `low::T` : lowest value within element
@@ -17,8 +17,9 @@ Stores information for 1D element. Where `T<:Unitful.Length`.
 struct Element1D{T} <: AbstractElement{1}
     low::T
     high::T
-    function Element1D(low::Unitful.Length, high::Unitful.Length)
+    function Element1D(low, high)
         @assert high > low
+        @assert dimension(low) == dimension(high)
         T = unit(low)
         tmp = promote( ustrip(low), ustrip(T, high) )
         new{ typeof(tmp[1] * T) }( tmp[1]*T, tmp[2]*T )
@@ -342,7 +343,7 @@ end
 
 
 function get_weight(egv::ElementGridVectorLegendre)
-    return vcat( map( x->get_weight(x), egv.elements )... )
+    return reduce( vcat,  map( x->get_weight(x), egv.elements ) )
 end
 
 function get_weight(egv::ElementGridVectorLobatto)

@@ -1,4 +1,6 @@
 
+## Integral
+
 function integrate(
     ega::AbstractElementGrid{T, 3}, 
     data::AbstractArray{Tt, 3}
@@ -17,6 +19,8 @@ function integrate(
     return sum( ωz * tmp_z )
 end
 
+
+## Derivatives
 
 function derivative_x!(
     out::AbstractArray{Tt, 3},
@@ -125,4 +129,90 @@ function laplacian(
     out = similar(data)
     laplacian!(tmp, out, ega, data)
     return out
+end
+
+
+##
+
+function apply_transformation(
+    data::AbstractArray{Ta,3},
+    tx::Tr,
+    ty::Tr,
+    tz::Tr;
+    correction=true
+)   where {Ta, Tr<:AbstractTransformationTensor}
+    @assert size(tx,3) == size(ty,3) == size(tz,3)
+    @assert size(data, 1) == size(tx, 2)
+    @assert size(data, 2) == size(ty, 2)
+    @assert size(data, 3) == size(tz, 2)
+    T = Base.promote_eltype(data, tx, ty, tz)
+    T = promote_type(T, typeof(get_t_weight(tx,1)))
+    # note V1 and V2 are named after literature
+    # and used for temporary arrays
+    V1 = similar(data, T) 
+    V2 = similar(data, T)
+
+
+    V = sum( 1:size(tx,3) ) do tᵢ
+        tmp = calculate_transformation(
+            V1,
+            V2,
+            data,
+            get_matrix_at_t(tx, tᵢ),
+            get_matrix_at_t(ty, tᵢ),
+            get_matrix_at_t(tz, tᵢ),
+            get_t_weight(tx,tᵢ)
+        )
+        tmp
+    end
+
+    if correction
+        tmax = get_t_max(tx)
+        V2 .= T( 2/sqrt(π)*(π/tmax^2) ) .* data
+        V .+= V2
+    end
+    return V
+end
+
+
+function calculate_transformation(
+   V1::AbstractArray{T1,3},
+   V2::AbstractArray{T1,3},
+   data::AbstractArray{T,3},
+   tx::AbstractMatrix{Tx},
+   ty::AbstractMatrix{Ty},
+   tz::AbstractMatrix{Tz},
+   wt 
+)   where {T, T1, Tx, Ty, Tz}
+    @assert size(tx,3) == size(ty,3) == size(tz,3)
+    @assert size(data, 1) == size(tx, 2) == size(tx, 1)
+    @assert size(data, 2) == size(ty, 2) == size(ty, 1)
+    @assert size(data, 3) == size(tz, 2) == size(tz, 1)
+    @assert size(data) == size(V1) == size(V2)
+    
+    s = size(data)
+    # Contract x-axis
+    tmp = reshape(data, s[1], s[2]*s[3])
+    V1_x_yz = reshape(V1, s[1], s[2]*s[3])
+    mul!(V1_x_yz, tx, tmp)
+
+    # Contract z-axis
+    V1_xy_z = reshape(V1_x_yz, s[1]*s[2], s[3])
+    V2_xy_z = reshape(V2, s[1]*s[2], s[3])
+    mul!(V2_xy_z, V1_xy_z, tz')
+
+    # Contract y-axis
+    V1_y_x_z = reshape(V1, s[2], s[1], s[3])
+    permutedims!(V1_y_x_z, V2, (2,1,3))
+    V1_y_xz = reshape(V1_y_x_z, s[2], s[1]*s[3])
+    V2_y_xz = reshape(V2, s[2], s[1]*s[3])
+    mul!(V2_y_xz, ty, V1_y_xz)
+
+    # Restore original permutation
+    V2_y_x_z = reshape(V2_y_xz, s[2], s[1], s[3])
+    permutedims!(V1, V2_y_x_z, (2,1,3))
+
+    # Add integration weight
+    V1 .*= convert( eltype(V1), (2wt/sqrt(one(wt)*π)) )
+    return V1
 end
