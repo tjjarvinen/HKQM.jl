@@ -187,7 +187,7 @@ function poisson_equation!(
     # the mid calculation results.
 
     # Note that Tx, Ty and Tz are not symmetric due to
-    # integration contant only being on the right side!
+    # integration constant only being on the right side!
     # Thus we need to contract from the right side.  
 
     s = size(ρ)
