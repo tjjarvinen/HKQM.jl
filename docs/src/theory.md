@@ -118,7 +118,7 @@ General form of time independent Schrödinger equation is
 It can be changed to Helmholtz equation from
 
 ```math
-\left( \nabla^2 + \frac{2m}{\hbar^2} \right)\psi = \frac{2m}{\hbar^2}\psi
+\left( \nabla^2 + \frac{2mE}{\hbar^2} \right)\psi = \frac{2m}{\hbar^2}V\psi
 ```
 
 with using
@@ -126,7 +126,7 @@ with using
 ```math
 \begin{align*}
 k = & \frac{ \sqrt{2 mE} }{\hbar} \\
-f = & \frac{2m}{\hbar^2}\psi
+f = & \frac{2m}{\hbar^2}V\psi
 \end{align*}
 ```
 
@@ -403,7 +403,7 @@ because the wavefunction needs to be normalized in any case.
 Hartree-Fock equation is an eigen-value equation for Fock matrix
 
 ```math
-F_{ij} = h_{ij} + 2J_{ij} + K_{ij}.
+F_{ij} = h_{ij} + 2J_{ij} - K_{ij}.
 ```
 
 Where $h_{ij}$ is one particle Hamiltonian
@@ -427,7 +427,7 @@ K_{ij}\psi_{j} = \sum_{k}\psi_{k}\int\frac{\psi_{j}^{*}(r_2)\psi_{k}(r_2)}{|r_1-
 Defining
 
 ```math
-\tilde{V} = V + 2J + K
+\tilde{V} = V + 2J - K
 ```
 
 leads to
