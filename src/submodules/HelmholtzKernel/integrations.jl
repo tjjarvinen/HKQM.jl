@@ -16,7 +16,7 @@ function integrate(
     tmp_z = ωy' * tmp_y_z
 
     ωz = get_weight(ega, 3)
-    return sum( ωz * tmp_z )
+    return sum( ωz .* tmp_z' )
 end
 
 
