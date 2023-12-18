@@ -35,7 +35,7 @@ export HelmholtzTensor
 export PoissonTensor
 
 include("elements.jl")
-include("kernels.jl")
+include("greensfunctions.jl")
 include("integrations.jl")
 
 
