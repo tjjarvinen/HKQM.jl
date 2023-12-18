@@ -96,3 +96,31 @@ function get_t_weight(t::AbstractTransformationTensor)
     end
 end
 
+##
+
+struct ConcreteTransformationTensor{T, TA} <: AbstractTransformationTensor{T}
+    vals::TA
+    tmax::T
+    wt::Vector{T}
+    function ConcreteTransformationTensor(tt::AbstractTransformationTensor{T}; array_type=Array) where {T}
+        vals = array_type(tt)
+        wt = [ get_t_weight(tt, i) for i in axes(tt,3) ]
+        tmax = get_t_max(tt)
+        new{T, typeof(vals)}(vals, tmax, wt)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ct::ConcreteTransformationTensor)
+    s = size(ct)
+    print(io, "ConcreteTransformationTensor $(s[3]) t-points and $(s[1]) r-points. Array type is $(typeof(ct.vals))")
+end
+
+Base.size(ct::ConcreteTransformationTensor) = size(ct.vals)
+
+Base.getindex(ct::ConcreteTransformationTensor, i...) = ct.vals[i...]
+
+get_matrix_at_t(ct::ConcreteTransformationTensor, i) = view(ct.vals, :,:, i)
+
+get_t_weight(ct::ConcreteTransformationTensor, i::Integer) = ct.wt[i]
+
+get_t_max(ct::ConcreteTransformationTensor) = ct.tmax

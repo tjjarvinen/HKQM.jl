@@ -415,6 +415,21 @@ get_weight(ega::ElementGridArray, i::Integer) = ega.weights[i]
 element_bounds(ega::ElementGridArray, i::Integer) = element_bounds(ega.elements[i])
 element_size(ega::ElementGridArray, i::Integer) = element_size(ega.elements[i])
 
+
+function Base.similar(ega::ElementGridArray{T,TV,TA,N}) where{T, TV, TA, N}
+    return similar(ega.r[begin], eltype(ega), size(ega)...)
+end
+
+function Base.similar(ega::ElementGridArray{T,TV,TA,N}, ::Type{TO}) where{T, TV, TA, N, TO}
+    return similar(ega.r[begin], TO, size(ega)...)
+end
+
+function Base.fill(ega::ElementGridArray, val)
+    tmp = similar(ega, typeof(val))
+    fill!(tmp, val)
+    return tmp
+end
+
 ##
 
 function get_derivative_matrix(grid, index::Integer, order::Integer)

@@ -153,7 +153,7 @@ function apply_transformation(
     V2 = similar(data, T)
 
 
-    V = sum( 1:size(tx,3) ) do tᵢ
+    V = sum( axes(tx,3) ) do tᵢ
         tmp = calculate_transformation(
             V1,
             V2,
