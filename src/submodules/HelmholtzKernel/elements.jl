@@ -374,6 +374,8 @@ struct ElementGridArray{T,TV,TA,N} <: AbstractElementGrid{SVector{N,T}, N}
     r::Vector{TV}
     weights::Vector{TV}
     function ElementGridArray(egv::AbstractElementGrid{T, 1}...; array_type=Array) where T
+        u = unit(egv[begin])
+        @assert all( x->unit(x)==u, egv)
         d = [ array_type( get_derivative_matrix(x) ) for x in egv]
         w = [ array_type( get_weight(x) ) for x in egv]
         r = [ array_type( x ) for x in egv ]
@@ -429,6 +431,9 @@ function Base.fill(ega::ElementGridArray, val)
     fill!(tmp, val)
     return tmp
 end
+
+Unitful.unit(egv::ElementGridArray) = unit(egv.elements[begin])
+
 
 ##
 

@@ -76,7 +76,8 @@ function Base.conj(qs::QuantumState{TA, T, N}) where {TA, T<:Complex, N}
 end
 Base.conj!(qs::QuantumState) = qs
 function Base.conj!(qs::QuantumState{TA, T, N}) where {TA, T<:Complex, N}
-    return map!(Base.conj, qs)
+    Base.conj!(qs.psi)
+    return qs
 end
 
 

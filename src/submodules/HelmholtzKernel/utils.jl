@@ -35,3 +35,5 @@ Base.similar(egat::ElementGridArrayWithTransformation) = similar(egat.ega)
 Base.similar(egat::ElementGridArrayWithTransformation, T::Type{TO}) where {TO} = similar(egat.ega, T)
 
 Base.fill(egat::ElementGridArrayWithTransformation, val) = fill(egat.ega, val)
+
+Unitful.unit(egv::ElementGridArrayWithTransformation) = unit(egv.ega)
