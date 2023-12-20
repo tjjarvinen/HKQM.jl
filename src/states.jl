@@ -156,7 +156,7 @@ Base.conj(qs::QuantumState) = qs
 Base.conj(qs::QuantumState{Any, Complex}) = QuantumState(qs.elementgrid, conj.(qs.psi), unit(qs))
 Base.conj!(qs::QuantumState) = qs
 function Base.conj!(qs::QuantumState{Any, Complex})
-    conj!.(qs.psi)
+    conj!(qs.psi)
     return qs
 end
 

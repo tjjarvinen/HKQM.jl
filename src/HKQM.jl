@@ -143,8 +143,7 @@ include("scf.jl")
 include("initial_states.jl")
 include("submodules/ToroidalCurrent.jl")
 include("submodules/HelmholtzKernel/HelmholtzKernel.jl")
-
-
+include("submodules/QuantumSystem/QuantumSystem.jl")
 
 
 end

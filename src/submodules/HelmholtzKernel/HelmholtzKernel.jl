@@ -27,6 +27,7 @@ export integrate
 export laplacian
 export laplacian!
 
+export AbstractElementGrid
 export ConcreteTransformationTensor
 export Element1D
 export ElementGridArray
