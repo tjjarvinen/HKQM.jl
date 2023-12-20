@@ -141,4 +141,7 @@ end
     @test all( element_bounds(ega,1) .≈ element_bounds(egv) )
     @test get_derivative_matrix(ega,2) ≈ get_derivative_matrix(ego)
     @test get_derivative_matrix(ega,1) ≈ get_derivative_matrix(egv)
+
+    d = fill(ega, 1.0)
+    @test integrate(ega, d) ≈ 27.0
 end
