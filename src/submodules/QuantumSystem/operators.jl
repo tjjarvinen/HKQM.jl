@@ -328,7 +328,7 @@ end
 
 
 function momentum_operator(ega::AbstractElementGrid)
-    return -im * u"ħ" * gradient_operator(ega)
+    return -im * u"ħ_au" * gradient_operator(ega)
 end
 
 
@@ -463,7 +463,7 @@ end
 Unitful.unit(H::HamiltonOperatorFreeParticle) = H.output_unit
 
 function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
-    a = u"ħ"^2/(-2H.m)
+    a = u"ħ_au"^2/(-2H.m)
     return a * (H.∇²*qs) |> unit(H)
 end
 
