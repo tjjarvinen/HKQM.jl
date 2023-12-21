@@ -1,14 +1,23 @@
 abstract type AbstractOperator{N} end
+abstract type GridFixedOperator{N} <: AbstractOperator{N} end
+abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
 
-get_elementgrid(ao::AbstractOperator) = ao.elementgrid
-Base.size(ao::AbstractOperator) = size(get_elementgrid(ao))
+get_elementgrid(::AbstractOperator) = missing
+get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
+Base.size(::AbstractOperator) = missing
+Base.size(ao::GridFixedOperator) = size(get_elementgrid(ao))
 Base.length(::AbstractOperator{N}) where N = N
 Base.firstindex(::AbstractOperator) = 1
 Base.lastindex(ao::AbstractOperator) = length(ao)
 
-function Base.show(io::IO, ao::AbstractOperator)
+function Base.show(io::IO, ao::AbstractOperator{N}) where N
+    print(io, "Operator with $N dimensions")
+end
+
+
+function Base.show(io::IO, ao::GridFixedOperator{N}) where N
     s = size(ao)
-    print(io, "Operator with grid size $s")
+    print(io, "Operator with $N dimensions and grid size $s")
 end
 
 function Base.getindex(so::AbstractOperator{1}, i::Int)
@@ -24,10 +33,11 @@ function Base.iterate(v::AbstractOperator, i=0)
     end
 end
 
-Unitful.unit(ao::AbstractOperator) = ao.unit
-Unitful.dimension(ao::AbstractOperator) = dimension(unit(ao))
+Unitful.unit(::AbstractOperator) = missing
+Unitful.unit(ao::GridFixedOperator) = ao.unit
+Unitful.dimension(ao::GridFixedOperator) = dimension(unit(ao))
 
-function Unitful.uconvert(u::Unitful.Units, op::AbstractOperator)
+function Unitful.uconvert(u::Unitful.Units, op::GridFixedOperator)
     @assert dimension(u) == dimension(op)
     unit(op) == u && return op
     T = (eltype ∘ eltype)(get_elementgrid(op)) # make sure type is correct
@@ -59,10 +69,15 @@ Base.:(*)(op::AbstractOperator{1}, qs::QuantumState) = op(qs)
 Base.:(*)(op::AbstractOperator, qs::QuantumState) = map(f->f(qs), op)
 
 
+braket(psi1::QuantumState, ao::AbstractOperator{1}, psi2::QuantumState) = braket(psi1, ao*psi2)
+
+function braket(psi1::QuantumState, ao::AbstractOperator, psi2::QuantumState)
+    return map( o->braket(psi1, o*psi2), ao )
+end
 
 ## ScalarOperator
 
-struct ScalarOperator{TA, T, D} <: AbstractOperator{1} where{TA<:AbstractArray{T, D}, T, D<:Int}
+struct ScalarOperator{TA, T, D} <: GridFixedOperator{1} where{TA<:AbstractArray{T, D}, T, D<:Int}
     elementgrid::AbstractElementGrid
     vals::TA
     unit::Unitful.FreeUnits
@@ -182,7 +197,6 @@ for op in (:real, :imag)
     @eval Base.$op(so::ScalarOperator) = map($op, so; output_unit=unit(so))
 end
 
-Base.:(-)(a::ScalarOperator) = -1*a
 Base.:(^)(a::ScalarOperator, x::Number) = map( y->y^x, a; output_unit=unit(a)^x)
 
 function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator{<:Any, T, <:Any}) where T
@@ -193,3 +207,231 @@ function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator{<:Any, T, <:Any})
 end
 
 
+## VectorOperator
+
+struct VectorOperator{N} <: AbstractOperator{N}
+    operators::Vector{AbstractOperator{1}}
+    function VectorOperator(op::AbstractVector{<:AbstractOperator{1}})
+        @assert all(x-> size(x)===size(op[begin]), op) "Scalar operators have different sizes"
+        @assert all(x-> dimension(x)==dimension(op[begin]), op)
+        new{length(op)}(op)
+    end
+end
+
+VectorOperator(op::AbstractOperator{1}...) = VectorOperator( collect(op) )
+Base.getindex(v::VectorOperator, i...) = v.operators[i...]
+
+Unitful.unit(v::VectorOperator) = unit(v[begin])
+Unitful.dimension(v::VectorOperator) = dimension(v[begin])
+
+
+for OP in (:(+), :(-))
+    @eval begin
+        function Base.$OP(a::VectorOperator{N},b::VectorOperator{N}) where N
+            VectorOperator($OP(a.operators,b.operators))
+        end
+        function Base.$OP(a::VectorOperator{N},b::AbstractVector) where N
+            @assert length(b) == N
+            VectorOperator($OP(a.operators,b))
+        end
+        function Base.$OP(a::AbstractVector,b::VectorOperator{N}) where N
+            @assert length(a) == N
+            VectorOperator($OP(a,b.operators))
+        end
+    end
+end
+
+
+for OP in (:(+), :(-), :(*))
+    @eval begin
+        Base.$OP(a::VectorOperator, x::Number) = VectorOperator($OP.(a.operators,x))
+        Base.$OP(x::Number, a::VectorOperator) = VectorOperator($OP.(x,a.operators))
+
+        function Base.$OP(v::VectorOperator,s::ScalarOperator)
+            @assert size(v) == size(s)
+            VectorOperator( map( x-> $OP(x,s), v) )
+        end
+        function Base.$OP(s::ScalarOperator,v::VectorOperator)
+            @assert size(v) == size(s)
+            VectorOperator( map( x-> $OP(s,x), v) )
+        end
+    end
+end
+
+
+for OP in [:(/)]
+    @eval begin
+        function Base.$OP(v::VectorOperator,s::ScalarOperator)
+            @assert size(v) == size(s)
+            VectorOperator( map( x-> $OP(x,s), v) )
+        end
+        Base.$OP(a::VectorOperator, x::Number) = VectorOperator($OP.(a.operators,x))
+    end
+end
+
+
+Base.:(-)(a::VectorOperator) = VectorOperator( map(x->-x, a)  )
+
+
+## Position operator
+
+function position_operator(ega::ElementGridArray, i)
+    tmp = map( j-> ega.r[i][j[i]],  eachindex(ega))
+    return ScalarOperator(ega, tmp; unit=unit(ega))
+end
+
+
+function position_operator(ega::ElementGridArray)
+    tmp = [ position_operator(ega, i) for i in 1:length(ega.r) ]
+    return VectorOperator(tmp)
+end
+
+
+## Derivative operators
+
+
+struct DerivativeOperator <: AbstractOperator{1}
+    coordinate::Int
+    order::Int
+end
+
+function Base.show(io::IO, ao::DerivativeOperator)
+    print(io, "DerivativeOperator for $(ao.coordinate) dimension and order $(ao.order)")
+end
+
+
+function (devo::DerivativeOperator)(psi::QuantumState)
+    ega = get_elementgrid(psi)
+    if devo.coordinate == 1
+        tmp = derivative_x(ega, psi.psi; order=devo.order)
+    elseif devo.coordinate == 2
+        tmp = derivative_y(ega, psi.psi; order=devo.order)
+    elseif devo.coordinate == 3
+        tmp = derivative_z(ega, psi.psi; order=devo.order)
+    else
+        error("not implented yet")
+    end
+    return QuantumState(ega, tmp, unit(psi)/unit(ega)^devo.order)
+end
+
+
+Unitful.dimension(devo::DerivativeOperator) = dimension(u"m"^-devo.order)
+
+
+
+
+function gradient_operator(ega::AbstractElementGrid{<:Any, D}) where D
+    g = [ DerivativeOperator(i, 1) for i in 1:D ]
+    return VectorOperator(g)    
+end
+
+
+
+
+struct LaplaceOperator <: AbstractOperator{1} end
+
+function Base.show(io::IO, ::LaplaceOperator)
+    print(io, "Laplace Operator")
+end
+
+function (lo::LaplaceOperator)(psi::QuantumState)
+    ega = get_elementgrid(psi)
+    tmp = laplacian(get_elementgrid(psi), psi.psi)
+    return QuantumState(ega, tmp, unit(psi)/unit(ega)^2)
+end
+
+
+Unitful.dimension(lo::LaplaceOperator) = dimension(u"m"^-2)
+
+
+## Untility operators
+
+struct ConstantTimesOperator{TO,T,N} <: AbstractOperator{N}
+    op::TO
+    a::T
+    function ConstantTimesOperator(op::AbstractOperator{N}, a=1) where N
+        if ustrip(imag(a)) ≈ 0
+            new{typeof(op),typeof(real(a)), N}(op, real(a))
+        else
+            new{typeof(op),typeof(a), N}(op, a)
+        end
+    end
+end
+
+
+Base.:(*)(op::AbstractOperator, a::Number) = ConstantTimesOperator(op,a)
+Base.:(*)(a::Number, op::AbstractOperator) = ConstantTimesOperator(op,a)
+Base.:(/)(op::AbstractOperator, a::Number) = ConstantTimesOperator(op,1/a)
+
+Base.getindex(cto::ConstantTimesOperator,i::Int) = cto.a*cto.op[i]
+
+Unitful.unit(op::ConstantTimesOperator) = unit(op.op) * unit(op.a)
+Unitful.dimension(op::ConstantTimesOperator) = dimension(op.op) * dimension(op.a)
+
+function (cto::ConstantTimesOperator{TO,T,1})(qs::QuantumState) where {TO,T}
+    return cto.a * cto.op(qs)
+end
+
+function dot(cto1::ConstantTimesOperator{TO,T,N}, cto2::ConstantTimesOperator{TO,T,N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto1.op,cto2.op), cto1.a*cto2.a)
+end
+
+function dot(cto::ConstantTimesOperator{TO,T,N}, op::AbstractOperator{N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto.op,op), cto.a)
+end
+
+function dot(op::AbstractOperator{N}, cto::ConstantTimesOperator{TO,T,N}) where {TO,T,N}
+    return ConstantTimesOperator(dot(cto.op,op), cto.a)
+end
+
+
+
+
+
+
+struct OperatorSum{TO1, TO2, N} <: AbstractCompositeOperator{N}
+    op1::TO1
+    op2::TO2
+    function OperatorSum(op1::AbstractOperator{N}, op2::AbstractOperator{N}) where N
+        @assert dimension(op1) === dimension(op2) "Operators have different unit dimensions"
+        new{typeof(op1),typeof(op2),N}(op1, op2)
+    end
+end
+
+function Base.:(+)(op1::AbstractOperator{N}, op2::AbstractOperator{N}) where N
+    return OperatorSum(op1,op2)
+end
+
+function Base.:(-)(op1::AbstractOperator{N}, op2::AbstractOperator{N}) where N
+    return OperatorSum(op1,-op2)
+end
+
+function (os::OperatorSum{TO1,TO2, 1})(qs::QuantumState) where {TO1,TO2}
+    return os.op1(qs) + os.op2(qs)
+end
+
+Unitful.unit(sos::OperatorSum) = unit(sos.op1)
+Unitful.dimension(sos::OperatorSum) = dimension(sos.op1)
+
+Base.getindex(op::OperatorSum, i::Int) = op.op1[i] + op.op2[i]
+
+
+
+
+
+struct OperatorProduct{TO1, TO2} <: AbstractCompositeOperator{1}
+    op1::TO1
+    op2::TO2
+    function OperatorProduct(op1::AbstractOperator{1}, op2::AbstractOperator{1})
+        new{typeof(op1),typeof(op2)}(op1, op2)
+    end
+end
+
+function Base.:(*)(op1::AbstractOperator{1}, op2::AbstractOperator{1})
+    return OperatorProduct(op1,op2)
+end
+
+(op::OperatorProduct)(qs::QuantumState) = op.op1(op.op2(qs))
+
+Unitful.unit(op::OperatorProduct) = unit(op.op1) * unit(op.op2)
+Unitful.dimension(op::OperatorProduct) = dimension(op.op1) * dimension(op.op2)
