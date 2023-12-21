@@ -1,6 +1,7 @@
 abstract type AbstractOperator{N} end
 abstract type GridFixedOperator{N} <: AbstractOperator{N} end
 abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
+abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
 get_elementgrid(::AbstractOperator) = missing
 get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
@@ -202,8 +203,8 @@ Base.:(^)(a::ScalarOperator, x::Number) = map( y->y^x, a; output_unit=unit(a)^x)
 function Unitful.uconvert(a::Unitful.Units, so::ScalarOperator{<:Any, T, <:Any}) where T
     @assert dimension(a) == dimension(so) "Dimension missmatch"
     a == unit(so) && return so
-    conv = (T ∘ ustrip ∘ uconvert)(u, 1*unit(so))
-    return map( x->conv*x, so; output_unit=u)
+    conv = (T ∘ ustrip ∘ uconvert)(a, 1*unit(so))
+    return map( x->conv*x, so; output_unit=a)
 end
 
 
@@ -326,6 +327,10 @@ function gradient_operator(ega::AbstractElementGrid{<:Any, D}) where D
 end
 
 
+function momentum_operator(ega::AbstractElementGrid)
+    return -im * u"ħ" * gradient_operator(ega)
+end
+
 
 
 struct LaplaceOperator <: AbstractOperator{1} end
@@ -435,3 +440,111 @@ end
 
 Unitful.unit(op::OperatorProduct) = unit(op.op1) * unit(op.op2)
 Unitful.dimension(op::OperatorProduct) = dimension(op.op1) * dimension(op.op2)
+
+
+
+## Hamiltonians
+
+
+Unitful.dimension(AbstractHamiltonOperator) = dimension(u"J")
+
+
+struct HamiltonOperatorFreeParticle{T, TU} <: AbstractHamiltonOperator
+    ∇²::LaplaceOperator
+    m::T
+    output_unit::TU
+    function HamiltonOperatorFreeParticle(; m=1u"me_au", output_unit=u"hartree")
+        @assert dimension(m) == dimension(u"kg")
+        @assert dimension(output_unit) == dimension(u"J")
+        new{typeof(m), typeof(output_unit)}(LaplaceOperator(), m, output_unit)
+    end
+end
+
+Unitful.unit(H::HamiltonOperatorFreeParticle) = H.output_unit
+
+function (H::HamiltonOperatorFreeParticle)(qs::QuantumState)
+    a = u"ħ"^2/(-2H.m)
+    return a * (H.∇²*qs) |> unit(H)
+end
+
+
+
+struct HamiltonOperator{T,TU,TV} <: AbstractHamiltonOperator
+    T::HamiltonOperatorFreeParticle{T, TU}
+    V::TV
+    function HamiltonOperator(V::AbstractOperator{1}; m=1u"me_au", output_unit=u"hartree")
+        @assert dimension(V) == dimension(u"J")
+        @assert dimension(m) == dimension(u"kg")
+        T = HamiltonOperatorFreeParticle(; m=m, output_unit=output_unit)
+        new{typeof(T.m),typeof(output_unit),typeof(V)}(T, V)
+    end
+end
+
+Unitful.unit(H::HamiltonOperator) = unit(H.T)
+
+
+(H::HamiltonOperator)(qs::QuantumState) = H.T*qs + H.V*qs
+
+
+
+
+struct HamiltonOperatorMagneticField{T,TU,TV,TA,Tq} <: AbstractHamiltonOperator
+    T::HamiltonOperatorFreeParticle{T, TU}
+    V::TV
+    A::TA
+    q::Tq
+    function HamiltonOperatorMagneticField(
+            V::AbstractOperator{1},
+            A::AbstractOperator{3};
+            m=1u"me_au",
+            q=-1u"e_au",
+            output_unit=u"hartree"
+        )
+        @assert dimension(V) == dimension(u"J")
+        @assert dimension(A) == dimension(u"T*m")
+        @assert dimension(m) == dimension(u"kg")
+        @assert dimension(q) == dimension(u"e_au")
+        T = HamiltonOperatorFreeParticle(; m=m, output_unit=output_unit)
+        new{typeof(T.m),typeof(output_unit),typeof(V),typeof(A),typeof(q)}(T, V, A, q)
+    end
+end
+
+
+Unitful.unit(H::HamiltonOperatorMagneticField) = unit(H.T)
+
+
+function (H::HamiltonOperatorMagneticField)(ψ::QuantumState)
+    #TODO make this better
+    p = momentum_operator(H.A[1])
+    ϕ = H.q^2*(H.A⋅H.A)*ψ
+    ϕ += H.q*(p⋅H.A)*ψ
+    ϕ += H.q*(H.A⋅p)*ψ
+    ϕ /= 2H.T.m
+    ϕ += H.V*ψ
+    return H.T*ψ + ϕ
+end
+
+
+momentum_operator(so::ScalarOperator) = momentum_operator(get_elementgrid(so))
+momentum_operator(H::HamiltonOperator) = momentum_operator(H.V)
+
+function momentum_operator(H::HamiltonOperatorMagneticField)
+    p = momentum_operator(H.A[1])
+    return p + H.q*H.A
+end
+
+
+"""
+    vector_potential(ceg, Bx, By, Bz)
+
+Gives vector potential for constant magnetic field.
+"""
+function vector_potential(eg, Bx, By, Bz)
+    @assert dimension(Bx) == dimension(By) == dimension(Bz) == dimension(u"T")
+    r = position_operator(eg)
+    # A = r×B/2
+    Ax = (r[2]*Bz-r[3]*By)/2
+    Ay = (r[3]*Bx-r[1]*Bz)/2
+    Az = (r[1]*By-r[2]*Bx)/2
+    return VectorOperator(Ax, Ay, Az)
+end
