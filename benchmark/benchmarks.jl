@@ -1,5 +1,9 @@
-using HKQM
+using HKQM.HelmholtzKernel
+using HKQM.QuantumSystem
 using BenchmarkTools
+using Unitful
+using UnitfulAtomic
+using LinearAlgebra
 
 
 
@@ -7,18 +11,20 @@ using BenchmarkTools
 
 ne = 4
 np = 32
+ev = ElementVector(5u"Å", ne)
+egl = ElementGridVectorLegendre(ev, np)
+eg = ElementGridArray(egl, egl, egl)
 
-eg = ElementGridSymmetricBox(5u"Å", ne, np)
 
 ψ = particle_in_box(eg, 1,2,3)
 ψ2 = 2*ψ
 r = position_operator(eg)
 p = momentum_operator(eg)
-Dx = DerivativeOperator(eg,1)
-Dy = DerivativeOperator(eg,2)
-Dz = DerivativeOperator(eg,3)
-go = GradientOperator(eg)
-lo = LaplaceOperator(eg)
+Dx = DerivativeOperator(1,1)
+Dy = DerivativeOperator(2,1)
+Dz = DerivativeOperator(3,1)
+go = gradient_operator(eg)
+lo = LaplaceOperator()
 H = HamiltonOperator( (r ⋅ r)*1u"hartree/Å^2" )
 l = r × p
 x = r[1]
@@ -65,10 +71,10 @@ SUITE["QuantumState"]["substraction"] = @benchmarkable ψ - ψ
 SUITE["QuantumState"]["multiply"] = @benchmarkable 2 * ψ
 SUITE["QuantumState"]["divide"] = @benchmarkable ψ/2
 
-SUITE["Integration"]["Norm"] = @benchmarkable bracket($ψ, $ψ)
-SUITE["Integration"]["Overlap"] = @benchmarkable bracket($ψ, $ψ2)
-SUITE["Integration"]["ScalarOperator"] = @benchmarkable bracket($ψ, $x, $ψ)
-SUITE["Integration"]["VectorOperator"] = @benchmarkable bracket($ψ, $r, $ψ)
-SUITE["Integration"]["MomentumOperator"] = @benchmarkable bracket($ψ, $p, $ψ)
-SUITE["Integration"]["angularmomentum"] = @benchmarkable bracket($ψ, $l, $ψ)
-SUITE["Integration"]["Hamiltonian"] = @benchmarkable bracket($ψ, $H, $ψ)
+SUITE["Integration"]["Norm"] = @benchmarkable braket($ψ, $ψ)
+SUITE["Integration"]["Overlap"] = @benchmarkable braket($ψ, $ψ2)
+SUITE["Integration"]["ScalarOperator"] = @benchmarkable braket($ψ, $x, $ψ)
+SUITE["Integration"]["VectorOperator"] = @benchmarkable braket($ψ, $r, $ψ)
+SUITE["Integration"]["MomentumOperator"] = @benchmarkable braket($ψ, $p, $ψ)
+SUITE["Integration"]["angularmomentum"] = @benchmarkable braket($ψ, $l, $ψ)
+SUITE["Integration"]["Hamiltonian"] = @benchmarkable braket($ψ, $H, $ψ)

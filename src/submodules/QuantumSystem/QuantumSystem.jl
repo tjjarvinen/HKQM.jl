@@ -21,10 +21,12 @@ module QuantumSystem
     export ketbra
     export momentum_operator
     export normalize!
+    export particle_in_box
     export position_operator
     export vector_potential
 
 
     include("quantum_states.jl")
     include("operators.jl")
+    include("utils.jl")
 end
