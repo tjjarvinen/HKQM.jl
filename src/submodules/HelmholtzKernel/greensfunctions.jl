@@ -45,6 +45,8 @@ function get_matrix_at_t(pt::PoissonTensor, t::Integer)
     return pt[:,:,t]    
 end
 
+get_t_grid(pt::PoissonTensor) = pt.t_grid
+
 ##
 
 struct HelmholtzTensor{T, Tt} <: AbstractTransformationTensor{T}
@@ -72,7 +74,7 @@ function Base.getindex(ht::HelmholtzTensor, i::Integer, j::Integer, ti::Integer)
 end
 
 function get_t_weight(ht::HelmholtzTensor, i::Integer)
-    t = ht.tensor.t_grid[i]
+    t = get_t_grid(ht)[i]
     return get_t_weight(ht.tensor, i) * exp( -(ht.k/(2t))^2 )
 end
 
@@ -87,6 +89,7 @@ function get_matrix_at_t(ht::HelmholtzTensor, t::Integer)
     return get_matrix_at_t(ht.tensor, t)   
 end
 
+get_t_grid(ht::HelmholtzTensor) = get_t_grid(ht.tensor)
 
 ##
 
@@ -100,13 +103,14 @@ end
 
 struct ConcreteTransformationTensor{T, TA} <: AbstractTransformationTensor{T}
     vals::TA
+    tvals::Vector{T}
     tmax::T
     wt::Vector{T}
     function ConcreteTransformationTensor(tt::AbstractTransformationTensor{T}; array_type=Array) where {T}
         vals = array_type(tt)
         wt = [ get_t_weight(tt, i) for i in axes(tt,3) ]
         tmax = get_t_max(tt)
-        new{T, typeof(vals)}(vals, tmax, wt)
+        new{T, typeof(vals)}(vals, get_t_grid(tt), tmax, wt)
     end
 end
 
@@ -124,3 +128,5 @@ get_matrix_at_t(ct::ConcreteTransformationTensor, i) = view(ct.vals, :,:, i)
 get_t_weight(ct::ConcreteTransformationTensor, i::Integer) = ct.wt[i]
 
 get_t_max(ct::ConcreteTransformationTensor) = ct.tmax
+
+get_t_grid(ct::ConcreteTransformationTensor) = ct.tvals

@@ -1,10 +1,17 @@
 
 
 function default_transformation_tensor(r_grid::AbstractElementGrid{T, 1}; array_type=Array) where {T}
-    tgrid = ElementGridVectorLegendre(ElementVector(0.0, 20.0, 100.0), 32)
+    tgrid = ElementGridVectorLegendre(ElementVector(T(0), T(20), T(100)), 32)
     return ConcreteTransformationTensor(PoissonTensor(r_grid, tgrid); array_type=array_type)
 end
 
+function default_transformation_tensor(r_grid::ElementGridArray, dimension::Integer; array_type=nothing)
+    if isnothing(array_type)
+        return default_transformation_tensor(r_grid.elements[dimension])
+    else
+        return default_transformation_tensor(r_grid.elements[dimension]; array_type=array_type)
+    end
+end
 
 
 struct ElementGridArrayWithTransformation{T,TT,N} <: AbstractElementGrid{SVector{N,T}, N}
@@ -14,6 +21,15 @@ struct ElementGridArrayWithTransformation{T,TT,N} <: AbstractElementGrid{SVector
         ega = ElementGridArray(egv...)
         t = [ default_transformation_tensor( x ; array_type=array_type) for x in egv]
         new{T, eltype(t), length(egv)}(ega, t)
+    end
+end
+
+
+function default_transformation_tensor(r_grid::ElementGridArrayWithTransformation, dimension::Integer; array_type=nothing)
+    if isnothing(array_type)
+        return r_grid.transformations[dimension]
+    else
+        return r_grid.transformations[dimension] |> array_type
     end
 end
 
