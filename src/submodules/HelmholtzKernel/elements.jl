@@ -2,6 +2,9 @@ abstract type AbstractElement{Dims} end
 abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
 abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
 
+Unitful.dimension(ega::AbstractElementGrid) = dimension(unit(ega))
+Unitful.dimension(ega::AbstractElement) = dimension(unit(ega))
+Unitful.dimension(ega::AbstractElementArray) = dimension(unit(ega))
 
 
 ## 1D element. All else a based on this

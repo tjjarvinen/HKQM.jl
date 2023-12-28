@@ -1,7 +1,9 @@
 module QuantumSystem
     using ArgCheck
+    using Distributed
     import LinearAlgebra: dot, ⋅
     import LinearAlgebra: cross, ×
+    using LinearAlgebra: diag
     using Unitful
     using UnitfulAtomic
     using ..HelmholtzKernel
@@ -20,10 +22,14 @@ module QuantumSystem
     
     export braket
     export charge_density
+    export coulomb_operator
     export density_operator
     export electric_potential
+    export exchange_operator
+    export fock_matrix
     export gradient_operator
     export helmholtz_equation
+    export hf_energy
     export ketbra
     export momentum_operator
     export normalize!

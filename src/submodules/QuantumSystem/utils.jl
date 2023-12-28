@@ -34,8 +34,8 @@ end
 function helmholtz_equation(qs::QuantumState, H::HamiltonOperator)
     normalize!(qs)
     E = (real ∘ braket)(qs,H,qs)
-    T = eltype(H.V.vals)
-    k = T( sqrt(-2H.T.m * E)/u"ħ_au" )
+    T = eltype(H.V.vals) #NOTE might need to remove T for forward more AD
+    k = sqrt(-T(2H.T.m) * E)/u"ħ_au" 
     ϕ = H.V * ( T(H.T.m*u"ħ_au^-2") * qs )
     ψ = helmholtz_equation(ϕ, k)
     normalize!(ψ)

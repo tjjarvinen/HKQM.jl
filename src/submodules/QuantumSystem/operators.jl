@@ -87,6 +87,14 @@ struct ScalarOperator{TA, T, D} <: GridFixedOperator{1} where{TA<:AbstractArray{
     end
 end
 
+function ScalarOperator(so::ScalarOperator; unit=NoUnits)
+    return ScalarOperator(get_elementgrid(so), so.vals; unit=unit)
+end
+
+function ScalarOperator(qs::QuantumState; unit=NoUnits)
+    return ScalarOperator(get_elementgrid(qs), qs.psi; unit=unit)
+end
+
 get_values(so::ScalarOperator) = so.vals
 
 function convert_array_type(T, so::ScalarOperator)
