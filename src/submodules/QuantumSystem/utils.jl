@@ -64,3 +64,44 @@ function scf(qs::QuantumState, H::HamiltonOperator; max_iter=10, conv=1e-6)
     end
     return tmp
 end
+
+
+"""
+    nuclear_potential_harrison_approximation(args; kwargs)
+
+Calculates Harrison style nuclear potential.
+See [J. Chem. Phys. 121, 11587 (2004)](https://doi.org/10.1063/1.1791051)
+for reference.
+
+# Args
+- `ceg`                       : Element grid used in calculation
+- `system`                    : AtomsBase system
+
+# Kwargs
+- `electron_charge=-1u"e_au"`   : Electron charge in further calculations
+- `precision=1E-6`              : Desired precision
+"""
+function nuclear_potential_harrison_approximation(
+    ega,
+    system;
+    electron_charge=-1u"e_au",
+    precision=1E-6
+)
+    r_op = position_operator(ega)
+    V = sum( 1:length(system) ) do i 
+        Zᵢ = atomic_number(system, i)
+        rᵢ = position(system, i)
+        # Harrison's special term for scaling the potential
+        # to desired accuracy
+        c_param = cbrt( 0.00435 * precision / Zᵢ^5 )
+
+        rr = r_op - rᵢ
+        # These two dont have unit
+        r² = ( rr ⋅ rr ) / (c_param*u"bohr")^2 |> auconvert  
+        r  = sqrt(r²) + 1E-10  # Make sure that no zero division
+
+        U = erf(r)/r + 1/(3*√π) * ( exp(-r²) + 16exp(-4r²) )
+        1u"hartree" / c_param * (Z * austrip(electron_charge) ) * U
+    end
+    return V
+end

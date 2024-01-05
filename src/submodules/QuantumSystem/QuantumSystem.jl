@@ -1,4 +1,5 @@
 module QuantumSystem
+    using AtomsBase
     using ArgCheck
     using Distributed
     import LinearAlgebra: dot, ⋅
@@ -6,6 +7,7 @@ module QuantumSystem
     using LinearAlgebra: diag
     using Unitful
     using UnitfulAtomic
+    using SpecialFunctions: erf
     using ..HelmholtzKernel
 
     export AbstractOperator
