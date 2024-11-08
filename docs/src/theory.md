@@ -490,7 +490,7 @@ the wavefunction is now complex.
 [https://doi.org/10.1103/PhysRev.128.1791](https://doi.org/10.1103/PhysRev.128.1791)
 
 [2] Harrision, et al.; J. Chem. Phys. **121**, 11587 (2004);
-[https://doi.org/10.1063/1.1791051](https://doi.org/10.1103/PhysRev.128.1791)
+[https://doi.org/10.1063/1.1791051](https://doi.org/10.1063/1.1791051)
 
 [3] Schum's outlines Mathematical Handbook of Formulas and Tables,
 2nd edition; edit. Murray R. Spiegel and John Liu;
