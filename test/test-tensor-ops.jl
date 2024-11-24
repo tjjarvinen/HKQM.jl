@@ -1,4 +1,6 @@
 using TensorOperations
+using Unitful
+using UnitfulAtomic
 
 
 @testset "Quantum States - TensorOperations" begin

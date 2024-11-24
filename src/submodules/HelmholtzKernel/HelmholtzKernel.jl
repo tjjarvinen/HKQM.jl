@@ -2,8 +2,10 @@
 module HelmholtzKernel
 
 using LinearAlgebra: mul!
+using KernelAbstractions
 using PolynomialBases
 using StaticArrays
+using TensorOperations
 using Unitful
 using UnitfulAtomic
 
@@ -33,6 +35,7 @@ export Element1D
 export ElementGridArray
 export ElementGridLegendre
 export ElementGridLobatto
+export ElementGridSymmetricBox
 export ElementGridVectorLegendre
 export ElementGridVectorLobatto
 export ElementVector

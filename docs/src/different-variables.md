@@ -5,7 +5,9 @@
 Standard calculations use `Float64`. This can be changed to vide variety of options.
 
 ```@example f32
-using HKQM
+using HKQM.HelmholtzKernel
+using HKQM.QuantumSystem
+using Unitful
 
 eg = ElementGridSymmetricBox(Float32, 5u"Å", 4, 24)
 typeof(eg)
@@ -115,15 +117,17 @@ For example to use on AMD GPU you could start by
 
 ```julia
 using AMDGPU
-using HKQM
+using HKQM.QuantumSystem
+using HKQM.HelmholtzKernel
+using Unitful
 
-eg = ElementGridSymmetricBox(Float64, 5u"Å", 4, 24)
-qs = particle_in_box(ROCArray, eg, 1, 1, 1)
-r = position_operator(ROCArray, eg)
-p = momentum_operator(ROCArray, eg)
+eg = ElementGridSymmetricBox( Float32(5u"Å"), 4, 24; array_type=ROCArray)
+qs = particle_in_box(eg, 1, 1, 1)
+r = position_operator(eg)
+p = momentum_operator(eg)
 
-bracket(qs, r, qs)
-bracket(qs, p, qs)
+braket(qs, r, qs)
+braket(qs, p, qs)
 ```
 
 ### Alternative TensorOperations backend for CUDA

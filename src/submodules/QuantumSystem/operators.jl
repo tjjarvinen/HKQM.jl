@@ -284,9 +284,42 @@ Base.:(-)(a::VectorOperator) = VectorOperator( map(x->-x, a)  )
 
 ## Position operator
 
+@kernel function x_position!(out, x, y, z)
+    i, j, k = @index(Global, NTuple)
+    I = @index(Global)
+    @inbounds out[I] = x[i] 
+end
+
+@kernel function y_position!(out, x, y, z)
+    i, j, k = @index(Global, NTuple)
+    I = @index(Global)
+    @inbounds out[I] = y[j] 
+end
+
+@kernel function z_position!(out, x, y, z)
+    i, j, k = @index(Global, NTuple)
+    I = @index(Global)
+    @inbounds out[I] = z[k] 
+end
+
 function position_operator(ega::ElementGridArray, i)
-    tmp = map( j-> ega.r[i][j[i]],  eachindex(ega))
-    return ScalarOperator(ega, tmp; unit=unit(ega))
+    backend = get_backend(ega.r[1])
+    if i == 1
+        kernel = x_position!(backend)
+    elseif i == 2
+        kernel = y_position!(backend)
+    else 
+        kernel = z_position!(backend)
+    end
+
+    out = similar(ega.r[1], eltype(ega.r[1]), size(ega))
+
+    kernel(out, ega.r...; ndrange = size(ega))
+    return ScalarOperator( ega, out; unit=unit(ega) )
+
+    ## old implementation
+    #tmp = map( I-> ega.r[i][I[i]],  eachindex(ega))
+    #return ScalarOperator(ega, tmp; unit=unit(ega))
 end
 
 

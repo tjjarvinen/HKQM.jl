@@ -2,6 +2,7 @@ module QuantumSystem
     using AtomsBase
     using ArgCheck
     using Distributed
+    using KernelAbstractions
     import LinearAlgebra: dot, ⋅
     import LinearAlgebra: cross, ×
     using LinearAlgebra: diag

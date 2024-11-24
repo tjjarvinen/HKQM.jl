@@ -7,16 +7,19 @@ function integrate(
 ) where {T, Tt}
     @assert size(ega) == size(data)
 
-    tmp_x_yz = reshape(data, size(data,1), size(data,2)*size(data,3))
-    ωx = get_weight(ega, 1)
-    tmp_yz = ωx' * tmp_x_yz
+    w = get_weight(ega)
+    return mapreduce( *, +, w, data )
 
-    tmp_y_z = reshape(tmp_yz, size(data,2), size(data,3))
-    ωy = get_weight(ega, 2)
-    tmp_z = ωy' * tmp_y_z
+    #tmp_x_yz = reshape(data, size(data,1), size(data,2)*size(data,3))
+    #ωx = get_weight(ega, 1)
+    #tmp_yz = ωx' * tmp_x_yz
 
-    ωz = get_weight(ega, 3)
-    return sum( ωz .* tmp_z' )
+    #tmp_y_z = reshape(tmp_yz, size(data,2), size(data,3))
+    #ωy = get_weight(ega, 2)
+    #tmp_z = ωy' * tmp_y_z
+
+    #ωz = get_weight(ega, 3)
+    #return sum( ωz .* tmp_z' )
 end
 
 
