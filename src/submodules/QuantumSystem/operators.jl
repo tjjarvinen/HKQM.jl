@@ -3,8 +3,8 @@ abstract type GridFixedOperator{N} <: AbstractOperator{N} end
 abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
 abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
-get_elementgrid(::AbstractOperator) = missing
-get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
+HelmholtzKernel.get_elementgrid(::AbstractOperator) = missing
+HelmholtzKernel.get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
 Base.size(::AbstractOperator) = missing
 Base.size(ao::GridFixedOperator) = size(get_elementgrid(ao))
 Base.length(::AbstractOperator{N}) where N = N
@@ -106,6 +106,7 @@ function (so::ScalarOperator{<:Any,<:Any,D})(qs::QuantumState{<:Any,<:Any,D}) wh
     return QuantumState(get_elementgrid(so), so.vals.*qs.psi, unit(so)*unit(qs))
 end
 
+QuantumState(so::ScalarOperator) = QuantumState(get_elementgrid(so), so.vals, unit(so))
 
 function Base.map(f, so::ScalarOperator; output_unit=unit(so))
     return ScalarOperator(
@@ -194,6 +195,11 @@ for op in (:sin, :cos, :tan, :exp, :log)
         @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
         return map($op, so)
      end
+end
+
+function erf(so::ScalarOperator)
+    @assert dimension(so) == dimension(NoUnits) "Operator needs to be dimensionless"
+    return map(erf, so)
 end
 
 # Functions that can change units

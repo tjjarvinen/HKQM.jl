@@ -103,7 +103,17 @@ function nuclear_potential_harrison_approximation(
         r  = sqrt(r²) + 1E-10  # Make sure that no zero division
 
         U = erf(r)/r + 1/(3*√π) * ( exp(-r²) + 16exp(-4r²) )
-        1u"hartree" / c_param * (Z * austrip(electron_charge) ) * U
+        1u"hartree" / c_param * (Zᵢ * austrip(electron_charge) ) * U
     end
     return V
+end
+
+
+function gaussian_state(ega, r, alpha)
+    pos = position_operator(ega)
+    r_tmp = pos - r
+    tmp = exp(alpha * (r_tmp ⋅ r_tmp) )
+    ψ = QuantumState(tmp)
+    normalize!(ψ)
+    return ψ
 end

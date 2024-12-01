@@ -6,8 +6,11 @@ module QuantumSystem
     import LinearAlgebra: dot, ⋅
     import LinearAlgebra: cross, ×
     using LinearAlgebra: diag
+    import LinearAlgebra: normalize!
+    using LinearAlgebra: normalize!
     using Unitful
     using UnitfulAtomic
+    import SpecialFunctions: erf
     using SpecialFunctions: erf
     using ..HelmholtzKernel
 
@@ -35,6 +38,7 @@ module QuantumSystem
     export hf_energy
     export ketbra
     export momentum_operator
+    export nuclear_potential_harrison_approximation
     export normalize!
     export particle_in_box
     export position_operator
