@@ -37,7 +37,7 @@ end
 
 ## utils
 
-HelmholtzKernel.get_elementgrid(qs::QuantumState) = qs.elementgrid
+get_elementgrid(qs::QuantumState) = qs.elementgrid
 
 
 ## Operations
