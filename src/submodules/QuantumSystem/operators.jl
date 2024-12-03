@@ -3,8 +3,8 @@ abstract type GridFixedOperator{N} <: AbstractOperator{N} end
 abstract type AbstractCompositeOperator{N} <: AbstractOperator{N} end
 abstract type AbstractHamiltonOperator <: AbstractOperator{1} end
 
-HelmholtzKernel.get_elementgrid(::AbstractOperator) = missing
-HelmholtzKernel.get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
+get_elementgrid(::AbstractOperator) = missing
+get_elementgrid(ao::GridFixedOperator) = ao.elementgrid
 Base.size(::AbstractOperator) = missing
 Base.size(ao::GridFixedOperator) = size(get_elementgrid(ao))
 Base.length(::AbstractOperator{N}) where N = N

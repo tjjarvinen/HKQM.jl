@@ -34,3 +34,34 @@ using Unitful
     normalize!(psi)
     @test braket(psi, psi) ≈ 1.0
 end
+
+
+@testset "Operators" begin
+    ev = ElementVector(0.0u"pm", 1.5u"pm", 3.0u"pm")
+    ego = ElementGridVectorLobatto(ev, 24)
+    ega = ElementGridArray(ego, ego, ego)
+
+    r = position_operator(ega)
+    p = momentum_operator(ega)
+
+    psi = particle_in_box(ega, 1, 2, 3)
+
+    psi1 = r[1] * psi
+    psi2 = p[1] * psi
+
+    @test braket(psi, r[1], psi) ≈ 1.5u"pm"
+    @test braket(psi, r[2], psi) ≈ 1.5u"pm"
+    @test braket(psi, r[3], psi) ≈ 1.5u"pm"
+
+    r2 = dot(r, r)
+
+    @test dimension(r2) == dimension(r)^2
+
+    @test braket(psi, -r2, psi) < 0.0u"pm^2"
+
+    lo = LaplaceOperator()
+    @test braket(psi, lo, psi) < 0.0u"pm^-2"
+
+    grad = gradient_operator(ega)
+    @test length( braket(psi, grad, psi) ) == 3
+end
