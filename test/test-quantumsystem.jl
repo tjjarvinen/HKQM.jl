@@ -1,6 +1,7 @@
 using Test
 using HKQM.HelmholtzKernel
 using HKQM.QuantumSystem
+using LinearAlgebra
 using Unitful
 
 
