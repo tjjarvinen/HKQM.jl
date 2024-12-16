@@ -5,7 +5,7 @@
 | [![][docs-dev-img]][docs-dev-url] | [![][CI-img]][CI-url] [![][codecov-img]][codecov-url] |
 
 
-
+The new backend (HelmholtzKernel & QuantumSystem submodules) is mostly ready to use. But Helmholtz and Poisson equation Greens functions are not tuned yet. Thus any use of them will give wrong results. The plan is to alter the integration of Greens fuctions to improve all around accuracy. But this is work in progress.
 
 This package is under development and not all of the functionality is ready.
 You are free to try it though.

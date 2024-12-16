@@ -19,6 +19,8 @@ using StaticArrays
 @reexport import LinearAlgebra: dot, cross, normalize!
 
 # Submodule
+include("submodules/HelmholtzKernel/HelmholtzKernel.jl")
+include("submodules/QuantumSystem/QuantumSystem.jl")
 include("submodules/ReferenceStates.jl")
 using .ReferenceStates
 
@@ -142,8 +144,7 @@ include("accuracytests.jl")
 include("scf.jl")
 include("initial_states.jl")
 include("submodules/ToroidalCurrent.jl")
-include("submodules/HelmholtzKernel/HelmholtzKernel.jl")
-include("submodules/QuantumSystem/QuantumSystem.jl")
+
 
 
 end

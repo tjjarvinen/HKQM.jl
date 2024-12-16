@@ -50,4 +50,5 @@ module QuantumSystem
     include("operators.jl")
     include("utils.jl")
     include("electronic_structure.jl")
+    include("solvers.jl")
 end
