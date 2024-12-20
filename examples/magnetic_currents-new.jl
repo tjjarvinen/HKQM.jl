@@ -5,7 +5,7 @@ using AtomsBase
 include(joinpath(pkgdir(HKQM), "examples", "visualize_wave_function.jl"))
 
 
-eg = eg = HKQM.HelmholtzKernel.ElementGridVectorLegendre(2.5u"Å", 4, 32)
+eg = HKQM.HelmholtzKernel.ElementGridVectorLegendre(2.5u"Å", 4, 32)
 nceg = HKQM.HelmholtzKernel.ElementGridArray(eg,eg,eg)
 
 # Positions of Hydrogen atoms
