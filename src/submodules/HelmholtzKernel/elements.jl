@@ -382,7 +382,7 @@ struct ElementGridArray{T,TV,TA,N} <: AbstractElementGrid{SVector{N,T}, N}
         d = [ array_type( get_derivative_matrix(x) ) for x in egv]
         w = build_weight_tensor( [ array_type( get_weight(x) ) for x in egv]... )
         r = [ array_type( x ) for x in egv ]
-        tgrid = ElementGridVectorLegendre(ElementVector(T(0), T(20), T(300)), 32)
+        tgrid = ElementGridVectorLegendre(ElementVector(T(0), T(20), T(100), T(800)), 32)
         Ttensor = map( egv ) do egvᵢ
             build_kernel_tensor_1d(egvᵢ, tgrid)
         end
