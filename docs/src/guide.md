@@ -5,7 +5,11 @@
 Start by defining grid used in calculations
 
 ```@example guide
-using HKQM
+using HKQM.HelmholtzKernel
+using HKQM.QuantumSystem
+using LinearAlgebra
+using Unitful
+using UnitfulAtomic
 
 ceg = ElementGridSymmetricBox(5u"Å", 4, 24)
 ```
@@ -31,7 +35,7 @@ eltype(ceg)
 The values are x-, y- and z-coordinates of the grid point in bohr.
 
 ```@example guide
-ceg[1,1,1,3,3,3]
+ceg[1,2,3]
 ```
 
 ## Operator algebra
@@ -50,7 +54,11 @@ unit(r)
 ```
 
 ```@example guide
-unit(p)
+unit(p)  # missing as it is implied by where it operates
+```
+
+```@example guide
+dimension(p)  # dimensions of ML/T
 ```
 
 These operator are vector operator and have length defined
@@ -142,10 +150,10 @@ Quantum states have linear algebra defined
 2ψ - ψ
 ```
 
-Inner product can be calculated with `bracket` function
+Inner product can be calculated with `braket` function
 
 ```@example guide
-bracket(ψ, 2ψ) 
+braket(ψ, 2ψ) 
 ```
 
 Operators can be applied to quantum state by multiplication
@@ -173,10 +181,10 @@ unit( x * ψ )
 Other [Unitful](https://github.com/PainterQubits/Unitful.jl) functions like
 `dimension` and `uconvert` are defined also.
 
-Expectational values of operators can be calculated with `bracket` funtion
+Expectational values of operators can be calculated with `braket` funtion
 
 ```@example guide
-bracket(ψ, x, ψ) 
+braket(ψ, x, ψ) 
 ```
 
 ## Slater Determinant
@@ -224,7 +232,7 @@ You need to generate initial state for Hamiltonian that gives negative energy!
 ψ = QuantumState( exp(-0.2u"bohr^-2" * r²) )
 normalize!(ψ)
 
-bracket(ψ, H, ψ)
+braket(ψ, H, ψ)
 ```
 
 After that Helmholtz Greens function can be used to generate better estimate for the lowest eigen-state
@@ -295,20 +303,20 @@ It allows approximate electronic structure calculations.
 
 Here is an example for Hydrogen molecule.
 
-Define nuclear positions
+Define nuclear positions by an [AtomsBase](https://github.com/JuliaMolSim/AtomsBase.jl) system
 
 ```@example guide
+using AtomsBase
+
 r₁ = [0.37, 0., 0.] .* 1u"Å"
 r₂ = [-0.37, 0., 0.] .* 1u"Å"
+sys = isolated_system( [Atom(:H, r₁), Atom(:H, r₂)] )
 ```
 
 After that create nuclear potential
 
 ```@example guide
-V₁ = nuclear_potential_harrison_approximation(ceg, r₁, "H")
-V₂ = nuclear_potential_harrison_approximation(ceg, r₂, "H")
-
-V = V₁ + V₂
+V = nuclear_potential_harrison_approximation(ceg, sys)
 ```
 
 and Hamiltonian

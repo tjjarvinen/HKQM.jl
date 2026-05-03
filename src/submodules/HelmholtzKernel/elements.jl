@@ -2,6 +2,9 @@ abstract type AbstractElement{Dims} end
 abstract type AbstractElementArray{T,N} <: AbstractArray{T,N} end
 abstract type AbstractElementGrid{T,N} <: AbstractArray{T,N} end
 
+Unitful.dimension(ega::AbstractElementGrid) = dimension(unit(ega))
+Unitful.dimension(ega::AbstractElement) = dimension(unit(ega))
+Unitful.dimension(ega::AbstractElementArray) = dimension(unit(ega))
 
 
 ## 1D element. All else a based on this
@@ -103,9 +106,7 @@ function ElementVector(start, bounds...)
 end
 
 function ElementVector(l::Unitful.Length, n::Integer)
-    d = l/n
-    bounds = [ i*d - l/2   for i in 1:n ]
-    return ElementVector(-l/2, bounds...)
+    return ElementVector( range(-l/2, l/2; length=n+1)... )
 end
 
 Base.size(ev::ElementVector) = size(ev.v)
@@ -194,7 +195,8 @@ function (eg::Union{ElementGridLegendre, ElementGridLobatto})(r, u)
     return interpolate(x, u, eg.basis)
 end
 
-
+polynomial_degree(eg::Union{ElementGridLegendre, ElementGridLobatto}) =
+    length(eg) - 1
 
 
 ## These combine several elements. They are the main building blocks for basis
@@ -372,14 +374,53 @@ struct ElementGridArray{T,TV,TA,N} <: AbstractElementGrid{SVector{N,T}, N}
     elements::Vector{AbstractElementGrid{T, 1}}
     derivatives::Vector{TA}
     r::Vector{TV}
-    weights::Vector{TV}
+    weights::AbstractArray{T,N}
+    Ttensor::NTuple{N,KernelTensor1D{T}}
     function ElementGridArray(egv::AbstractElementGrid{T, 1}...; array_type=Array) where T
+        u = unit(egv[begin])
+        @assert all( x->unit(x)==u, egv)
         d = [ array_type( get_derivative_matrix(x) ) for x in egv]
-        w = [ array_type( get_weight(x) ) for x in egv]
+        w = build_weight_tensor( [ array_type( get_weight(x) ) for x in egv]... )
         r = [ array_type( x ) for x in egv ]
-        new{T, typeof(w[begin]), typeof(d[begin]), length(egv)}(collect(egv), d, r, w)
+        tgrid = ElementGridVectorLegendre(ElementVector(T(0), T(20), T(100), T(800)), 32)
+        Ttensor = map( egv ) do egvᵢ
+            build_kernel_tensor_1d(egvᵢ, tgrid)
+        end
+        new{T, typeof(r[begin]), typeof(d[begin]), length(egv)}(collect(egv), d, r, w, Ttensor)
     end
 end
+
+# functions needed to build weight
+
+# need support for higher dimensions too
+@kernel function build_weight_tensor_kernel_3(out, w1, w2, w3)
+    i, j, k = @index(Global, NTuple)
+    I = @index(Global)
+    @inbounds out[I] = w1[i] * w2[j] * w3[k]
+end
+
+@kernel function build_weight_tensor_kernel_2(out, w1, w2)
+    i, j = @index(Global, NTuple)
+    I = @index(Global)
+    @inbounds out[I] = w1[i] * w2[j]
+end
+
+
+function build_weight_tensor(w...)
+    s = length.(w)
+    out = similar( w[1],  s)
+    backend = get_backend(w[1])
+    if length(w) == 3
+        kernel = build_weight_tensor_kernel_3(backend)
+    elseif length(w) == 2
+        kernel = build_weight_tensor_kernel_2(backend)
+    else
+        return w[1]
+    end
+    kernel(out, w...; ndrange = s)
+    return out
+end
+# end weight build functions
 
 
 function Base.size(ega::ElementGridArray)
@@ -410,7 +451,8 @@ end
 
 get_elementgrid(ega::ElementGridArray, i::Integer) = ega.elements[i]
 get_derivative_matrix(ega::ElementGridArray, i::Integer) = ega.derivatives[i]
-get_weight(ega::ElementGridArray, i::Integer) = ega.weights[i]
+get_weight(ega::ElementGridArray, i::Integer) = get_weight( get_elementgrid(ega,i) )
+get_weight(ega::ElementGridArray) = ega.weights
 
 element_bounds(ega::ElementGridArray, i::Integer) = element_bounds(ega.elements[i])
 element_size(ega::ElementGridArray, i::Integer) = element_size(ega.elements[i])
@@ -430,6 +472,9 @@ function Base.fill(ega::ElementGridArray, val)
     return tmp
 end
 
+Unitful.unit(egv::ElementGridArray) = unit(egv.elements[begin])
+
+
 ##
 
 function get_derivative_matrix(grid, index::Integer, order::Integer)
@@ -439,3 +484,21 @@ function get_derivative_matrix(grid, index::Integer, order::Integer)
         return get_derivative_matrix(grid, index)^order
     end
 end
+
+
+##
+
+# Ease of use constructors
+
+function ElementGridSymmetricBox(T, a, ne::Int, ngp::Int; array_type=Array)
+    ev = ElementVector( range(-a/2, stop=a/2; length=ne+1)... )
+    ego = ElementGridVectorLobatto(T, ev, ngp)
+    return ElementGridArray(ego, ego, ego; array_type=array_type)
+end
+
+
+function ElementGridSymmetricBox(a, ne::Int, ngp::Int; array_type=Array)
+    return ElementGridSymmetricBox(Float64, a, ne, ngp; array_type=array_type)
+end
+
+##
