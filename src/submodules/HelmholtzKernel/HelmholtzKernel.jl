@@ -11,6 +11,8 @@ using TensorOperations
 using Unitful
 using UnitfulAtomic
 
+export apply_helmholtz!
+export apply_poisson!
 export apply_transformation
 export convert_variable_type
 export default_transformation_tensor

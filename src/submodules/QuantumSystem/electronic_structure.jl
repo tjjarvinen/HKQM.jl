@@ -17,10 +17,12 @@ function electric_potential(cdensity::ScalarOperator{TA, T, 3}; correction=true)
     ega = get_elementgrid(cdensity)
     @argcheck dimension(ega) == dimension(u"m")
     ρ = auconvert(cdensity)
-    tx = default_transformation_tensor(ega, 1)
-    ty = default_transformation_tensor(ega, 2)
-    tz = default_transformation_tensor(ega, 3)
-    tmp = apply_transformation(ρ.vals, tx, ty, tz; correction=correction)
+    #tx = default_transformation_tensor(ega, 1)
+    #ty = default_transformation_tensor(ega, 2)
+    #tz = default_transformation_tensor(ega, 3)
+    #tmp = apply_transformation(ρ.vals, tx, ty, tz; correction=correction)
+    tmp = similar(ρ.vals)
+    apply_poisson!(tmp, ρ.vals, ega.Ttensor[1], ega.Ttensor[1], ega.Ttensor[1])
     return ScalarOperator(ega, tmp; unit=u"hartree/e_au"*unit(ega)^2/u"bohr"^2) |> auconvert
 end
 
