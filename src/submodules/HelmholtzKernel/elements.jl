@@ -195,7 +195,8 @@ function (eg::Union{ElementGridLegendre, ElementGridLobatto})(r, u)
     return interpolate(x, u, eg.basis)
 end
 
-
+polynomial_degree(eg::Union{ElementGridLegendre, ElementGridLobatto}) =
+    length(eg) - 1
 
 
 ## These combine several elements. They are the main building blocks for basis

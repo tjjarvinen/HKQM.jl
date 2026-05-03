@@ -1,9 +1,10 @@
 # This is meant to be the new elements that could be later taken as an own module
 module HelmholtzKernel
 
-using LinearAlgebra: mul!
+using LinearAlgebra
 using KernelAbstractions
 using PolynomialBases
+using SpecialFunctions: erf, erfc
 using StaticArrays
 using TensorOperations
 using Unitful
@@ -45,6 +46,7 @@ export PoissonTensor
 include("elements.jl")
 include("greensfunctions.jl")
 include("integrations.jl")
+include("newkernels.jl")
 include("utils.jl")
 
 
