@@ -51,4 +51,5 @@ module QuantumSystem
     include("utils.jl")
     include("electronic_structure.jl")
     include("solvers.jl")
+    include("test-accuracy.jl")
 end

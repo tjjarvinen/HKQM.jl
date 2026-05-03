@@ -7,7 +7,7 @@ using Unitful
 
 @testset "Quantum States" begin
     ev = ElementVector(0.0u"pm", 1.5u"pm", 3.0u"pm")
-    ego = ElementGridVectorLobatto(ev, 24)
+    ego = ElementGridVectorLobatto(ev, 16)
     ega = ElementGridArray(ego, ego, ego)
 
     psi = QuantumState(ega, fill(ega,1.0im), u"pm")
@@ -39,7 +39,7 @@ end
 
 @testset "Operators" begin
     ev = ElementVector(0.0u"pm", 1.5u"pm", 3.0u"pm")
-    ego = ElementGridVectorLobatto(ev, 24)
+    ego = ElementGridVectorLobatto(ev, 16)
     ega = ElementGridArray(ego, ego, ego)
 
     r = position_operator(ega)

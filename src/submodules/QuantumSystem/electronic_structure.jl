@@ -12,18 +12,51 @@ function charge_density(qs; charge=-1u"e_au")
 end
 
 
+# function electric_potential(cdensity::ScalarOperator{TA, T, 3}; correction=true) where {TA, T}
+#     @argcheck dimension(cdensity) == dimension(u"C") || dimension(cdensity) == dimension(1.0)
+#     ega = get_elementgrid(cdensity)
+#     @argcheck dimension(ega) == dimension(u"m")
+#     ρ = auconvert(cdensity)
+#     #tx = default_transformation_tensor(ega, 1)
+#     #ty = default_transformation_tensor(ega, 2)
+#     #tz = default_transformation_tensor(ega, 3)
+#     #tmp = apply_transformation(ρ.vals, tx, ty, tz; correction=correction)
+#     tmp = similar(ρ.vals)
+#     apply_poisson!(tmp, ρ.vals, ega.Ttensor[1], ega.Ttensor[1], ega.Ttensor[1])
+#     tmp ./= ega.weights
+#     return ScalarOperator(ega, tmp; unit=u"hartree/e_au"*unit(ega)^2/u"bohr"^2) |> auconvert
+# end
+
+
 function electric_potential(cdensity::ScalarOperator{TA, T, 3}; correction=true) where {TA, T}
     @argcheck dimension(cdensity) == dimension(u"C") || dimension(cdensity) == dimension(1.0)
+
     ega = get_elementgrid(cdensity)
     @argcheck dimension(ega) == dimension(u"m")
-    ρ = auconvert(cdensity)
-    #tx = default_transformation_tensor(ega, 1)
-    #ty = default_transformation_tensor(ega, 2)
-    #tz = default_transformation_tensor(ega, 3)
-    #tmp = apply_transformation(ρ.vals, tx, ty, tz; correction=correction)
+
+    # Important: do NOT auconvert here.
+    # Ttensor was built in the native stripped grid coordinates.
+    ρ = cdensity
+
     tmp = similar(ρ.vals)
-    apply_poisson!(tmp, ρ.vals, ega.Ttensor[1], ega.Ttensor[1], ega.Ttensor[1])
-    return ScalarOperator(ega, tmp; unit=u"hartree/e_au"*unit(ega)^2/u"bohr"^2) |> auconvert
+
+    apply_poisson!(
+        tmp,
+        ρ.vals,
+        ega.Ttensor[1],
+        ega.Ttensor[2],
+        ega.Ttensor[3],
+    )
+
+    # apply_poisson! gives Galerkin load.
+    # braket/integrate expect nodal operator values.
+    tmp ./= ega.weights
+
+    return ScalarOperator(
+        ega,
+        tmp;
+        unit = u"hartree" * u"bohr" / unit(ega),
+    ) |> auconvert
 end
 
 

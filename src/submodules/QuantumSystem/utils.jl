@@ -18,21 +18,51 @@ function particle_in_box(ceg, nx::Int, ny::Int, nz::Int)
 end
 
 
+# function helmholtz_equation(qs::QuantumState, k)
+#     ega = get_elementgrid(qs)
+#     k = ustrip(unit(ega)^-1, k)
+#     @argcheck k > 0
+#     #tx = default_transformation_tensor(ega, 1)
+#     #ty = default_transformation_tensor(ega, 2)
+#     #tz = default_transformation_tensor(ega, 3)
+#     #tx = HelmholtzTensor(tx, k)
+#     #ty = HelmholtzTensor(ty, k)
+#     #tz = HelmholtzTensor(tz, k)
+#     #tmp = apply_transformation(qs.psi, tx, ty, tz)
+#     T = promote_type(eltype(qs.psi), typeof(k))
+#     tmp = similar(qs.psi, T)
+#     apply_helmholtz!(tmp, qs.psi, ega.Ttensor[1], ega.Ttensor[2], ega.Ttensor[3], k)
+#     return QuantumState(ega, tmp, unit(qs)*unit(ega)^2)
+# end
+
 function helmholtz_equation(qs::QuantumState, k)
     ega = get_elementgrid(qs)
-    k = ustrip(unit(ega)^-1, k)
-    @argcheck k > 0
-    #tx = default_transformation_tensor(ega, 1)
-    #ty = default_transformation_tensor(ega, 2)
-    #tz = default_transformation_tensor(ega, 3)
-    #tx = HelmholtzTensor(tx, k)
-    #ty = HelmholtzTensor(ty, k)
-    #tz = HelmholtzTensor(tz, k)
-    #tmp = apply_transformation(qs.psi, tx, ty, tz)
-    T = promote_type(eltype(qs.psi), typeof(k))
+
+    k_native = ustrip(unit(ega)^-1, k)
+    @argcheck k_native > 0
+
+    T = promote_type(eltype(qs.psi), typeof(k_native))
+
     tmp = similar(qs.psi, T)
-    apply_helmholtz!(tmp, qs.psi, ega.Ttensor[1], ega.Ttensor[2], ega.Ttensor[3], k)
-    return QuantumState(ega, tmp, unit(qs)*unit(ega)^2)
+
+    apply_helmholtz!(
+        tmp,
+        qs.psi,
+        ega.Ttensor[1],
+        ega.Ttensor[2],
+        ega.Ttensor[3],
+        T(k_native),
+    )
+
+    # apply_helmholtz! gives Galerkin load.
+    # QuantumState expects nodal/grid values.
+    tmp ./= ega.weights
+
+    return QuantumState(
+        ega,
+        tmp,
+        unit(qs) * unit(ega)^2,
+    )
 end
 
 
@@ -106,7 +136,7 @@ function nuclear_potential_harrison_approximation(
         r  = sqrt(r²) + 1E-10  # Make sure that no zero division
 
         U = erf(r)/r + 1/(3*√π) * ( exp(-r²) + 16exp(-4r²) )
-        1u"hartree" / c_param * (Zᵢ * austrip(electron_charge) ) * U
+        -1u"hartree" / c_param * (Zᵢ * austrip(electron_charge) ) * U
     end
     return V
 end
