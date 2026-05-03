@@ -375,13 +375,18 @@ struct ElementGridArray{T,TV,TA,N} <: AbstractElementGrid{SVector{N,T}, N}
     derivatives::Vector{TA}
     r::Vector{TV}
     weights::AbstractArray{T,N}
+    Ttensor::NTuple{N,KernelTensor1D{T}}
     function ElementGridArray(egv::AbstractElementGrid{T, 1}...; array_type=Array) where T
         u = unit(egv[begin])
         @assert all( x->unit(x)==u, egv)
         d = [ array_type( get_derivative_matrix(x) ) for x in egv]
         w = build_weight_tensor( [ array_type( get_weight(x) ) for x in egv]... )
         r = [ array_type( x ) for x in egv ]
-        new{T, typeof(r[begin]), typeof(d[begin]), length(egv)}(collect(egv), d, r, w)
+        tgrid = ElementGridVectorLegendre(ElementVector(T(0), T(20), T(300)), 32)
+        Ttensor = map( egv ) do egvᵢ
+            build_kernel_tensor_1d(egvᵢ, tgrid)
+        end
+        new{T, typeof(r[begin]), typeof(d[begin]), length(egv)}(collect(egv), d, r, w, Ttensor)
     end
 end
 
